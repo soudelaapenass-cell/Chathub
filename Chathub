@@ -1,0 +1,395 @@
+-- Glassmorphism Chat Hub + Editor + Transfery + Settings (V24 - EXEC DIRETO NO TRANSFERY)
+local TextChatService = game:GetService("TextChatService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Limpeza de UI antiga
+local oldUI = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("GlassChatHub_Final")
+if oldUI then oldUI:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GlassChatHub_Final"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+local autoScrollEnabled = true
+local tInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+-- --- SISTEMA DE IDIOMAS ---
+local currentLang = "Brazil"
+local editingId = nil
+
+local Langs = {
+    ["Brazil"] = {exec="Exec", chat="Chat", apagar="Apagar", trans="Transfery", ed="Editor", name="Nome...", cont="Conteúdo...", search="Pesquisar...", save="Salvar", right="Certo?", copy="Copiar", clear="Limpar", edPlc="Editor Secundário...", inpPlc="Script/Chat...", warn="Este script foi criado pela lezin e foi feito com amor e carinho, não abuse muito dos botões abaixo para você não ser banido ou kickado do mapa amo vocês!😊", key="Key do script (tp da Lezin) é [lezinhub2026]"},
+    ["English"] = {exec="Run", chat="Chat", apagar="Clear", trans="Transfery", ed="Editor", name="Name...", cont="Content...", search="Search...", save="Save", right="Done?", copy="Copy", clear="Clear", edPlc="Secondary Editor...", inpPlc="Script/Chat...", warn="This script was created by lezin with love and care, do not abuse the buttons below so you don't get banned or kicked! Love you!😊", key="Script key (tp da Lezin) is [lezinhub2026]"},
+    ["America"] = {exec="Run", chat="Chat", apagar="Delete", trans="Transfery", ed="Editor", name="Name...", cont="Content...", search="Search...", save="Save", right="Done?", copy="Copy", clear="Erase", edPlc="Secondary Editor...", inpPlc="Script/Chat...", warn="This script was created by lezin with love and care, do not abuse the buttons below so you don't get banned or kicked! Love you!😊", key="Script key (tp da Lezin) is [lezinhub2026]"},
+    ["Spanish"] = {exec="Ejecutar", chat="Chat", apagar="Borrar", trans="Transfery", ed="Editor", name="Nombre...", cont="Contenido...", search="Buscar...", save="Guardar", right="¿Seguro?", copy="Copiar", clear="Limpiar", edPlc="Editor Secundario...", inpPlc="Script/Chat...", warn="¡Este script fue creado por lezin con mucho amor, no abuses de los botones para no ser baneado! ¡Los amo!😊", key="La Key del script (tp da Lezin) es [lezinhub2026]"},
+    ["Italian"] = {exec="Esegui", chat="Chat", apagar="Cancella", trans="Transfery", ed="Editor", name="Nome...", cont="Contenuto...", search="Cerca...", save="Salva", right="Fatto?", copy="Copia", clear="Pulisci", edPlc="Editor Secondario...", inpPlc="Script/Chat...", warn="Questo script è stato creato da lezin con amore, non abusare dei pulsanti per non essere bannato! Vi amo!😊", key="La Key (tp da Lezin) è [lezinhub2026]"},
+    ["Russo"] = {exec="Выполнить", chat="Чат", apagar="Удалить", trans="Transfery", ed="Редактор", name="Имя...", cont="Контент...", search="Поиск...", save="Сохранить", right="Готово?", copy="Копировать", clear="Очистить", edPlc="Вторичный редактор...", inpPlc="Скрипт/Чат...", warn="Этот скрипт был создан lezin с любовью, не злоупотребляйте кнопками, чтобы вас не забанили! Люблю вас!😊", key="Ключ скрипта (tp da Lezin) - [lezinhub2026]"},
+    ["Japanese"] = {exec="実行", chat="チャット", apagar="消去", trans="Transfery", ed="エディタ", name="名前...", cont="コンテンツ...", search="検索...", save="保存", right="完了?", copy="コピー", clear="クリア", edPlc="セカンダリエディタ...", inpPlc="スクリプト/チャット...", warn="このスクリプトはlezinによって愛を込めて作成されました。BANされないようにボタンを悪用しないでください！愛してます！😊", key="スクリプトキー(tp da Lezin)は[lezinhub2026]です"}
+}
+
+-- --- SCRIPTS REAIS DA LEZIN ---
+local LezinScripts = {
+    {name = "Executor Infinito", code = [=[
+local UIS = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.CoreGui
+ScreenGui.Name = "Delta_Elite_V17"
+ScreenGui.ResetOnSpawn = false
+local function MostrarCreditos()
+    pcall(function()
+        local player = game.Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local head = char:WaitForChild("Head")
+        local bbg = Instance.new("BillboardGui", head)
+        bbg.Size = UDim2.new(0, 250, 0, 50)
+        bbg.Adornee = head
+        bbg.ExtentsOffset = Vector3.new(0, 3, 0)
+        bbg.AlwaysOnTop = true
+        local lbl = Instance.new("TextLabel", bbg)
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = "Script by Lezin e Gemini 🥰"
+        lbl.TextColor3 = Color3.new(1, 1, 1)
+        lbl.Font = Enum.Font.GothamBold
+        lbl.TextSize = 22
+        lbl.TextStrokeTransparency = 0
+        task.spawn(function()
+            local t = 0
+            while bbg.Parent do
+                lbl.TextStrokeColor3 = Color3.fromHSV(t, 1, 1)
+                t = (t + 0.01) % 1
+                task.wait()
+            end
+        end)
+        task.wait(5)
+        TweenService:Create(lbl, TweenInfo.new(1.5), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+        task.wait(1.5)
+        bbg:Destroy()
+    end)
+end
+MostrarCreditos()
+local config = {bgMusic = "0"}
+pcall(function()
+    if isfile and isfile("DeltaV17_Data.json") then
+        config = HttpService:JSONDecode(readfile("DeltaV17_Data.json"))
+    end
+end)
+local MainFrame = Instance.new("ImageLabel")
+MainFrame.Parent = ScreenGui
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 500, 0, 350)
+MainFrame.Image = "rbxassetid://126966972982411"
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Active = true
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 15)
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Thickness = 3
+Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.005 do Stroke.Color = Color3.fromHSV(i, 1, 1) task.wait() end
+    end
+end)
+local SoundInt = Instance.new("Sound", MainFrame)
+SoundInt.SoundId = "rbxassetid://119974879573475"
+SoundInt.Volume = 3
+local BGM = Instance.new("Sound", game.Workspace)
+BGM.Name = "DeltaBGM_V17"
+BGM.Looped = true
+BGM.Volume = 0.5
+if config.bgMusic ~= "0" then BGM.SoundId = "rbxassetid://"..config.bgMusic end
+local Content = Instance.new("Frame", MainFrame)
+Content.Size = UDim2.new(1, 0, 1, 0)
+Content.BackgroundTransparency = 1
+Content.ZIndex = 2
+local CloseBtn = Instance.new("TextButton", Content)
+CloseBtn.Size = UDim2.new(0, 35, 0, 35)
+CloseBtn.Position = UDim2.new(1, -45, 0, 10)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1,0)
+local SettingsBtn = Instance.new("TextButton", Content)
+SettingsBtn.Size = UDim2.new(0, 35, 0, 35)
+SettingsBtn.Position = UDim2.new(0, 10, 0, 10)
+SettingsBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SettingsBtn.Text = "⚙️"
+SettingsBtn.TextSize = 20
+SettingsBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", SettingsBtn).CornerRadius = UDim.new(0, 8)
+local SetPanel = Instance.new("Frame", MainFrame)
+SetPanel.Size = UDim2.new(0, 240, 0, 130)
+SetPanel.Position = UDim2.new(0.5, -120, 0.5, -65)
+SetPanel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SetPanel.BackgroundTransparency = 0.4
+SetPanel.Visible = false
+SetPanel.ZIndex = 100 
+Instance.new("UICorner", SetPanel)
+local MusicInput = Instance.new("TextBox", SetPanel)
+MusicInput.Size = UDim2.new(0.9, 0, 0.35, 0)
+MusicInput.Position = UDim2.new(0.05, 0, 0.15, 0)
+MusicInput.PlaceholderText = "ID da Música"
+MusicInput.Text = config.bgMusic
+MusicInput.BackgroundTransparency = 0.6
+MusicInput.TextColor3 = Color3.new(1,1,1)
+MusicInput.ZIndex = 101
+local SaveBtn = Instance.new("TextButton", SetPanel)
+SaveBtn.Size = UDim2.new(0.9, 0, 0.3, 0)
+SaveBtn.Position = UDim2.new(0.05, 0, 0.6, 0)
+SaveBtn.Text = "SALVAR"
+SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+SaveBtn.ZIndex = 101
+SettingsBtn.MouseButton1Click:Connect(function() SetPanel.Visible = not SetPanel.Visible end)
+SaveBtn.MouseButton1Click:Connect(function()
+    config.bgMusic = MusicInput.Text
+    pcall(function() writefile("DeltaV17_Data.json", HttpService:JSONEncode(config)) end)
+    BGM.SoundId = "rbxassetid://"..MusicInput.Text
+    BGM:Play()
+    SetPanel.Visible = false
+end)
+local isOpened = true
+local function toggle()
+    isOpened = not isOpened
+    SoundInt:Play()
+    if isOpened then
+        Content.Visible = true
+        MainFrame:TweenSizeAndPosition(UDim2.new(0, 500, 0, 350), UDim2.new(0.5, -250, 0.5, -175), "Out", "Back", 0.4, true)
+        MainFrame.Image = "rbxassetid://126966972982411"
+        if BGM.SoundId ~= "" then BGM:Play() end
+    else
+        Content.Visible = false
+        SetPanel.Visible = false
+        MainFrame:TweenSizeAndPosition(UDim2.new(0, 75, 0, 75), UDim2.new(0.1, 0, 0.1, 0), "Out", "Back", 0.4, true)
+        MainFrame.Image = "rbxassetid://97871211303571"
+        BGM:Pause()
+    end
+end
+CloseBtn.MouseButton1Click:Connect(toggle)
+local dragging, dragStart, startPos, moveAmount = false, nil, nil, 0
+MainFrame.InputBegan:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        dragging = true dragStart = input.Position startPos = MainFrame.Position moveAmount = 0
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        moveAmount = moveAmount + delta.Magnitude
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if dragging then dragging = false if not isOpened and moveAmount < 10 then toggle() end end
+end)
+local function ExecutarScript(codigo)
+    local func, err = loadstring(codigo)
+    if func then
+        setfenv(func, getfenv(0)) 
+        task.spawn(func)
+    else
+        warn("Erro no Script: " .. tostring(err))
+    end
+end
+local PageHolder = Instance.new("Frame", Content)
+PageHolder.Position = UDim2.new(0, 105, 0, 55)
+PageHolder.Size = UDim2.new(1, -115, 1, -85)
+PageHolder.BackgroundTransparency = 1
+local TabHolder = Instance.new("ScrollingFrame", Content)
+TabHolder.Position = UDim2.new(0, 10, 0, 55)
+TabHolder.Size = UDim2.new(0, 85, 1, -70)
+TabHolder.BackgroundTransparency = 1
+Instance.new("UIListLayout", TabHolder).Padding = UDim.new(0, 5)
+local activeLoops = {}
+function CreateTab(i)
+    local bt = Instance.new("TextButton", TabHolder)
+    bt.Size = UDim2.new(1, 0, 0, 32)
+    bt.Text = "Aba "..i
+    bt.BackgroundColor3 = Color3.new(0,0,0)
+    bt.BackgroundTransparency = 0.5
+    bt.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", bt)
+    local pg = Instance.new("Frame", PageHolder)
+    pg.Size = UDim2.new(1, 0, 1, 0)
+    pg.Visible = (i == 1)
+    pg.BackgroundTransparency = 1
+    local txt = Instance.new("TextBox", pg)
+    txt.Size = UDim2.new(1, 0, 0.5, 0)
+    txt.MultiLine = true
+    txt.PlaceholderText = "Cole o script..."
+    txt.BackgroundTransparency = 0.7
+    txt.TextColor3 = Color3.new(0,1,0)
+    Instance.new("UICorner", txt)
+    local spd = Instance.new("TextBox", pg)
+    spd.Size = UDim2.new(1, 0, 0.15, 0)
+    spd.Position = UDim2.new(0, 0, 0.55, 0)
+    spd.Text = "0.5"
+    spd.BackgroundTransparency = 0.7
+    spd.TextColor3 = Color3.new(1,1,1)
+    local go = Instance.new("TextButton", pg)
+    go.Size = UDim2.new(1, 0, 0.2, 0)
+    go.Position = UDim2.new(0, 0, 0.75, 0)
+    go.Text = "LIGAR"
+    go.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    Instance.new("UICorner", go)
+    bt.MouseButton1Click:Connect(function()
+        for _, v in pairs(PageHolder:GetChildren()) do v.Visible = false end
+        pg.Visible = true
+    end)
+    activeLoops[i] = false
+    go.MouseButton1Click:Connect(function()
+        activeLoops[i] = not activeLoops[i]
+        SoundInt:Play()
+        if activeLoops[i] then
+            go.Text = "DESLIGAR"
+            go.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+            task.spawn(function()
+                while activeLoops[i] do
+                    ExecutarScript(txt.Text)
+                    task.wait(tonumber(spd.Text) or 0.5)
+                end
+            end)
+        else
+            go.Text = "LIGAR"
+            go.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        end
+    end)
+end
+for i=1, 10 do CreateTab(i) end
+]=] },
+    {name = "CFrame da Lezin", code = [=[
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local FILE_NAME = "Lezin_Ultimate_V13_Final.json"
+local function GetImg(id) return "https://www.roblox.com/asset-thumbnail/image?assetId="..id.."&width=420&height=420&format=png" end
+local LOGO_MENU = GetImg("13147607436")
+local LOGO_EXT = GetImg("424087740")
+local JUMP_IMG = GetImg("274744044")
+local Langs = {
+    ["Português Brasil"] = {speedOn="VELOCIDADE: ON", speedOff="VELOCIDADE: OFF", extOn="Botão Speed: VISÍVEL", extOff="Botão Speed: OCULTO", showJump="BOTÃO PULO: ON", hideJump="BOTÃO PULO: OFF", langTitle="Idioma: PT-BR", speedInput="Velocidade...", jumpInput="Força Pulo...", sizeInput="Tam. Botão Speed...", jumpSizeInput="Tam. Botão Pulo...", active="LIGADO", deactive="DESLIGADO", reset="RESETAR TUDO (MEIO)", mode="MODO: "},
+}
+local Config = { 
+    speedVal = 16, jumpPower = 50, extSize = 55, jumpBtnSize = 70, lang = "Português Brasil", speedMethod = "WalkSpeed",
+    posMenu = {0.5, -100, 0.2, 0}, posOpen = {0.05, 0, 0.2, 0}, posExt = {0.05, 0, 0.4, 0}, posJump = {0.8, 0, 0.6, 0}
+}
+local function Save() if writefile then writefile(FILE_NAME, HttpService:JSONEncode(Config)) end end
+local function Load()
+    if isfile and isfile(FILE_NAME) then
+        local s, d = pcall(function() return HttpService:JSONDecode(readfile(FILE_NAME)) end)
+        if s and d then for k,v in pairs(d) do Config[k] = v end end
+    end
+end
+Load()
+local function TableToPos(t) return UDim2.new(t[1], t[2], t[3], t[4]) end
+local function PosToTable(u) return {u.X.Scale, u.X.Offset, u.Y.Scale, u.Y.Offset} end
+local function MakeDraggable(gui, key)
+    local dragging, dragInput, dragStart, startPos
+    gui.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true dragStart = input.Position startPos = gui.Position
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then 
+                dragging = false Config[key] = PosToTable(gui.Position) Save() 
+            end end)
+        end
+    end)
+    gui.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
+    UserInputService.InputChanged:Connect(function(input) if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end end)
+end
+if CoreGui:FindFirstChild("LezinV13") then CoreGui.LezinV13:Destroy() end
+local ScreenGui = Instance.new("ScreenGui", CoreGui or player.PlayerGui)
+ScreenGui.Name = "LezinV13"
+local function Fade(obj, show)
+    local t = show and 0 or 1
+    if show then obj.Visible = true end
+    TweenService:Create(obj, TweenInfo.new(0.3), {
+        BackgroundTransparency = (obj:IsA("Frame") and (show and 0 or 1) or (show and 0.2 or 1)),
+        ImageTransparency = (obj:IsA("ImageButton") and t or nil),
+        TextTransparency = (obj:IsA("TextButton") or obj:IsA("TextBox") and t or nil)
+    }):Play()
+    if not show then task.delay(0.3, function() obj.Visible = false end) end
+end
+local ExternalToggle = Instance.new("ImageButton", ScreenGui)
+ExternalToggle.Size = UDim2.new(0, Config.extSize, 0, Config.extSize)
+ExternalToggle.Position = TableToPos(Config.posExt)
+ExternalToggle.Image = LOGO_EXT
+ExternalToggle.Visible = false
+ExternalToggle.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+Instance.new("UICorner", ExternalToggle)
+MakeDraggable(ExternalToggle, "posExt")
+local function TypeStat(txt, col)
+    local l = Instance.new("TextLabel", ScreenGui)
+    l.Size = UDim2.new(0, 200, 0, 30)
+    l.Position = ExternalToggle.Position + UDim2.new(0, ExternalToggle.AbsoluteSize.X + 15, 0, 10)
+    l.BackgroundTransparency = 1 l.TextColor3 = col l.Font = "GothamBold" l.TextSize = 22 l.TextXAlignment = "Left"
+    task.spawn(function() 
+        for i=1, #txt do l.Text = string.sub(txt,1,i) task.wait(0.04) end 
+        task.wait(0.6)
+        TweenService:Create(l, TweenInfo.new(0.5), {Position = l.Position + UDim2.new(0,30,0,-20), TextTransparency = 1}):Play()
+        task.delay(0.5, function() l:Destroy() end) 
+    end)
+end
+local JumpBtn = Instance.new("ImageButton", ScreenGui)
+JumpBtn.Size = UDim2.new(0, Config.jumpBtnSize, 0, Config.jumpBtnSize)
+JumpBtn.Position = TableToPos(Config.posJump)
+JumpBtn.Image = JUMP_IMG
+JumpBtn.Visible = false
+JumpBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Instance.new("UICorner", JumpBtn).CornerRadius = UDim.new(1, 0)
+MakeDraggable(JumpBtn, "posJump")
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 200, 0, 580)
+Main.Position = TableToPos(Config.posMenu)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.Visible = false
+Instance.new("UICorner", Main)
+MakeDraggable(Main, "posMenu")
+local function CreateBtn(parent, pos, text, color)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(0, 170, 0, 32)
+    b.Position = pos
+    b.Text = text
+    b.BackgroundColor3 = color or Color3.fromRGB(40, 40, 40)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = "GothamBold"
+    b.TextSize = 11
+    Instance.new("UICorner", b)
+    return b
+end
+local function CreateInp(parent, pos, placeholder, val)
+    local i = Instance.new("TextBox", parent)
+    i.Size = UDim2.new(0, 170, 0, 30)
+    i.Position = pos
+    i.Text = tostring(val)
+    i.PlaceholderText = placeholder
+    i.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    i.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", i)
+    return i
+end
+local SInput = CreateInp(Main, UDim2.new(0.07, 0, 0.05, 0), "Speed", Config.speedVal)
+local SToggle = CreateBtn(Main, UDim2.new(0.07, 0, 0.12, 0), "OFF")
+local SMethodBtn = CreateBtn(Main, UDim2.new(0.07, 0, 0.19, 0), "MODO: "..Config.speedMethod, Color3.fromRGB(80, 0, 150))
+local ExtBtnTog = CreateBtn(Main, UDim2.new(0.07, 0, 0.27, 0), "Botão Speed")
+local SizeInput = CreateInp(Main, UDim2.new(0.07, 0, 0.35, 0), "Tam. Speed", Config.extSize)
+local LangBtn = CreateBtn(Main, UDim2.new(0.07, 0, 0.45, 0), Config.lang, Color3.fromRGB(0, 100, 200))
+local JInput = CreateInp(Main, UDim2.new(0.07, 0, 0.65, 0), "Força Pulo", Config.jumpPower)
+local JToggle = CreateBtn(Main, UDim2.new(0.07, 0, 0.72, 0), "Botão Pulo")
+local JSizeInput = CreateInp(Main, UDim2.new(0.07, 0, 0.79, 0), "Tam. Pulo", Config.jumpBtnSize)
+local ResetPosBtn = CreateBtn(Main, UDim2.new(0.07, 0, 0.88, 
