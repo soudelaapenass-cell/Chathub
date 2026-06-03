@@ -374,7 +374,7 @@ renderConnection = RunService.RenderStepped:Connect(function()
     
     if ShowFOV then
         local fovC = getFovCenter()
-        fovCircle.Position = UDim2.new(0.2, fovC.X, 0, fovC.Y)
+        fovCircle.Position = UDim2.new(0, fovC.X, 0.18, fovC.Y)
         fovCircle.Visible = true
         
         fovCircle.ImageColor3 = _G.FovColor
