@@ -1097,7 +1097,7 @@ mainBtn.MouseButton1Click:Connect(function()
         PlayInterfaceSound("102528075764454")
         Window:Show()
     else
-        PlayInterfaceSound("6865649264")
+        PlayInterfaceSound("102528075764454")
         Window:Hide()
     end
 end)
