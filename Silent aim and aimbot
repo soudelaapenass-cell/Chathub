@@ -1,5 +1,6 @@
 --[[
 	Lezin Aim Hub - Fluent UI Version (Otimizado + Correção Universal de NPCs)
+	+ SISTEMA SCREEN EDITOR (MOVER/REDIMENSIONAR BOTÕES)
 ]]
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -7,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
 local camera = Workspace.CurrentCamera
 local localPlayer = Players.LocalPlayer
 local Mouse = localPlayer:GetMouse()
@@ -19,7 +21,21 @@ _G.FovTransparency = 0.9
 _G.FovColor = Color3.fromRGB(255, 255, 255)
 _G.MagnetSize = 40
 
--- // MENSAGEM DE INICIALIZAÇÃO AJUSTADA PARA 100% DE VISIBILIDADE //
+-- // SISTEMA DE SOM (ABRIR/FECHAR HUB) //
+local function PlayInterfaceSound(soundId)
+    task.spawn(function()
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://" .. soundId
+        sound.Volume = 1
+        sound.Parent = SoundService
+        sound:Play()
+        sound.Ended:Connect(function()
+            sound:Destroy()
+        end)
+    end)
+end
+
+-- // MENSAGEM DE INICIALIZAÇÃO //
 task.spawn(function()
     local msgGui = Instance.new("ScreenGui", localPlayer:WaitForChild("PlayerGui"))
     msgGui.ResetOnSpawn = false
@@ -57,7 +73,7 @@ toggleGui.Name = "LezinOpenUi"
 toggleGui.Parent = localPlayer:WaitForChild("PlayerGui")
 toggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 toggleGui.ResetOnSpawn = false
-toggleGui.IgnoreGuiInset = true -- Correção para a bolinha magnet ficar no centro perfeito
+toggleGui.IgnoreGuiInset = true
 
 local fovCircle = Instance.new("ImageLabel", toggleGui)
 fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -78,8 +94,213 @@ magnetImgLabel.Size = UDim2.new(0, _G.MagnetSize, 0, _G.MagnetSize)
 magnetImgLabel.BackgroundTransparency = 1
 magnetImgLabel.Visible = false
 magnetImgLabel.Image = "rbxassetid://6848903051"
+magnetImgLabel.Active = true -- Necessário para poder arrastar depois
 
--- // ESTADOS E CONFIGURAÇÕES //
+-- // SISTEMA DE EDIÇÃO DE TELA (SCREEN EDITOR) //
+local EditorGui = Instance.new("ScreenGui")
+EditorGui.Name = "LezinScreenEditor"
+EditorGui.Parent = localPlayer:WaitForChild("PlayerGui")
+EditorGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+EditorGui.DisplayOrder = 999999
+
+-- Menu de Contexto Individual (As 4 Opções)
+local ContextMenu = Instance.new("Frame", EditorGui)
+ContextMenu.Size = UDim2.new(0, 160, 0, 40)
+ContextMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+ContextMenu.Visible = false
+Instance.new("UICorner", ContextMenu).CornerRadius = UDim.new(0, 8)
+
+local ctxLayout = Instance.new("UIListLayout", ContextMenu)
+ctxLayout.FillDirection = Enum.FillDirection.Horizontal
+ctxLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ctxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+ctxLayout.Padding = UDim.new(0, 5)
+
+local function createCtxBtn(text, color)
+    local btn = Instance.new("TextButton", ContextMenu)
+    btn.Size = UDim2.new(0, 32, 0, 32)
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 16
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    return btn
+end
+
+local btnPlus = createCtxBtn("+", Color3.fromRGB(46, 204, 113))
+local btnMinus = createCtxBtn("-", Color3.fromRGB(230, 126, 34))
+local btnDel = createCtxBtn("X", Color3.fromRGB(231, 76, 60))
+local btnReset = createCtxBtn("R", Color3.fromRGB(52, 152, 219))
+
+-- Painel Global (Resetar Tudo / Aplicar)
+local GlobalPanel = Instance.new("Frame", EditorGui)
+GlobalPanel.Size = UDim2.new(0, 140, 0, 75)
+GlobalPanel.Position = UDim2.new(0, 15, 0, 140) -- Fica abaixo do Chat e Logo do Roblox
+GlobalPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+GlobalPanel.BackgroundTransparency = 0.2
+GlobalPanel.Visible = false
+Instance.new("UICorner", GlobalPanel).CornerRadius = UDim.new(0, 8)
+
+local glbLayout = Instance.new("UIListLayout", GlobalPanel)
+glbLayout.SortOrder = Enum.SortOrder.LayoutOrder
+glbLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+glbLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+glbLayout.Padding = UDim.new(0, 5)
+
+local btnResetAll = Instance.new("TextButton", GlobalPanel)
+btnResetAll.Size = UDim2.new(1, -10, 0, 30)
+btnResetAll.BackgroundColor3 = Color3.fromRGB(192, 57, 43)
+btnResetAll.Text = "Resetar Tudo"
+btnResetAll.TextColor3 = Color3.new(1,1,1)
+btnResetAll.Font = Enum.Font.GothamBold
+btnResetAll.TextSize = 13
+Instance.new("UICorner", btnResetAll).CornerRadius = UDim.new(0, 5)
+
+local btnApply = Instance.new("TextButton", GlobalPanel)
+btnApply.Size = UDim2.new(1, -10, 0, 30)
+btnApply.BackgroundColor3 = Color3.fromRGB(39, 174, 96)
+btnApply.Text = "Aplicar Mudanças"
+btnApply.TextColor3 = Color3.new(1,1,1)
+btnApply.Font = Enum.Font.GothamBold
+btnApply.TextSize = 13
+Instance.new("UICorner", btnApply).CornerRadius = UDim.new(0, 5)
+
+local ScreenEditor = {
+    Enabled = false,
+    MagnetMovable = false,
+    OriginalStates = {},
+    Connections = {},
+    SelectedObject = nil
+}
+
+local toggleEditorInstance = nil -- Variável salva do botão Fluent para desligá-lo depois
+
+local function saveOriginalState(obj)
+    if not ScreenEditor.OriginalStates[obj] then
+        ScreenEditor.OriginalStates[obj] = {
+            Position = obj.Position,
+            Size = obj.Size,
+            Visible = obj.Visible
+        }
+    end
+end
+
+-- Lógica dos botões Individuais (+, -, Apagar, Resetar)
+btnPlus.MouseButton1Click:Connect(function()
+    if ScreenEditor.SelectedObject then
+        saveOriginalState(ScreenEditor.SelectedObject)
+        local obj = ScreenEditor.SelectedObject
+        obj.Size = UDim2.new(obj.Size.X.Scale, obj.Size.X.Offset + 10, obj.Size.Y.Scale, obj.Size.Y.Offset + 10)
+    end
+end)
+btnMinus.MouseButton1Click:Connect(function()
+    if ScreenEditor.SelectedObject then
+        saveOriginalState(ScreenEditor.SelectedObject)
+        local obj = ScreenEditor.SelectedObject
+        obj.Size = UDim2.new(obj.Size.X.Scale, math.max(10, obj.Size.X.Offset - 10), obj.Size.Y.Scale, math.max(10, obj.Size.Y.Offset - 10))
+    end
+end)
+btnDel.MouseButton1Click:Connect(function()
+    if ScreenEditor.SelectedObject then
+        saveOriginalState(ScreenEditor.SelectedObject)
+        ScreenEditor.SelectedObject.Visible = false
+        ContextMenu.Visible = false
+        ScreenEditor.SelectedObject = nil
+    end
+end)
+btnReset.MouseButton1Click:Connect(function()
+    if ScreenEditor.SelectedObject and ScreenEditor.OriginalStates[ScreenEditor.SelectedObject] then
+        local st = ScreenEditor.OriginalStates[ScreenEditor.SelectedObject]
+        ScreenEditor.SelectedObject.Position = st.Position
+        ScreenEditor.SelectedObject.Size = st.Size
+        ScreenEditor.SelectedObject.Visible = st.Visible
+        ContextMenu.Visible = false
+        ScreenEditor.SelectedObject = nil
+    end
+end)
+
+-- Lógica dos botões Globais
+btnResetAll.MouseButton1Click:Connect(function()
+    for obj, st in pairs(ScreenEditor.OriginalStates) do
+        if obj and obj.Parent then
+            obj.Position = st.Position
+            obj.Size = st.Size
+            obj.Visible = st.Visible
+        end
+    end
+    ContextMenu.Visible = false
+    ScreenEditor.SelectedObject = nil
+end)
+btnApply.MouseButton1Click:Connect(function()
+    ContextMenu.Visible = false
+    ScreenEditor.SelectedObject = nil
+    GlobalPanel.Visible = false
+    if toggleEditorInstance then toggleEditorInstance:SetValue(false) end
+end)
+
+-- Sistema de Arrasto Core (Usado na Bolinha e no Editor)
+local function makeDraggable(obj, conditionFunc)
+    local dragging, dragStart, startPos
+    
+    local c1 = obj.InputBegan:Connect(function(input)
+        if conditionFunc() and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+            
+            -- Se não for a bolinha do magnet, mostra as opções do editor
+            if obj ~= magnetImgLabel then
+                ScreenEditor.SelectedObject = obj
+                -- Posiciona o menu próximo ao botão clicado
+                ContextMenu.Position = UDim2.new(0, math.clamp(obj.AbsolutePosition.X, 10, camera.ViewportSize.X - 170), 0, math.clamp(obj.AbsolutePosition.Y - 50, 10, camera.ViewportSize.Y - 50))
+                ContextMenu.Visible = true
+            end
+        end
+    end)
+    local c2 = obj.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    local c3 = UserInputService.InputChanged:Connect(function(input)
+        if dragging and conditionFunc() and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + (input.Position - dragStart).X, startPos.Y.Scale, startPos.Y.Offset + (input.Position - dragStart).Y)
+        end
+    end)
+    return {c1, c2, c3}
+end
+
+-- Aplica a lógica de arrastar para a bolinha magnet (só move se a condição for ativada no toggle)
+makeDraggable(magnetImgLabel, function() return ScreenEditor.MagnetMovable end)
+
+local function toggleScreenEditor(state)
+    ScreenEditor.Enabled = state
+    GlobalPanel.Visible = state
+    if not state then
+        ContextMenu.Visible = false
+        ScreenEditor.SelectedObject = nil
+        -- Limpa a memória das conexões pra não dar lag
+        for _, conn in pairs(ScreenEditor.Connections) do
+            conn:Disconnect()
+        end
+        ScreenEditor.Connections = {}
+    else
+        for _, child in pairs(localPlayer.PlayerGui:GetDescendants()) do
+            if (child:IsA("TextButton") or child:IsA("ImageButton")) then
+                -- Ignora o Hub e os botões de controle do próprio Editor
+                if not child:IsDescendantOf(toggleGui) and not child:IsDescendantOf(EditorGui) then
+                    saveOriginalState(child)
+                    local conns = makeDraggable(child, function() return ScreenEditor.Enabled end)
+                    for _, c in ipairs(conns) do table.insert(ScreenEditor.Connections, c) end
+                end
+            end
+        end
+    end
+end
+
+
+-- // ESTADOS E CONFIGURAÇÕES DO AIMBOT //
 local IsEnabled = false
 local AimMode = "Aimbot" 
 local ShowFOV = true
@@ -155,14 +376,14 @@ local function setFluentBackground(assetUri)
         for _, interface in ipairs({CoreGui, localPlayer:WaitForChild("PlayerGui")}) do
             for _, obj in ipairs(interface:GetDescendants()) do
                 if obj:IsA("ImageLabel") and obj.Image == assetUri then
-                    obj.ScaleType = Enum.ScaleType.Fit
+                    obj.ScaleType = Enum.ScaleType.Stretch 
                 end
             end
         end
     end)
 end
 
--- // FUNÇÃO DOWNLOADER DE FOTOS (SEM BLOQUEIO) //
+-- // FUNÇÃO DOWNLOADER DE FOTOS //
 local function applyBackgroundFromUrl(url, fileName)
     local req = (syn and syn.request) or request or http_request or (http and http.request)
     if not (req and getcustomasset and writefile) then 
@@ -739,12 +960,24 @@ secPhotos:AddButton({
     end
 })
 
-
 -- // ABA: CONFIGURAÇÕES //
 local secSystem = Tabs.Settings:AddSection("Sistema e Customização")
+
 secSystem:AddToggle("CrosshairToggle", {
     Title = "Crosshair Magnético", Default = false, 
     Callback = function(v) _G.MagnetAtivado = v; circleOutline.Visible = v; circleInner.Visible = v end
+})
+
+-- NOVO: Toggle da Bolinha do Magnet Móvel
+secSystem:AddToggle("MagnetMovelToggle", {
+    Title = "Bolinha do Magnet Móvel", Default = false, 
+    Callback = function(v) ScreenEditor.MagnetMovable = v end
+})
+
+-- NOVO: Toggle do Editor de Tela (Tudo Móvel)
+toggleEditorInstance = secSystem:AddToggle("EditorTelaToggle", {
+    Title = "Editor de Tela (Botões Móveis)", Default = false, 
+    Callback = function(v) toggleScreenEditor(v) end
 })
 
 secSystem:AddDropdown("MagnetImageDrop", {
@@ -815,6 +1048,7 @@ secSystem:AddButton({
         line:Remove(); dotVisual:Remove(); circleOutline:Remove(); circleInner:Remove()
         if magnetImgLabel then magnetImgLabel:Destroy() end
         if toggleGui then toggleGui:Destroy() end
+        if EditorGui then EditorGui:Destroy() end -- Limpa o Editor também
         if Window then Window:Destroy() end
     end
 })
@@ -859,21 +1093,28 @@ Instance.new("UICorner", frontImage).CornerRadius = UDim.new(0.2, 0)
 local uiOpen = true
 mainBtn.MouseButton1Click:Connect(function()
     uiOpen = not uiOpen
-    if uiOpen then Window:Show() else Window:Hide() end
+    if uiOpen then
+        PlayInterfaceSound("102528075764454")
+        Window:Show()
+    else
+        PlayInterfaceSound("6865649264")
+        Window:Hide()
+    end
 end)
 
-local dragging, dragStart, startPos = false, nil, nil
+-- Lógica de arrasto do Botão Flutuante
+local draggingFloat, dragStartFloat, startPosFloat = false, nil, nil
 mainBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true; dragStart = input.Position; startPos = mainBtn.Position
+        draggingFloat = true; dragStartFloat = input.Position; startPosFloat = mainBtn.Position
     end
 end)
 mainBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingFloat = false end
 end)
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        mainBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + (input.Position - dragStart).X, startPos.Y.Scale, startPos.Y.Offset + (input.Position - dragStart).Y)
+    if draggingFloat and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        mainBtn.Position = UDim2.new(startPosFloat.X.Scale, startPosFloat.X.Offset + (input.Position - dragStartFloat).X, startPosFloat.Y.Scale, startPosFloat.Y.Offset + (input.Position - dragStartFloat).Y)
     end
 end)
 
