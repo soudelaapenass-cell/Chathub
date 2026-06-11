@@ -4,6 +4,7 @@
 	+ BUSCA AVANÇADA POR HUMANOIDROOTPART (IGNORA AUSÊNCIA DE HUMANOID)
 	+ MODOS DE FOCO: 1° PESSOA PADRÃO, 360, ALL
 	+ SLIDER HIT CHANCE NO SILENT AIM
+	+ MINI JANELA DE PREVIEW DE FOTOS DINÂMICA
 ]]
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -18,7 +19,7 @@ local Mouse = localPlayer:GetMouse()
 
 _G.MagnetAtivado = false
 _G.SilentTarget = nil
-_G.MaxSilentDistance = 999950
+_G.MaxSilentDistance = 99950
 _G.FovFormat = "Padrão Círculo"
 _G.FovTransparency = 0.9
 _G.FovColor = Color3.fromRGB(255, 255, 255)
@@ -119,6 +120,35 @@ magnetImgLabel.BackgroundTransparency = 1
 magnetImgLabel.Visible = false
 magnetImgLabel.Image = "rbxassetid://6848903051"
 magnetImgLabel.Active = true 
+
+-- // MINI JANELA DE PREVIEW DE FOTOS //
+local PreviewFrame = Instance.new("Frame", toggleGui)
+PreviewFrame.Name = "LezinPhotoPreview"
+PreviewFrame.Size = UDim2.new(0, 180, 0, 135)
+PreviewFrame.Position = UDim2.new(0.5, 270, 0.5, -120) -- Posicionado convenientemente à direita do menu
+PreviewFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+PreviewFrame.BackgroundTransparency = 0.1
+PreviewFrame.Visible = true
+Instance.new("UICorner", PreviewFrame).CornerRadius = UDim.new(0, 8)
+local PreviewStroke = Instance.new("UIStroke", PreviewFrame)
+PreviewStroke.Color = Color3.fromRGB(50, 50, 70)
+PreviewStroke.Thickness = 1.5
+
+local PreviewTitle = Instance.new("TextLabel", PreviewFrame)
+PreviewTitle.Size = UDim2.new(1, 0, 0, 22)
+PreviewTitle.BackgroundTransparency = 1
+PreviewTitle.Text = "Preview da Foto"
+PreviewTitle.TextColor3 = Color3.fromRGB(200, 200, 255)
+PreviewTitle.Font = Enum.Font.GothamBold
+PreviewTitle.TextSize = 11
+
+local PreviewImage = Instance.new("ImageLabel", PreviewFrame)
+PreviewImage.Size = UDim2.new(1, -12, 1, -30)
+PreviewImage.Position = UDim2.new(0, 6, 0, 24)
+PreviewImage.BackgroundTransparency = 1
+PreviewImage.ScaleType = Enum.ScaleType.Stretch
+PreviewImage.Image = "rbxassetid://13147607436"
+Instance.new("UICorner", PreviewImage).CornerRadius = UDim.new(0, 6)
 
 -- // SISTEMA DE EDIÇÃO DE TELA (SCREEN EDITOR) //
 local EditorGui = Instance.new("ScreenGui")
@@ -248,7 +278,7 @@ local function makeDraggable(obj, conditionFunc)
     local c1 = obj.InputBegan:Connect(function(input)
         if conditionFunc() and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
             dragging = true; dragStart = input.Position; startPos = obj.Position
-            if obj ~= magnetImgLabel then
+            if obj ~= magnetImgLabel and obj ~= PreviewFrame then
                 ScreenEditor.SelectedObject = obj
                 ContextMenu.Position = UDim2.new(0, math.clamp(obj.AbsolutePosition.X, 10, camera.ViewportSize.X - 170), 0, math.clamp(obj.AbsolutePosition.Y - 50, 10, camera.ViewportSize.Y - 50))
                 ContextMenu.Visible = true
@@ -267,6 +297,7 @@ local function makeDraggable(obj, conditionFunc)
 end
 
 makeDraggable(magnetImgLabel, function() return ScreenEditor.MagnetMovable end)
+makeDraggable(PreviewFrame, function() return true end) -- Deixa a janela de preview livre para mover sempre
 
 local function toggleScreenEditor(state)
     ScreenEditor.Enabled = state
@@ -333,6 +364,31 @@ local function setFluentBackground(assetUri)
         for _, interface in ipairs({CoreGui, localPlayer:WaitForChild("PlayerGui")}) do
             for _, obj in ipairs(interface:GetDescendants()) do
                 if obj:IsA("ImageLabel") and obj.Image == assetUri then obj.ScaleType = Enum.ScaleType.Stretch end
+            end
+        end
+    end)
+end
+
+-- // LÓGICA DE PRÉ-VISUALIZAÇÃO DENTRO DA MINI JANELA //
+local function updatePreviewImage(data)
+    if not data then return end
+    local req = (syn and syn.request) or request or http_request or (http and http.request)
+    if not (req and getcustomasset and writefile) then
+        PreviewImage.Image = "rbxassetid://13147607436"
+        return
+    end
+
+    task.spawn(function()
+        if isfile(data.File) then
+            PreviewImage.Image = getcustomasset(data.File)
+        else
+            -- Faz um download temporário rápido em background só para alimentar a tela de escolha
+            local imgRes = req({Url = data.Url, Method = "GET"})
+            if imgRes.StatusCode == 200 and not string.find(string.lower(imgRes.Body), "<html") then
+                writefile("lz_preview_cache.png", imgRes.Body)
+                PreviewImage.Image = getcustomasset("lz_preview_cache.png")
+            else
+                PreviewImage.Image = "rbxassetid://13147607436"
             end
         end
     end)
@@ -613,7 +669,6 @@ renderConnection = RunService.RenderStepped:Connect(function()
         
         local currentTrans = _G.FovTransparency
         
-        -- Mantendo o comportamento padrão de círculo agora que o Dropdown foi removido
         fovCircle.BackgroundTransparency = currentTrans; fovCircle.ImageTransparency = 1; fovCircle.Image = ""; fovCorner.CornerRadius = UDim.new(1, 0); fovStroke.Enabled = true
     else
         fovCircle.Visible = false
@@ -753,7 +808,7 @@ secFov:AddDropdown("FovPos", {Title="Posição do FOV", Values={"Center", "Mouse
 local secEsp = Tabs.Visuals:AddSection("Marcadores")
 secEsp:AddDropdown("VisualMode", {Title="Tipo Visual", Values={"Linha", "Bolinha"}, Default="Linha", Callback=function(v) VisualType = v end})
 
--- // REPOSITÓRIO COMPLETO DE IMAGENS DO HUB PHOTOS (ATUALIZADO) //
+-- // REPOSITÓRIO COMPLETO DE IMAGENS DO HUB PHOTOS //
 local origUrls = {
     {Name = "Original Anime Girl", Url = "https://img10.joyreactor.com/pics/post/full/Karory-anime-art-anime-5309643.jpeg", File = "lz_img_1.jpg"},
     
@@ -791,7 +846,7 @@ local origUrls = {
     {Name = "Hub Photo 31", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/f512f83e-ed92-4e50-8333-d76157c0ba2b.jpg", File = "hub_31.jpg"},
     {Name = "Hub Photo 32", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b5e171c3-4a8a-45c9-9d61-4f145b23f12a.jpg", File = "hub_32.jpg"},
 
-    -- WALL PHOTOS (Nova lista customizada)
+    -- WALL PHOTOS
     {Name = "Wall Photo 1", Url = "https://i.ibb.co/TqW0LLD9/adult-neptune-and-yatogami-tohka-by-camanime7794-ddd4xqc-fullview.jpg", File = "n_wall_1.png"},
     {Name = "Wall Photo 2", Url = "https://i.ibb.co/whHZnt1x/akagi-and-prinz-eugen-by-camanime7794-de95ud7-pre.jpg", File = "n_wall_2.png"},
     {Name = "Wall Photo 3", Url = "https://i.ibb.co/HZQrYjm/albedo-by-malyste-dchnftp-375w-2x.png", File = "n_wall_3.png"},
@@ -902,7 +957,25 @@ local function getPhotoNames(list) local t = {}; for _, v in ipairs(list) do tab
 
 local secPhotos = Tabs.Photos:AddSection("Escolha a Imagem de Fundo")
 secPhotos:AddButton({Title="Fundo Padrão (Seu ID Nativo)", Description="ID: 13147607436", Callback=function() setFluentBackground("rbxassetid://13147607436") end})
-local photoDrop = secPhotos:AddDropdown("PhotoDrop", {Title="Selecionar Foto", Values=getPhotoNames(normalImages), Default=normalImages[1].Name, Callback=function(v) for _, data in ipairs(normalImages) do if data.Name == v then selectedPhotoData = data; break end end end})
+
+local photoDrop = secPhotos:AddDropdown("PhotoDrop", {
+    Title="Selecionar Foto", 
+    Values=getPhotoNames(normalImages), 
+    Default=normalImages[1].Name, 
+    Callback=function(v) 
+        for _, data in ipairs(normalImages) do 
+            if data.Name == v then 
+                selectedPhotoData = data
+                updatePreviewImage(data) -- Atualiza a mini janela de preview imediatamente
+                break 
+            end 
+        end 
+    end
+})
+
+-- Inicializa o preview da primeira imagem da lista
+updatePreviewImage(normalImages[1])
+
 secPhotos:AddButton({Title="Baixar e Aplicar Fundo", Callback=function() if selectedPhotoData then applyBackgroundFromUrl(selectedPhotoData.Url, selectedPhotoData.File) end end})
 
 -- // ABA: CONFIGURAÇÕES //
@@ -918,10 +991,9 @@ secSystem:AddToggle("MagnetMovelToggle", {Title="Bolinha do Magnet Móvel", Defa
 toggleEditorInstance = secSystem:AddToggle("EditorTelaToggle", {Title="Editor de Tela (Botões Móveis)", Default=false, Callback=function(v) toggleScreenEditor(v) end})
 secSystem:AddDropdown("MagnetImageDrop", {Title="Imagem da Bolinha Magnet", Values={"6848903051", "5145203260"}, Default="6848903051", Callback=function(v) magnetImgLabel.Image = "rbxassetid://" .. v end})
 secSystem:AddSlider("MagnetSizeSlider", {Title="Tamanho da Bolinha Magnet", Min=10, Max=200, Default=40, Rounding=0, Callback=function(v) _G.MagnetSize = v end})
--- Dropdown de formato do FOV foi removido daqui
 secSystem:AddColorpicker("FovColorPicker", {Title="Cor do FOV", Default=Color3.fromRGB(255, 255, 255), Callback=function(color) _G.FovColor = color end})
 secSystem:AddInput("BtnSizeInput", {Title="Tamanho do Botão Menu", Default="70", Numeric=true, Finished=true, Callback=function(v) local size = tonumber(v); if size and toggleGui:FindFirstChild("OpenButton") then toggleGui.OpenButton.Size = UDim2.new(0, size, 0, size) end end})
-secSystem:AddButton({Title="Destruir Hub Completamente", Callback=function() if renderConnection then renderConnection:Disconnect() end; line:Remove(); dotVisual:Remove(); circleOutline:Remove(); circleInner:Remove(); if magnetImgLabel then magnetImgLabel:Destroy() end; if toggleGui then toggleGui:Destroy() end; if EditorGui then EditorGui:Destroy() end; if Window then Window:Destroy() end end})
+secSystem:AddButton({Title="Destruir Hub Completamente", Callback=function() if renderConnection then renderConnection:Disconnect() end; line:Remove(); dotVisual:Remove(); circleOutline:Remove(); circleInner:Remove(); if magnetImgLabel then magnetImgLabel:Destroy() end; if PreviewFrame then PreviewFrame:Destroy() end; if toggleGui then toggleGui:Destroy() end; if EditorGui then EditorGui:Destroy() end; if Window then Window:Destroy() end end})
 
 -- // DOWNLOAD E ASSOCIAÇÃO DA IMAGEM DO BOTÃO FLUTUANTE //
 local customImageId = "rbxassetid://13147607436"
@@ -949,7 +1021,15 @@ frontImage.Size = UDim2.fromScale(1, 1); frontImage.BackgroundTransparency = 1; 
 local uiOpen = true
 mainBtn.MouseButton1Click:Connect(function()
     uiOpen = not uiOpen
-    if uiOpen then PlayInterfaceSound("102528075764454"); Window:Show() else PlayInterfaceSound("102528075764454"); Window:Hide() end
+    if uiOpen then 
+        PlayInterfaceSound("102528075764454")
+        Window:Show() 
+        PreviewFrame.Visible = true
+    else 
+        PlayInterfaceSound("102528075764454")
+        Window:Hide() 
+        PreviewFrame.Visible = false
+    end
 end)
 
 local draggingFloat, dragStartFloat, startPosFloat = false, nil, nil
