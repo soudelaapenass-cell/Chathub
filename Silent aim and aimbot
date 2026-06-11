@@ -1,6 +1,9 @@
 --[[
-	Lezin Aim Hub - Fluent UI Version (Otimizado + Correção Universal de NPCs)
+	Lezin Aim Hub - Fluent UI Version (Universal Compatibility: Project Smash Edition)
 	+ SISTEMA SCREEN EDITOR (MOVER/REDIMENSIONAR BOTÕES)
+	+ BUSCA AVANÇADA POR HUMANOIDROOTPART (IGNORA AUSÊNCIA DE HUMANOID)
+	+ MODOS DE FOCO: 1° PESSOA PADRÃO, 360, ALL
+	+ SLIDER HIT CHANCE NO SILENT AIM
 ]]
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -15,11 +18,32 @@ local Mouse = localPlayer:GetMouse()
 
 _G.MagnetAtivado = false
 _G.SilentTarget = nil
-_G.MaxSilentDistance = 9999999950
+_G.MaxSilentDistance = 999950
 _G.FovFormat = "Padrão Círculo"
 _G.FovTransparency = 0.9
 _G.FovColor = Color3.fromRGB(255, 255, 255)
 _G.MagnetSize = 40
+
+local IsEnabled = false
+local AimMode = "Aimbot" 
+local ShowFOV = true
+local WallCheck = false
+local TeamCheck = false
+local LookAtEnabled = false
+
+local TargetPart = "HumanoidRootPart"
+local LockMode = "Closest"
+local FovPosition = "Center"
+local AimbotType = "Lock"
+local TargetType = "Players" 
+local VisualType = "Linha" 
+local CurrentTarget = nil
+local FovValue = 100
+local PREDICT_STRENGTH = 0.13
+
+-- Novas Variáveis Customizadas
+local FocusMode = "1° Pessoa Padrão"
+local HitChance = 100
 
 -- // SISTEMA DE SOM (ABRIR/FECHAR HUB) //
 local function PlayInterfaceSound(soundId)
@@ -46,7 +70,7 @@ task.spawn(function()
     txt.Size = UDim2.new(0.9, 0, 0.3, 0)
     txt.Position = UDim2.new(0.5, 0, 0.5, 0)
     txt.BackgroundTransparency = 1
-    txt.Text = "Otimizando threads para evitar lag. Carregando interface..."
+    txt.Text = "Adaptando o sistema para Project Smash e custom models..."
     txt.TextColor3 = Color3.fromRGB(255, 255, 255)
     txt.TextStrokeTransparency = 1 
     txt.TextTransparency = 1 
@@ -94,7 +118,7 @@ magnetImgLabel.Size = UDim2.new(0, _G.MagnetSize, 0, _G.MagnetSize)
 magnetImgLabel.BackgroundTransparency = 1
 magnetImgLabel.Visible = false
 magnetImgLabel.Image = "rbxassetid://6848903051"
-magnetImgLabel.Active = true -- Necessário para poder arrastar depois
+magnetImgLabel.Active = true 
 
 -- // SISTEMA DE EDIÇÃO DE TELA (SCREEN EDITOR) //
 local EditorGui = Instance.new("ScreenGui")
@@ -103,7 +127,6 @@ EditorGui.Parent = localPlayer:WaitForChild("PlayerGui")
 EditorGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 EditorGui.DisplayOrder = 999999
 
--- Menu de Contexto Individual (As 4 Opções)
 local ContextMenu = Instance.new("Frame", EditorGui)
 ContextMenu.Size = UDim2.new(0, 160, 0, 40)
 ContextMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
@@ -133,10 +156,9 @@ local btnMinus = createCtxBtn("-", Color3.fromRGB(230, 126, 34))
 local btnDel = createCtxBtn("X", Color3.fromRGB(231, 76, 60))
 local btnReset = createCtxBtn("R", Color3.fromRGB(52, 152, 219))
 
--- Painel Global (Resetar Tudo / Aplicar)
 local GlobalPanel = Instance.new("Frame", EditorGui)
 GlobalPanel.Size = UDim2.new(0, 140, 0, 75)
-GlobalPanel.Position = UDim2.new(0, 15, 0, 140) -- Fica abaixo do Chat e Logo do Roblox
+GlobalPanel.Position = UDim2.new(0, 15, 0, 140) 
 GlobalPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 GlobalPanel.BackgroundTransparency = 0.2
 GlobalPanel.Visible = false
@@ -166,27 +188,15 @@ btnApply.Font = Enum.Font.GothamBold
 btnApply.TextSize = 13
 Instance.new("UICorner", btnApply).CornerRadius = UDim.new(0, 5)
 
-local ScreenEditor = {
-    Enabled = false,
-    MagnetMovable = false,
-    OriginalStates = {},
-    Connections = {},
-    SelectedObject = nil
-}
-
-local toggleEditorInstance = nil -- Variável salva do botão Fluent para desligá-lo depois
+local ScreenEditor = { Enabled = false, MagnetMovable = false, OriginalStates = {}, Connections = {}, SelectedObject = nil }
+local toggleEditorInstance = nil 
 
 local function saveOriginalState(obj)
     if not ScreenEditor.OriginalStates[obj] then
-        ScreenEditor.OriginalStates[obj] = {
-            Position = obj.Position,
-            Size = obj.Size,
-            Visible = obj.Visible
-        }
+        ScreenEditor.OriginalStates[obj] = { Position = obj.Position, Size = obj.Size, Visible = obj.Visible }
     end
 end
 
--- Lógica dos botões Individuais (+, -, Apagar, Resetar)
 btnPlus.MouseButton1Click:Connect(function()
     if ScreenEditor.SelectedObject then
         saveOriginalState(ScreenEditor.SelectedObject)
@@ -220,48 +230,33 @@ btnReset.MouseButton1Click:Connect(function()
     end
 end)
 
--- Lógica dos botões Globais
 btnResetAll.MouseButton1Click:Connect(function()
     for obj, st in pairs(ScreenEditor.OriginalStates) do
         if obj and obj.Parent then
-            obj.Position = st.Position
-            obj.Size = st.Size
-            obj.Visible = st.Visible
+            obj.Position = st.Position; obj.Size = st.Size; obj.Visible = st.Visible
         end
     end
-    ContextMenu.Visible = false
-    ScreenEditor.SelectedObject = nil
+    ContextMenu.Visible = false; ScreenEditor.SelectedObject = nil
 end)
 btnApply.MouseButton1Click:Connect(function()
-    ContextMenu.Visible = false
-    ScreenEditor.SelectedObject = nil
-    GlobalPanel.Visible = false
+    ContextMenu.Visible = false; ScreenEditor.SelectedObject = nil; GlobalPanel.Visible = false
     if toggleEditorInstance then toggleEditorInstance:SetValue(false) end
 end)
 
--- Sistema de Arrasto Core (Usado na Bolinha e no Editor)
 local function makeDraggable(obj, conditionFunc)
     local dragging, dragStart, startPos
-    
     local c1 = obj.InputBegan:Connect(function(input)
         if conditionFunc() and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            dragging = true
-            dragStart = input.Position
-            startPos = obj.Position
-            
-            -- Se não for a bolinha do magnet, mostra as opções do editor
+            dragging = true; dragStart = input.Position; startPos = obj.Position
             if obj ~= magnetImgLabel then
                 ScreenEditor.SelectedObject = obj
-                -- Posiciona o menu próximo ao botão clicado
                 ContextMenu.Position = UDim2.new(0, math.clamp(obj.AbsolutePosition.X, 10, camera.ViewportSize.X - 170), 0, math.clamp(obj.AbsolutePosition.Y - 50, 10, camera.ViewportSize.Y - 50))
                 ContextMenu.Visible = true
             end
         end
     end)
     local c2 = obj.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
     end)
     local c3 = UserInputService.InputChanged:Connect(function(input)
         if dragging and conditionFunc() and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
@@ -271,24 +266,18 @@ local function makeDraggable(obj, conditionFunc)
     return {c1, c2, c3}
 end
 
--- Aplica a lógica de arrastar para a bolinha magnet (só move se a condição for ativada no toggle)
 makeDraggable(magnetImgLabel, function() return ScreenEditor.MagnetMovable end)
 
 local function toggleScreenEditor(state)
     ScreenEditor.Enabled = state
     GlobalPanel.Visible = state
     if not state then
-        ContextMenu.Visible = false
-        ScreenEditor.SelectedObject = nil
-        -- Limpa a memória das conexões pra não dar lag
-        for _, conn in pairs(ScreenEditor.Connections) do
-            conn:Disconnect()
-        end
+        ContextMenu.Visible = false; ScreenEditor.SelectedObject = nil
+        for _, conn in pairs(ScreenEditor.Connections) do conn:Disconnect() end
         ScreenEditor.Connections = {}
     else
         for _, child in pairs(localPlayer.PlayerGui:GetDescendants()) do
             if (child:IsA("TextButton") or child:IsA("ImageButton")) then
-                -- Ignora o Hub e os botões de controle do próprio Editor
                 if not child:IsDescendantOf(toggleGui) and not child:IsDescendantOf(EditorGui) then
                     saveOriginalState(child)
                     local conns = makeDraggable(child, function() return ScreenEditor.Enabled end)
@@ -299,25 +288,6 @@ local function toggleScreenEditor(state)
     end
 end
 
-
--- // ESTADOS E CONFIGURAÇÕES DO AIMBOT //
-local IsEnabled = false
-local AimMode = "Aimbot" 
-local ShowFOV = true
-local WallCheck = false
-local TeamCheck = false
-local LookAtEnabled = false
-
-local TargetPart = "Head"
-local LockMode = "Closest"
-local FovPosition = "Center"
-local AimbotType = "Lock"
-local TargetType = "Players" 
-local VisualType = "Linha" 
-local CurrentTarget = nil
-local FovValue = 100
-local PREDICT_STRENGTH = 0.13
-
 -- // VISUAIS ESP //
 local line = Drawing.new("Line")
 line.Color = Color3.new(1, 0, 0)
@@ -325,23 +295,15 @@ line.Thickness = 2
 
 local dotVisual = Drawing.new("Circle")
 dotVisual.Color = Color3.new(1, 1, 1)
-dotVisual.Thickness = 1
-dotVisual.Filled = true
-dotVisual.Radius = 4
+dotVisual.Thickness = 1; dotVisual.Filled = true; dotVisual.Radius = 4
 
 local circleOutline = Drawing.new("Circle")
 circleOutline.Color = Color3.fromRGB(0, 0, 0)
-circleOutline.Thickness = 1.5
-circleOutline.Radius = 4
-circleOutline.Filled = false
-circleOutline.Visible = false
+circleOutline.Thickness = 1.5; circleOutline.Radius = 4; circleOutline.Filled = false; circleOutline.Visible = false
 
 local circleInner = Drawing.new("Circle")
 circleInner.Color = Color3.fromRGB(255, 255, 255)
-circleInner.Thickness = 1
-circleInner.Radius = 3
-circleInner.Filled = true
-circleInner.Visible = false
+circleInner.Thickness = 1; circleInner.Radius = 3; circleInner.Filled = true; circleInner.Visible = false
 
 -- // CARREGA A LIBRARY FLUENT //
 local Fluent = loadstring(game:HttpGet("https://github.com/StyearX/Fluent-Modded/releases/download/Fluent/FluentPro"))()
@@ -360,30 +322,22 @@ local function setFluentBackground(assetUri)
         DialogButtonBorder=Color3.fromRGB(50,50,70), DialogBorder=Color3.fromRGB(50,50,70), DialogInput=Color3.fromRGB(18,18,28),
         DialogInputLine=Color3.fromRGB(60,60,90), Text=Color3.fromRGB(240,240,255), SubText=Color3.fromRGB(140,140,175),
         Hover=Color3.fromRGB(35,35,55), HoverChange=0.04, ShineEnabled=true, StrokeShine=false, StrokeDark=Color3.fromRGB(40,40,60),
-        ButtonGradient={
-            Background=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(20,20,40)),ColorSequenceKeypoint.new(1,Color3.fromRGB(10,10,25))}),
-            Stroke=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(60,180,255)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(96,205,255)),ColorSequenceKeypoint.new(1,Color3.fromRGB(60,180,255))}),
-        },
-        Background = assetUri,
-        BackgroundTransparency = 0,
+        ButtonGradient={ Background=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(20,20,40)),ColorSequenceKeypoint.new(1,Color3.fromRGB(10,10,25))}), Stroke=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(60,180,255)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(96,205,255)),ColorSequenceKeypoint.new(1,Color3.fromRGB(60,180,255))})},
+        Background = assetUri, BackgroundTransparency = 0,
     })
     
-    if Fluent.Options and Fluent.Options.Theme then Fluent.Options.Theme:SetValue("LezinPhotoTheme")
-    else Fluent:SetTheme("LezinPhotoTheme") end
+    if Fluent.Options and Fluent.Options.Theme then Fluent.Options.Theme:SetValue("LezinPhotoTheme") else Fluent:SetTheme("LezinPhotoTheme") end
     
     task.spawn(function()
         task.wait(0.5)
         for _, interface in ipairs({CoreGui, localPlayer:WaitForChild("PlayerGui")}) do
             for _, obj in ipairs(interface:GetDescendants()) do
-                if obj:IsA("ImageLabel") and obj.Image == assetUri then
-                    obj.ScaleType = Enum.ScaleType.Stretch 
-                end
+                if obj:IsA("ImageLabel") and obj.Image == assetUri then obj.ScaleType = Enum.ScaleType.Stretch end
             end
         end
     end)
 end
 
--- // FUNÇÃO DOWNLOADER DE FOTOS //
 local function applyBackgroundFromUrl(url, fileName)
     local req = (syn and syn.request) or request or http_request or (http and http.request)
     if not (req and getcustomasset and writefile) then 
@@ -407,28 +361,24 @@ local function applyBackgroundFromUrl(url, fileName)
     end)
 end
 
--- // INTERCEPTAÇÃO HOOK OTIMIZADA COM PREDICTION //
 local gmt = getrawmetatable(game)
 local oldIndex = gmt.__index
 local oldNamecall = gmt.__namecall
 setreadonly(gmt, false)
 
 gmt.__index = newcclosure(function(self, index)
-    if not _G.MagnetAtivado and not (IsEnabled and AimMode == "Silent Aim") then
-        return oldIndex(self, index)
-    end
-
+    if not _G.MagnetAtivado and not (IsEnabled and AimMode == "Silent Aim") then return oldIndex(self, index) end
     if not checkcaller() then
         if self == Mouse then
             if IsEnabled and AimMode == "Silent Aim" and _G.SilentTarget then
-                if index == "Hit" then 
-                    local aimPos = _G.SilentTarget.Position
-                    if PREDICT_STRENGTH > 0 then
-                        aimPos = aimPos + (_G.SilentTarget.AssemblyLinearVelocity * PREDICT_STRENGTH)
+                if math.random(1, 100) <= HitChance then
+                    if index == "Hit" then 
+                        local aimPos = _G.SilentTarget.Position
+                        if PREDICT_STRENGTH > 0 then aimPos = aimPos + (_G.SilentTarget.AssemblyLinearVelocity * PREDICT_STRENGTH) end
+                        return CFrame.new(aimPos) 
                     end
-                    return CFrame.new(aimPos) 
+                    if index == "Target" then return _G.SilentTarget end
                 end
-                if index == "Target" then return _G.SilentTarget end
             elseif _G.MagnetAtivado then
                 if index == "Hit" then return CFrame.new(camera.CFrame.Position + (camera.CFrame.LookVector * 10000)) end
                 if index == "Target" then return nil end
@@ -440,22 +390,18 @@ end)
 
 gmt.__namecall = newcclosure(function(self, ...)
     local method = getnamecallmethod()
-    
-    if not _G.MagnetAtivado and not (IsEnabled and AimMode == "Silent Aim") then
-        return oldNamecall(self, ...)
-    end
+    if not _G.MagnetAtivado and not (IsEnabled and AimMode == "Silent Aim") then return oldNamecall(self, ...) end
 
     local args = {...}
-
     if not checkcaller() then
         local caller = getcallingscript and getcallingscript()
         if caller and string.find(caller.Name, "Camera") then return oldNamecall(self, ...) end
 
         local redirectPos = nil
         if IsEnabled and AimMode == "Silent Aim" and _G.SilentTarget then
-            redirectPos = _G.SilentTarget.Position
-            if PREDICT_STRENGTH > 0 then
-                redirectPos = redirectPos + (_G.SilentTarget.AssemblyLinearVelocity * PREDICT_STRENGTH)
+            if math.random(1, 100) <= HitChance then
+                redirectPos = _G.SilentTarget.Position
+                if PREDICT_STRENGTH > 0 then redirectPos = redirectPos + (_G.SilentTarget.AssemblyLinearVelocity * PREDICT_STRENGTH) end
             end
         elseif _G.MagnetAtivado then
             redirectPos = camera.CFrame.Position + (camera.CFrame.LookVector * 10000)
@@ -482,104 +428,168 @@ gmt.__namecall = newcclosure(function(self, ...)
             return camera.ViewportSize / 2
         end
     end
-
     return oldNamecall(self, ...)
 end)
 setreadonly(gmt, true)
 
--- // LÓGICA CORE AIMBOT (SISTEMA DE CORREÇÃO E VARREDURA DE NPCs) //
-local cachedNPCs = {}
-local lastNpcCache = 0
+-- // LÓGICA CORE AIMBOT //
+local cachedTargets = {}
+local lastCacheTime = 0
 
 local function getPotentialTargets()
-    local targets = {}
+    local validTargets = {}
     
-    if TargetType == "Players" or TargetType == "Ambos" then
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= localPlayer and p.Character then table.insert(targets, p.Character) end
+    if tick() - lastCacheTime > 1.0 then
+        cachedTargets = {}
+        local function scanLevel(parent, depth)
+            if depth > 3 then return end
+            for _, obj in ipairs(parent:GetChildren()) do
+                if obj:IsA("Model") and obj ~= localPlayer.Character then
+                    if obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head") or obj:FindFirstChild("Torso") or obj:FindFirstChild("UpperTorso") then
+                        table.insert(cachedTargets, obj)
+                    else
+                        scanLevel(obj, depth + 1)
+                    end
+                elseif obj:IsA("Folder") then
+                    scanLevel(obj, depth + 1)
+                end
+            end
         end
+        
+        scanLevel(Workspace, 1)
+        lastCacheTime = tick()
     end
 
-    if TargetType == "NPCs" or TargetType == "Ambos" then
-        if tick() - lastNpcCache > 1.5 then
-            cachedNPCs = {}
-            
-            for _, obj in ipairs(Workspace:GetChildren()) do
-                if obj:IsA("Model") and obj ~= localPlayer.Character then
-                    if obj:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(obj) then
-                        table.insert(cachedNPCs, obj)
-                    end
-                elseif obj:IsA("Folder") or (obj:IsA("Model") and not obj:FindFirstChildOfClass("Humanoid")) then
-                    local nameLower = string.lower(obj.Name)
-                    if nameLower:find("enemy") or nameLower:find("enemies") or nameLower:find("npc") or nameLower:find("mob") or nameLower:find("live") or nameLower:find("bot") or nameLower:find("character") or nameLower:find("monstro") then
-                        for _, subObj in ipairs(obj:GetChildren()) do
-                            if subObj:IsA("Model") and subObj:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(subObj) then
-                                table.insert(cachedNPCs, subObj)
-                            end
-                        end
+    for _, model in ipairs(cachedTargets) do
+        if model and model.Parent then
+            local isPlr = Players:GetPlayerFromCharacter(model)
+            if not isPlr then
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p.Name == model.Name or p.DisplayName == model.Name then
+                        isPlr = p
+                        break
                     end
                 end
             end
-            lastNpcCache = tick()
-        end
-        for _, npc in ipairs(cachedNPCs) do
-            if npc and npc.Parent then table.insert(targets, npc) end
+            
+            local isDead = false
+            local hum = model:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health <= 0 then isDead = true end
+            
+            local customHp = model:GetAttribute("Health") or model:GetAttribute("HP")
+            if customHp and type(customHp) == "number" and customHp <= 0 then isDead = true end
+            
+            if not isDead then
+                if TargetType == "Players" and isPlr then
+                    table.insert(validTargets, model)
+                elseif TargetType == "NPCs" and not isPlr then
+                    table.insert(validTargets, model)
+                elseif TargetType == "Ambos" then
+                    table.insert(validTargets, model)
+                end
+            end
         end
     end
     
-    return targets
+    return validTargets
 end
 
 local function getFovCenter() 
-    return FovPosition == "Center" and Vector2.new(camera.ViewportSize.X / 2, (camera.ViewportSize.Y / 2) - 65) or UserInputService:GetMouseLocation() 
+    return FovPosition == "Center" and Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2) or UserInputService:GetMouseLocation() 
 end
 
 local function getCorrectPart(character)
     if not character then return nil end
     local part = character:FindFirstChild(TargetPart)
     if part and part:IsA("BasePart") then return part end
-    return character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart") or character:FindFirstChildWhichIsA("BasePart")
+    return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Head") or character:FindFirstChild("Torso") or character:FindFirstChildWhichIsA("BasePart")
 end
 
 local function getClosestPart()
     if not IsEnabled then CurrentTarget = nil; return nil end
 
     if LockMode == "LockUntilDeath" and CurrentTarget then
-        local humanoid = CurrentTarget:FindFirstChildOfClass("Humanoid")
-        if humanoid and humanoid.Health > 0 and CurrentTarget.Parent ~= nil then
+        local isDead = false
+        local hum = CurrentTarget:FindFirstChildOfClass("Humanoid")
+        if hum and hum.Health <= 0 then isDead = true end
+        
+        local customHp = CurrentTarget:GetAttribute("Health") or CurrentTarget:GetAttribute("HP")
+        if customHp and type(customHp) == "number" and customHp <= 0 then isDead = true end
+
+        if not isDead and CurrentTarget.Parent ~= nil then
             return getCorrectPart(CurrentTarget)
         else
             CurrentTarget = nil 
         end
     end
     
-    local closest, dist = nil, math.max(FovValue, 1)
+    local closest, dist = nil, math.huge
     local fovCenter = getFovCenter()
     local possibleTargets = getPotentialTargets()
+    local myRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
     
     for _, obj in ipairs(possibleTargets) do
-        local humanoid = obj:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then continue end
-        
-        local isPlayer = Players:GetPlayerFromCharacter(obj)
-        if TeamCheck and isPlayer and isPlayer.Team == localPlayer.Team then continue end
+        local isPlayer = false
+        if Players:GetPlayerFromCharacter(obj) then 
+            isPlayer = Players:GetPlayerFromCharacter(obj) 
+        else
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Name == obj.Name then isPlayer = p; break end
+            end
+        end
+
+        if TeamCheck and isPlayer and type(isPlayer) ~= "boolean" and isPlayer.Team == localPlayer.Team then continue end
         
         local part = getCorrectPart(obj)
         if part then
-            local pos, onScreen = camera:WorldToViewportPoint(part.Position)
-            if onScreen then
-                local mDist = (Vector2.new(pos.X, pos.Y) - fovCenter).Magnitude
-                if mDist <= dist then
-                    if WallCheck then
-                        local params = RaycastParams.new()
-                        params.FilterDescendantsInstances = {localPlayer.Character, obj}
-                        params.FilterType = Enum.RaycastFilterType.Blacklist
-                        local rayResult = Workspace:Raycast(camera.CFrame.Position, part.Position - camera.CFrame.Position, params)
-                        if rayResult then continue end
+            if FocusMode == "1° Pessoa Padrão" then
+                local pos, onScreen = camera:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local mDist = (Vector2.new(pos.X, pos.Y) - fovCenter).Magnitude
+                    if mDist <= FovValue and mDist < dist then
+                        if WallCheck then
+                            local params = RaycastParams.new()
+                            params.FilterDescendantsInstances = {localPlayer.Character, obj}
+                            params.FilterType = Enum.RaycastFilterType.Blacklist
+                            local rayResult = Workspace:Raycast(camera.CFrame.Position, part.Position - camera.CFrame.Position, params)
+                            if rayResult then continue end
+                        end
+                        dist = mDist
+                        closest = part
+                        CurrentTarget = obj
                     end
-                    dist = mDist
-                    closest = part
-                    CurrentTarget = obj
+                end
+            elseif FocusMode == "360" then
+                if myRoot then
+                    local wDist = (myRoot.Position - part.Position).Magnitude
+                    if wDist <= 400 and wDist < dist then
+                        if WallCheck then
+                            local params = RaycastParams.new()
+                            params.FilterDescendantsInstances = {localPlayer.Character, obj}
+                            params.FilterType = Enum.RaycastFilterType.Blacklist
+                            local rayResult = Workspace:Raycast(camera.CFrame.Position, part.Position - camera.CFrame.Position, params)
+                            if rayResult then continue end
+                        end
+                        dist = wDist
+                        closest = part
+                        CurrentTarget = obj
+                    end
+                end
+            elseif FocusMode == "All" then
+                if myRoot then
+                    local wDist = (myRoot.Position - part.Position).Magnitude
+                    if wDist < dist then
+                        if WallCheck then
+                            local params = RaycastParams.new()
+                            params.FilterDescendantsInstances = {localPlayer.Character, obj}
+                            params.FilterType = Enum.RaycastFilterType.Blacklist
+                            local rayResult = Workspace:Raycast(camera.CFrame.Position, part.Position - camera.CFrame.Position, params)
+                            if rayResult then continue end
+                        end
+                        dist = wDist
+                        closest = part
+                        CurrentTarget = obj
+                    end
                 end
             end
         end
@@ -593,37 +603,18 @@ renderConnection = RunService.RenderStepped:Connect(function()
     fovCircle.Size = UDim2.new(0, FovValue * 2, 0, FovValue * 2)
     magnetImgLabel.Size = UDim2.new(0, _G.MagnetSize, 0, _G.MagnetSize)
     
-    if ShowFOV then
+    if ShowFOV and FocusMode == "1° Pessoa Padrão" then
         local fovC = getFovCenter()
-        fovCircle.Position = UDim2.new(0, fovC.X, 0.18, fovC.Y)
+        fovCircle.Position = UDim2.new(0, fovC.X, 0, fovC.Y)
         fovCircle.Visible = true
-        
         fovCircle.ImageColor3 = _G.FovColor
         fovCircle.BackgroundColor3 = _G.FovColor
         fovStroke.Color = _G.FovColor
         
-        local currentFormat = _G.FovFormat
         local currentTrans = _G.FovTransparency
         
-        if currentFormat == "Padrão Círculo" then
-            fovCircle.BackgroundTransparency = currentTrans
-            fovCircle.ImageTransparency = 1
-            fovCircle.Image = ""
-            fovCorner.CornerRadius = UDim.new(1, 0)
-            fovStroke.Enabled = true
-        else
-            fovCircle.BackgroundTransparency = 1
-            fovCircle.ImageTransparency = currentTrans
-            fovCorner.CornerRadius = UDim.new(0, 0)
-            fovStroke.Enabled = false
-            if currentFormat == "Estrela" then
-                fovCircle.Image = "rbxassetid://6031215981"
-            elseif currentFormat == "Bola" then
-                fovCircle.Image = "rbxassetid://6034289894"
-            elseif currentFormat == "?" then
-                fovCircle.Image = "rbxassetid://11422119106"
-            end
-        end
+        -- Mantendo o comportamento padrão de círculo agora que o Dropdown foi removido
+        fovCircle.BackgroundTransparency = currentTrans; fovCircle.ImageTransparency = 1; fovCircle.Image = ""; fovCorner.CornerRadius = UDim.new(1, 0); fovStroke.Enabled = true
     else
         fovCircle.Visible = false
     end
@@ -632,25 +623,16 @@ renderConnection = RunService.RenderStepped:Connect(function()
         local center = camera.ViewportSize / 2
         circleOutline.Position = center; circleInner.Position = center
         magnetImgLabel.Position = UDim2.new(0, center.X, 0, center.Y)
-        magnetImgLabel.Visible = true
-        circleOutline.Visible = false
-        circleInner.Visible = false
-    else
-        magnetImgLabel.Visible = false
-    end
+        magnetImgLabel.Visible = true; circleOutline.Visible = false; circleInner.Visible = false
+    else magnetImgLabel.Visible = false end
     
     local target = getClosestPart()
     
     if IsEnabled and AimMode == "Silent Aim" and target then
         local localRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if localRoot and (target.Position - localRoot.Position).Magnitude > _G.MaxSilentDistance then
-            _G.SilentTarget = nil
-        else
-            _G.SilentTarget = target
-        end
-    else
-        _G.SilentTarget = target 
-    end
+        if localRoot and (target.Position - localRoot.Position).Magnitude > _G.MaxSilentDistance then _G.SilentTarget = nil
+        else _G.SilentTarget = target end
+    else _G.SilentTarget = target end
     
     if IsEnabled and target then
         if AimMode == "Aimbot" then
@@ -658,7 +640,6 @@ renderConnection = RunService.RenderStepped:Connect(function()
             if AimbotType == "Predict" then aimPos = aimPos + (target.AssemblyLinearVelocity * PREDICT_STRENGTH) end
             camera.CFrame = CFrame.new(camera.CFrame.Position, aimPos)
         end
-        
         if LookAtEnabled and localPlayer.Character then
             local rootPart = localPlayer.Character:FindFirstChild("HumanoidRootPart")
             if rootPart then
@@ -672,27 +653,18 @@ renderConnection = RunService.RenderStepped:Connect(function()
         local tPos, onScreen = camera:WorldToViewportPoint(target.Position)
         if onScreen then
             if VisualType == "Linha" then 
-                line.From = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y)
-                line.To = Vector2.new(tPos.X, tPos.Y)
-                line.Visible = true;
-                dotVisual.Visible = false
+                line.From = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y); line.To = Vector2.new(tPos.X, tPos.Y)
+                line.Visible = true; dotVisual.Visible = false
             elseif VisualType == "Bolinha" then 
-                dotVisual.Position = Vector2.new(tPos.X, tPos.Y)
-                dotVisual.Visible = true;
-                line.Visible = false
-            else
-                line.Visible = false;
-                dotVisual.Visible = false
-            end
-        else line.Visible = false;
-            dotVisual.Visible = false end
-    else line.Visible = false;
-        dotVisual.Visible = false end
+                dotVisual.Position = Vector2.new(tPos.X, tPos.Y); dotVisual.Visible = true; line.Visible = false
+            else line.Visible = false; dotVisual.Visible = false end
+        else line.Visible = false; dotVisual.Visible = false end
+    else line.Visible = false; dotVisual.Visible = false end
 end)
 
 -- // CONFIGURAÇÃO DA JANELA E ABAS //
 local Window = Fluent:CreateWindow({
-    Title = "Lezin Hub Pro", SubTitle = "Anti-Lag Edition", TabWidth = 145,
+    Title = "Lezin Hub Pro", SubTitle = "Universal Edition", TabWidth = 145,
     Size = UDim2.fromOffset(520,480), Acrylic = false, Theme = "Midnight Blue",
     MinimizeKey = Enum.KeyCode.LeftControl, Search = true,
     UserInfoTop = true, UserInfoTitle = "Welcome", UserInfoSubtitle = "Lezin"
@@ -707,7 +679,6 @@ local Tabs = {
 
 -- // ABA: AIMBOT //
 local secAim = Tabs.Main:AddSection("Aimbot Core")
-
 local aimToggle
 aimToggle = secAim:AddToggle("AimToggle", {Title="Ativar Aimbot / Silent Aim", Default=false, Callback=function(v) 
     IsEnabled = v 
@@ -715,33 +686,16 @@ aimToggle = secAim:AddToggle("AimToggle", {Title="Ativar Aimbot / Silent Aim", D
     if extAim then extAim.Image = v and "rbxassetid://117620446004855" or "rbxassetid://98188856634746" end
 end})
 
+secAim:AddDropdown("FocusModeDD", {Title = "Tipo de Foco", Values = {"1° Pessoa Padrão", "360", "All"}, Default = "1° Pessoa Padrão", Callback = function(v) FocusMode = v end})
+
 secAim:AddDropdown("AimModeDD", { Title = "Modo de Mira", Values = {"Aimbot", "Silent Aim"}, Default = "Aimbot", Callback = function(v) 
     AimMode = v 
     if v == "Silent Aim" and not Tabs.SilentAim then
         Tabs.SilentAim = Window:AddTab({ Title="Silent Aim", Icon="solar/shield-user-bold" })
         local secSilent = Tabs.SilentAim:AddSection("Configurações Silent Aim")
-        
-        secSilent:AddSlider("MaxDistSlider", {
-            Title = "Distância Máxima",
-            Min = 0.1,
-            Max = 9999999950,
-            Default = 9999999950,
-            Rounding = 1,
-            Callback = function(val)
-                _G.MaxSilentDistance = val
-            end
-        })
-        
-        secSilent:AddInput("PredictionInput", {
-            Title = "Prediction",
-            Default = tostring(PREDICT_STRENGTH),
-            Numeric = true,
-            Finished = true,
-            Callback = function(val)
-                local num = tonumber(val)
-                if num then PREDICT_STRENGTH = num end
-            end
-        })
+        secSilent:AddSlider("HitChanceSlider", { Title="Chance de Acertar (%)", Min=0, Max=100, Default=100, Rounding=0, Callback=function(val) HitChance = val end })
+        secSilent:AddSlider("MaxDistSlider", { Title="Distância Máxima", Min=0.1, Max=9999999950, Default=9999999950, Rounding=1, Callback=function(val) _G.MaxSilentDistance = val end})
+        secSilent:AddInput("PredictionInput", { Title="Prediction", Default=tostring(PREDICT_STRENGTH), Numeric=true, Finished=true, Callback=function(val) local num = tonumber(val); if num then PREDICT_STRENGTH = num end end})
     end
 end })
 
@@ -749,21 +703,14 @@ secAim:AddToggle("ExternalAimToggle", {Title="Botão Externo do Aimbot (Mobile)"
     if v then
         if not toggleGui:FindFirstChild("LezinExternalAimBtn") then
             local extBtn = Instance.new("ImageButton")
-            extBtn.Name = "LezinExternalAimBtn"
-            extBtn.Parent = toggleGui
-            extBtn.Size = UDim2.new(0, 55, 0, 55)
-            extBtn.Position = UDim2.new(0.5, 0, 0.75, 0)
-            extBtn.BackgroundTransparency = 1
-            extBtn.Image = IsEnabled and "rbxassetid://117620446004855" or "rbxassetid://98188856634746"
+            extBtn.Name = "LezinExternalAimBtn"; extBtn.Parent = toggleGui; extBtn.Size = UDim2.new(0, 55, 0, 55); extBtn.Position = UDim2.new(0.5, 0, 0.75, 0)
+            extBtn.BackgroundTransparency = 1; extBtn.Image = IsEnabled and "rbxassetid://117620446004855" or "rbxassetid://98188856634746"
             Instance.new("UICorner", extBtn).CornerRadius = UDim.new(0.5, 0)
 
-            local dragging, dragInput, dragStart, startPos
-            local isClick = false
-
+            local dragging, dragInput, dragStart, startPos, isClick = false, nil, nil, nil, false
             extBtn.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    dragging = true; dragStart = input.Position; startPos = extBtn.Position; dragInput = input;
-                    isClick = true
+                    dragging = true; dragStart = input.Position; startPos = extBtn.Position; dragInput = input; isClick = true
                 end
             end)
             UserInputService.InputChanged:Connect(function(input)
@@ -791,7 +738,7 @@ secAim:AddDropdown("AimType", {Title="Tipo (Só para Aimbot)", Values={"Lock", "
 secAim:AddDropdown("TargetMode", {Title="Modo de Alvo", Values={"Closest", "LockUntilDeath"}, Default="Closest", Callback=function(v) LockMode = v; CurrentTarget = nil end})
 
 local secTarget = Tabs.Main:AddSection("Configurações de Alvo")
-secTarget:AddDropdown("TargetPartDD", {Title="Parte do Corpo", Values={"Head", "UpperTorso", "LowerTorso"}, Default="Head", Callback=function(v) TargetPart = v end})
+secTarget:AddDropdown("TargetPartDD", {Title="Parte do Corpo", Values={"HumanoidRootPart", "Head", "UpperTorso", "LowerTorso"}, Default="HumanoidRootPart", Callback=function(v) TargetPart = v end})
 secTarget:AddDropdown("TargetTypeDD", {Title="Tipo de Alvo", Values={"Players", "NPCs", "Ambos"}, Default="Players", Callback=function(v) TargetType = v end})
 secTarget:AddToggle("WallCheckToggle", {Title="Wall Check", Default=false, Callback=function(v) WallCheck = v end})
 secTarget:AddToggle("TeamCheckToggle", {Title="Team Check", Default=false, Callback=function(v) TeamCheck = v end})
@@ -799,259 +746,182 @@ secTarget:AddToggle("TeamCheckToggle", {Title="Team Check", Default=false, Callb
 -- // ABA: VISUAIS //
 local secFov = Tabs.Visuals:AddSection("FOV")
 secFov:AddToggle("ShowFOVToggle", {Title="Mostrar FOV", Default=true, Callback=function(v) ShowFOV = v end})
-
-local updatingFovTrans = false
-
-secFov:AddSlider("FovTransSliderVisuals", {
-    Title = "Transparência do FOV",
-    Min = 0,
-    Max = 1,
-    Default = 0.9,
-    Rounding = 2,
-    Callback = function(v)
-        _G.FovTransparency = v
-        if not updatingFovTrans and Fluent.Options.FovTransSliderSettings then
-            updatingFovTrans = true
-            Fluent.Options.FovTransSliderSettings:SetValue(v)
-            updatingFovTrans = false
-        end
-    end
-})
-
+secFov:AddSlider("FovSizeSlider", { Title="Tamanho do FOV", Min=1, Max=1250, Default=100, Rounding=0, Callback=function(v) FovValue = v end })
+secFov:AddSlider("FovTransSliderVisuals", { Title="Transparência do FOV", Min=0, Max=1, Default=0.9, Rounding=2, Callback=function(v) _G.FovTransparency = v end })
 secFov:AddDropdown("FovPos", {Title="Posição do FOV", Values={"Center", "Mouse"}, Default="Center", Callback=function(v) FovPosition = v end})
-
-secFov:AddInput("FovSizeInput", {
-    Title = "Tamanho do FOV",
-    Default = "100",
-    Numeric = true,
-    Finished = true,
-    Callback = function(v)
-        local val = tonumber(v)
-        if val then FovValue = val end
-    end
-})
 
 local secEsp = Tabs.Visuals:AddSection("Marcadores")
 secEsp:AddDropdown("VisualMode", {Title="Tipo Visual", Values={"Linha", "Bolinha"}, Default="Linha", Callback=function(v) VisualType = v end})
 
--- // DADOS DAS FOTOS (SISTEMA DE DROPDOWN) //
+-- // REPOSITÓRIO COMPLETO DE IMAGENS DO HUB PHOTOS (ATUALIZADO) //
 local origUrls = {
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b1e4357e-eec0-4cab-afff-dc2d34764612.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/8d1f8a64-124f-49be-bedb-cee3a62d5d6d.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/fbc0e295-4a9d-4803-9613-8cdb16681f7e.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b4943f1d-8156-48ca-83a8-883f3fae099a.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/a2281226-1e2e-43e8-b35b-e5bc5de704e1.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/1c41c0fa-b626-4eaf-b7a9-970b7b84d53d.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/4a15c886-9db6-4bd4-9858-42c0aacfbd3a.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/6eae7de5-0c4d-4d6a-ad81-c8ca13080411.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/cee93035-aa49-4034-aa3d-cdba038f3e53.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/cdcbc2b2-3e8a-4270-941a-e9bf7a21e310.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/1a8792ed-91a8-47f2-9844-1d2b9c7e2195.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/0752239a-1d32-44b2-bf46-942b2cb81684.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/4143d951-8d4d-4d28-a1af-8ab34f90b091.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b6b2434f-c7be-4470-b0ca-1c1d94386464.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/d4e9cd1d-328a-4fc6-b4ae-46495e848e00.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/21d6129c-19e9-48bf-b70e-0a832587b3d3.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/7d2d3724-8d11-4067-b9b1-e9ca015e27e5.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/4156b242-6991-4b0d-af52-6343b2703025.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/764c5872-8a6a-473c-b199-29d7ac8b39c1.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/0078357c-745e-4b90-a1d2-88a38533ab30.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/e0c423b9-8c17-4b1a-b49a-d316f8e50700.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/beecf544-d456-4c07-b055-7759913cb098.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/3ecab458-7b10-4424-b056-93b390fc50d2.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/871d6f77-ede4-40f0-9e0c-a9c20a0f8a58.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/c07269a4-057a-448b-b659-25eb6509ae68.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/839352e9-4ea6-4c2a-a29d-36588f9cd39b.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/eb1113ec-3da8-4b37-ad6a-1a62d50ea54f.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/f5acb865-7db3-4f8e-99e2-688471d10431.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/df9b9417-1075-4164-9c8a-6de437332a40.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/49f45301-cb86-4d5a-b75a-aa291cecfd99.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/f512f83e-ed92-4e50-8333-d76157c0ba2b.jpg",
-    "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b5e171c3-4a8a-45c9-9d61-4f145b23f12a.jpg"
-}
+    {Name = "Original Anime Girl", Url = "https://img10.joyreactor.com/pics/post/full/Karory-anime-art-anime-5309643.jpeg", File = "lz_img_1.jpg"},
+    
+    -- HUB PHOTOS (32 Imagens originais)
+    {Name = "Hub Photo 1", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b1e4357e-eec0-4cab-afff-dc2d34764612.jpg", File = "hub_1.jpg"},
+    {Name = "Hub Photo 2", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/8d1f8a64-124f-49be-bedb-cee3a62d5d6d.jpg", File = "hub_2.jpg"},
+    {Name = "Hub Photo 3", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/fbc0e295-4a9d-4803-9613-8cdb16681f7e.jpg", File = "hub_3.jpg"},
+    {Name = "Hub Photo 4", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b4943f1d-8156-48ca-83a8-883f3fae099a.jpg", File = "hub_4.jpg"},
+    {Name = "Hub Photo 5", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/a2281226-1e2e-43e8-b35b-e5bc5de704e1.jpg", File = "hub_5.jpg"},
+    {Name = "Hub Photo 6", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/1c41c0fa-b626-4eaf-b7a9-970b7b84d53d.jpg", File = "hub_6.jpg"},
+    {Name = "Hub Photo 7", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/4a15c886-9db6-4bd4-9858-42c0aacfbd3a.jpg", File = "hub_7.jpg"},
+    {Name = "Hub Photo 8", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/6eae7de5-0c4d-4d6a-ad81-c8ca13080411.jpg", File = "hub_8.jpg"},
+    {Name = "Hub Photo 9", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/cee93035-aa49-4034-aa3d-cdba038f3e53.jpg", File = "hub_9.jpg"},
+    {Name = "Hub Photo 10", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/cdcbc2b2-3e8a-4270-941a-e9bf7a21e310.jpg", File = "hub_10.jpg"},
+    {Name = "Hub Photo 11", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/1a8792ed-91a8-47f2-9844-1d2b9c7e2195.jpg", File = "hub_11.jpg"},
+    {Name = "Hub Photo 12", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/0752239a-1d32-44b2-bf46-942b2cb81684.jpg", File = "hub_12.jpg"},
+    {Name = "Hub Photo 13", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/4143d951-8d4d-4d28-a1af-8ab34f90b091.jpg", File = "hub_13.jpg"},
+    {Name = "Hub Photo 14", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b6b2434f-c7be-4470-b0ca-1c1d94386464.jpg", File = "hub_14.jpg"},
+    {Name = "Hub Photo 15", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/d4e9cd1d-328a-4fc6-b4ae-46495e848e00.jpg", File = "hub_15.jpg"},
+    {Name = "Hub Photo 16", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/21d6129c-19e9-48bf-b70e-0a832587b3d3.jpg", File = "hub_16.jpg"},
+    {Name = "Hub Photo 17", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/7d2d3724-8d11-4067-b9b1-e9ca015e27e5.jpg", File = "hub_17.jpg"},
+    {Name = "Hub Photo 18", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/4156b242-6991-4b0d-af52-6343b2703025.jpg", File = "hub_18.jpg"},
+    {Name = "Hub Photo 19", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/764c5872-8a6a-473c-b199-29d7ac8b39c1.jpg", File = "hub_19.jpg"},
+    {Name = "Hub Photo 20", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/0078357c-745e-4b90-a1d2-88a38533ab30.jpg", File = "hub_20.jpg"},
+    {Name = "Hub Photo 21", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/e0c423b9-8c17-4b1a-b49a-d316f8e50700.jpg", File = "hub_21.jpg"},
+    {Name = "Hub Photo 22", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/beecf544-d456-4c07-b055-7759913cb098.jpg", File = "hub_22.jpg"},
+    {Name = "Hub Photo 23", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/3ecab458-7b10-4424-b056-93b390fc50d2.jpg", File = "hub_23.jpg"},
+    {Name = "Hub Photo 24", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/871d6f77-ede4-40f0-9e0c-a9c20a0f8a58.jpg", File = "hub_24.jpg"},
+    {Name = "Hub Photo 25", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/c07269a4-057a-448b-b659-25eb6509ae68.jpg", File = "hub_25.jpg"},
+    {Name = "Hub Photo 26", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/839352e9-4ea6-4c2a-a29d-36588f9cd39b.jpg", File = "hub_26.jpg"},
+    {Name = "Hub Photo 27", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/eb1113ec-3da8-4b37-ad6a-1a62d50ea54f.jpg", File = "hub_27.jpg"},
+    {Name = "Hub Photo 28", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/f5acb865-7db3-4f8e-99e2-688471d10431.jpg", File = "hub_28.jpg"},
+    {Name = "Hub Photo 29", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/df9b9417-1075-4164-9c8a-6de437332a40.jpg", File = "hub_29.jpg"},
+    {Name = "Hub Photo 30", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/49f45301-cb86-4d5a-b75a-aa291cecfd99.jpg", File = "hub_30.jpg"},
+    {Name = "Hub Photo 31", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/f512f83e-ed92-4e50-8333-d76157c0ba2b.jpg", File = "hub_31.jpg"},
+    {Name = "Hub Photo 32", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b5e171c3-4a8a-45c9-9d61-4f145b23f12a.jpg", File = "hub_32.jpg"},
 
-local wallUrls = {
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/c82d7f9c-09cc-4f57-bee4-aae2a7cb46e3.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/48cc04a3-f1f0-4c5a-bd77-097b58b30622.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/cfaf857d-cdc9-4867-9d5a-dd23471c0fee.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/5f14b1b5-d74c-4df3-858a-c4b228dab034.png",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/10f1e567-3206-4722-a6d1-26b13d6638f0.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/90d5db6e-0ce3-4380-a339-f6c11e0cdabe.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/277d7e35-8c5d-47a3-acae-7d5068fcd823.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/b94dde97-e819-48be-a5a3-394136f3b3e3.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/0b016b81-f5fb-4925-ab69-d24d25c66941.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/cad340b7-5cee-43b3-9766-171398e4ec97.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/78ed47dc-b321-40eb-a009-000c1d3d3969.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/360ea118-16e8-4b54-bd4c-b4757d846eb2.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/e6f65359-a7e3-44f8-8242-339ab12ec592.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/8b474325-3f75-4ea5-9c21-201d43128e21.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/681e2e0a-0c18-40c8-900b-761b1f9d44e2.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/b6f5930b-4274-4fd9-b96f-bdf3767fa7c5.jpg"
-}
+    -- WALL PHOTOS (Nova lista customizada)
+    {Name = "Wall Photo 1", Url = "https://i.ibb.co/TqW0LLD9/adult-neptune-and-yatogami-tohka-by-camanime7794-ddd4xqc-fullview.jpg", File = "n_wall_1.png"},
+    {Name = "Wall Photo 2", Url = "https://i.ibb.co/whHZnt1x/akagi-and-prinz-eugen-by-camanime7794-de95ud7-pre.jpg", File = "n_wall_2.png"},
+    {Name = "Wall Photo 3", Url = "https://i.ibb.co/HZQrYjm/albedo-by-malyste-dchnftp-375w-2x.png", File = "n_wall_3.png"},
+    {Name = "Wall Photo 4", Url = "https://i.ibb.co/rKZ8xwXK/aqua-wallpaper-by-dinocozero-db3cyy1-fullview.jpg", File = "n_wall_4.png"},
+    {Name = "Wall Photo 5", Url = "https://i.ibb.co/4zzKby6/anime-ecchi-bunny-girl-wallpaper-by-camanime7794-df5zd1n.png", File = "n_wall_5.png"},
+    {Name = "Wall Photo 6", Url = "https://i.ibb.co/LLHspkB/asuna-wallpaper-by-dinocozero-d8e3jfy-fullview.jpg", File = "n_wall_6.png"},
+    {Name = "Wall Photo 7", Url = "https://i.ibb.co/zTpNwL5w/chocola-wallpaper-1920x1080-by-joliiee-d95oa6e-fullview.jpg", File = "n_wall_7.png"},
+    {Name = "Wall Photo 8", Url = "https://i.ibb.co/C50z7xmq/d5fb7to-7d06f118-567a-425e-ba34-4f46caaa9ecc.png", File = "n_wall_8.png"},
+    {Name = "Wall Photo 9", Url = "https://i.ibb.co/fVLFx5x7/dal-girls-in-lingerie-by-camanime7794-de03vt3-fullview.jpg", File = "n_wall_9.png"},
+    {Name = "Wall Photo 10", Url = "https://i.ibb.co/jkLLQpK1/date-a-live-inverse-origami-tlc-by-ecchiartist-d9apwyr-fullview.jpg", File = "n_wall_10.png"},
+    {Name = "Wall Photo 11", Url = "https://i.ibb.co/GfSjQD25/de7ol92-bc67fb1d-48a3-4e67-b671-7fff39c188f5.jpg", File = "n_wall_11.png"},
+    {Name = "Wall Photo 12", Url = "https://i.ibb.co/W43pn3b7/erio-touwa-wallpaper-by-dinocozero-db48px4-fullview.jpg", File = "n_wall_12.png"},
+    {Name = "Wall Photo 13", Url = "https://i.ibb.co/V0nTmQcv/date-a-live-wallpaper-remake-by-tammypain-d62xh6u-fullview.jpg", File = "n_wall_13.png"},
+    {Name = "Wall Photo 14", Url = "https://i.ibb.co/Ps167S1C/grayfia-and-akeno-high-school-dxd-by-camanime7794-ddjjtp1-fullview.jpg", File = "n_wall_14.png"},
+    {Name = "Wall Photo 15", Url = "https://i.ibb.co/ch7DNBWg/hanako-ikezawa-by-malyste-dcsu9cu-375w-2x.png", File = "n_wall_15.png"},
+    {Name = "Wall Photo 16", Url = "https://i.ibb.co/VYxrSQss/hestia-wallpaper-2-by-dinocozero-d8y5nif.jpg", File = "n_wall_16.png"},
+    {Name = "Wall Photo 17", Url = "https://i.ibb.co/m5YYQYBD/high-school-dxd-rossweisse-by-camanime7794-ddnht5h-fullview.jpg", File = "n_wall_17.png"},
+    {Name = "Wall Photo 18", Url = "https://i.ibb.co/Zz8MJNzF/high-school-dxd-akeno-02-by-numerum-dc34seg-pre.jpg", File = "n_wall_18.png"},
+    {Name = "Wall Photo 19", Url = "https://i.ibb.co/Rpwb553T/high-school-dxd-akeno-by-numerum-dc34sbn-pre.jpg", File = "n_wall_19.png"},
+    {Name = "Wall Photo 20", Url = "https://i.ibb.co/zTxV22Jt/high-school-dxd-kuroka-by-numerum-dc32udz-pre.jpg", File = "n_wall_20.png"},
+    {Name = "Wall Photo 21", Url = "https://i.ibb.co/PZtK4BSm/high-school-dxd-kuroka-02-by-numerum-dc334xr-pre.jpg", File = "n_wall_21.png"},
+    {Name = "Wall Photo 22", Url = "https://i.ibb.co/jkN7xBRp/high-school-dxd-rossweisse-by-numerum-dc32x12-pre.jpg", File = "n_wall_22.png"},
+    {Name = "Wall Photo 23", Url = "https://i.ibb.co/8DxLYr32/high-school-dxd-rias-03-by-numerum-dc3369x-fullview.jpg", File = "n_wall_23.png"},
+    {Name = "Wall Photo 24", Url = "https://i.ibb.co/dhb0vgV/high-school-dxd-xenovia-02-by-numerum-dc3349t-pre.jpg", File = "n_wall_24.png"},
+    {Name = "Wall Photo 25", Url = "https://i.ibb.co/KpQcDks0/high-school-dxd-xenovia-by-numerum-dc32xaz-pre.jpg", File = "n_wall_25.png"},
+    {Name = "Wall Photo 26", Url = "https://i.ibb.co/1GN6T7FQ/high-school-dxd-born-rossweisse-wallpaper-by-numerum-dc3dqql-pre.jpg", File = "n_wall_26.png"},
+    {Name = "Wall Photo 27", Url = "https://i.ibb.co/pF0MTHz/highschool-dxd-akeno-himejima-render-3-by-knd-art-dc1k56c-pre.png", File = "n_wall_27.png"},
+    {Name = "Wall Photo 28", Url = "https://i.ibb.co/m55JDr6k/highschool-dxd-kuroka-render-2-by-knd-art-dcarljg-414w-2x.png", File = "n_wall_28.png"},
+    {Name = "Wall Photo 29", Url = "https://i.ibb.co/FbzS0Wxx/horikita-wallpaper-by-dinocozero-dc6842b-fullview.jpg", File = "n_wall_29.png"},
+    {Name = "Wall Photo 30", Url = "https://i.ibb.co/4RftWr0c/hime-arikawa-wallpaper-by-dinocozero-ddd1s9u-fullview.jpg", File = "n_wall_30.png"},
+    {Name = "Wall Photo 31", Url = "https://i.ibb.co/WvXD4T1R/hot-evening-by-lordcamelot2018-dd5yaeh-375w-2x.jpg", File = "n_wall_31.png"},
+    {Name = "Wall Photo 32", Url = "https://i.ibb.co/MD04wdm5/ikaros-by-malyste-dcjbmbx-375w-2x.png", File = "n_wall_32.png"},
+    {Name = "Wall Photo 33", Url = "https://i.ibb.co/7x6qCzXL/images-bin.jpg", File = "n_wall_33.png"},
+    {Name = "Wall Photo 34", Url = "https://i.ibb.co/xSX0qmj5/isla-wallpaper-by-dinocozero-dbssk50-fullview.jpg", File = "n_wall_34.png"},
+    {Name = "Wall Photo 35", Url = "https://i.ibb.co/Lh0N5trm/inori-wallpaper-2-by-dinocozero-d8f66sn-fullview.jpg", File = "n_wall_35.png"},
+    {Name = "Wall Photo 36", Url = "https://i.ibb.co/LXYcSXP2/konosuba-aqua-by-camanime7794-ddmxv6o-fullview.jpg", File = "n_wall_36.png"},
+    {Name = "Wall Photo 37", Url = "https://i.ibb.co/FLcCjr2M/kotori-with-kurumi-cover-date-a-live-by-hikaruxkotori-d6417m9-fullview.jpg", File = "n_wall_37.png"},
+    {Name = "Wall Photo 38", Url = "https://i.ibb.co/6cZwwyx2/kurumi-in-lingerie-by-camanime7794-de45bx3.jpg", File = "n_wall_38.png"},
+    {Name = "Wall Photo 39", Url = "https://i.ibb.co/VcyDWtRD/kurumi-by-dinocozero-dbmyfms-fullview.jpg", File = "n_wall_39.png"},
+    {Name = "Wall Photo 40", Url = "https://i.ibb.co/S7Z1LcMS/kurumi-tohka-wallpaper-by-yoshisouls-d7sjr5e-pre.jpg", File = "n_wall_40.png"},
+    {Name = "Wall Photo 41", Url = "https://i.ibb.co/7dzsnLtS/kurumi-tokisaki-wallpaper-date-a-live-by-galangcp-dbv7yib-fullview.jpg", File = "n_wall_41.png"},
+    {Name = "Wall Photo 42", Url = "https://i.ibb.co/snXNqHb/lzngg-w-Cg-Fp-Q.jpg", File = "n_wall_42.png"},
+    {Name = "Wall Photo 43", Url = "https://i.ibb.co/XxWLSNF2/kurumi-tokisaki-wallpaper-by-dinocozero-ddeo2jm-pre.jpg", File = "n_wall_43.png"},
+    {Name = "Wall Photo 44", Url = "https://i.ibb.co/vC0Y7Jn5/levia-02-by-silverm00ngraphics-ddlpefh-pre.jpg", File = "n_wall_44.png"},
+    {Name = "Wall Photo 45", Url = "https://i.ibb.co/xK8smKfY/kurumi-wallpaper-2-by-dinocozero-d8zcj3e-fullview.jpg", File = "n_wall_45.png"},
+    {Name = "Wall Photo 46", Url = "https://i.ibb.co/JFxzNGMc/mio-naruse-15-by-plyboijayy-dfp1cjg-414w-2x.jpg", File = "n_wall_46.png"},
+    {Name = "Wall Photo 47", Url = "https://i.ibb.co/dsyBk9fF/mio-naruse-wallpaper-by-dinocozero-db2tboj-fullview.jpg", File = "n_wall_47.png"},
+    {Name = "Wall Photo 48", Url = "https://i.ibb.co/HfpP9DhL/naruse-maria-shinmai-maou-no-testament-by-dinocozero-dcleyae-fullview.jpg", File = "n_wall_48.png"},
+    {Name = "Wall Photo 49", Url = "https://i.ibb.co/11hRDJ1/mioproyect-by-joseph-excelsior-dbw1mpi-414w-2x.jpg", File = "n_wall_49.png"},
+    {Name = "Wall Photo 50", Url = "https://i.ibb.co/Xxx2SMm8/momo-ayase-wallpaper-by-dinocozero-dic7jdj-fullview.jpg", File = "n_wall_50.png"},
+    {Name = "Wall Photo 51", Url = "https://i.ibb.co/GvxfYjDY/naruse-mio-card-2-by-zadkielhermit-dazih4s-375w-2x.jpg", File = "n_wall_51.png"},
+    {Name = "Wall Photo 52", Url = "https://i.ibb.co/qLv05nyp/neko-paws-grey-by-t-nelly-d2nhjr0-fullview.jpg", File = "n_wall_52.png"},
+    {Name = "Wall Photo 53", Url = "https://i.ibb.co/Z1h4Tmz1/neptunia-black-heart-wallpaper-by-dinocozero-dbfjhy3-fullview.jpg", File = "n_wall_53.png"},
+    {Name = "Wall Photo 54", Url = "https://i.ibb.co/RkSV0QtL/neptunia-purple-sister-wallpaper-by-dinocozero-dbf73ht-fullview.jpg", File = "n_wall_54.png"},
+    {Name = "Wall Photo 55", Url = "https://i.ibb.co/ccL3rSsC/neptunia-purple-heart-wallpaper-by-dinocozero-dbf63cs-fullview.jpg", File = "n_wall_55.png"},
+    {Name = "Wall Photo 56", Url = "https://i.ibb.co/n8rqjQGc/newbie-succubus-by-dinocozero-dcck53c.jpg", File = "n_wall_56.png"},
+    {Name = "Wall Photo 57", Url = "https://i.ibb.co/gMj1fF93/nyan-cat-girl-by-macky-516-d5jwc6v.jpg", File = "n_wall_57.png"},
+    {Name = "Wall Photo 58", Url = "https://i.ibb.co/qLWYpkpM/rias-gremory-hair-crimson-as-blood-by-oumashudesign-d6m2odp-fullview.jpg", File = "n_wall_58.png"},
+    {Name = "Wall Photo 59", Url = "https://i.ibb.co/qM4yykbC/photoshop-signature-atempt-by-konekoss-d64612n.jpg", File = "n_wall_59.png"},
+    {Name = "Wall Photo 60", Url = "https://i.ibb.co/vxSt6JMr/rem-galleu-by-malyste-dclc5ss-375w-2x.png", File = "n_wall_60.png"},
+    {Name = "Wall Photo 61", Url = "https://i.ibb.co/mFSpPHFp/rias-x4-by-joseph-excelsior-dbw1n6y-pre.jpg", File = "n_wall_61.png"},
+    {Name = "Wall Photo 62", Url = "https://i.ibb.co/9m3jT9wL/rossweisse-base-12-by-tomoe-waterfox-dcu1ibe-fullview.jpg", File = "n_wall_62.png"},
+    {Name = "Wall Photo 63", Url = "https://i.ibb.co/ZRrrgPPY/yuuki-wallpaper-by-dinocozero-d8vpsq1-fullview.jpg", File = "n_wall_63.png"},
+    {Name = "Wall Photo 64", Url = "https://i.ibb.co/fdJ02LYZ/yukana-yame-wallpaper-by-dinocozero-dcarxvg-fullview.jpg", File = "n_wall_64.png"},
+    {Name = "Wall Photo 65", Url = "https://i.ibb.co/QjcNZMXk/wp5170732.jpg", File = "n_wall_65.png"},
+    {Name = "Wall Photo 66", Url = "https://i.ibb.co/WNV3JLVJ/wp2769282.jpg", File = "n_wall_66.png"},
+    {Name = "Wall Photo 67", Url = "https://i.ibb.co/N6jYMM82/wallpaperflare-com-wallpaper.jpg", File = "n_wall_67.png"},
+    {Name = "Wall Photo 68", Url = "https://i.ibb.co/Myy3Zt3q/venelana-gremory-render-8-by-knd-art-de6ea8a-414w-2x.png", File = "n_wall_68.png"},
+    {Name = "Wall Photo 69", Url = "https://i.ibb.co/zhTXLNwD/Utool-20260603-082612158.jpg", File = "n_wall_69.png"},
+    {Name = "Wall Photo 70", Url = "https://i.ibb.co/8gcwgLQK/tokisaki-kurumi-by-malyste-dcjnyml-375w-2x.png", File = "n_wall_70.png"},
+    {Name = "Wall Photo 71", Url = "https://i.ibb.co/fGx1BqL1/tohka-yatogami-by-malyste-dcjrpey-375w-2x.png", File = "n_wall_71.png"},
+    {Name = "Wall Photo 72", Url = "https://i.ibb.co/Ng5TvCzV/tohka-yatogami-by-lovexstrawberry-del4l5x-414w-2x.jpg", File = "n_wall_72.png"},
+    {Name = "Wall Photo 73", Url = "https://i.ibb.co/gZXbVVJD/tohka-yatogami-date-a-live-by-camanime7794-de27mir.jpg", File = "n_wall_73.png"},
+    {Name = "Wall Photo 74", Url = "https://i.ibb.co/SwHyLhmt/tohka-wallpaper-by-dinocozero-dajkw70-fullview.jpg", File = "n_wall_74.png"},
+    {Name = "Wall Photo 75", Url = "https://i.ibb.co/CNHz9Vs/tohka-wallpaper-by-dinocozero-d8k8qve-fullview.jpg", File = "n_wall_75.png"},
+    {Name = "Wall Photo 76", Url = "https://i.ibb.co/s9B5ZFXH/tohka-by-dinocozero-d8vl95h-fullview.jpg", File = "n_wall_76.png"},
+    {Name = "Wall Photo 77", Url = "https://i.ibb.co/5XhjFcP2/tejina-senpai-wallpaper-by-camanime7794-ddff722-fullview.jpg", File = "n_wall_77.png"},
+    {Name = "Wall Photo 78", Url = "https://i.ibb.co/svwg7nVX/takarada-rikka-wallpaper-by-dinocozero-dcrbsuv-fullview.jpg", File = "n_wall_78.png"},
+    {Name = "Wall Photo 79", Url = "https://i.ibb.co/ns6Wrnq4/shiro-wallpaper-by-dinocozero-dah8iie-fullview.jpg", File = "n_wall_79.png"},
+    {Name = "Wall Photo 80", Url = "https://i.ibb.co/Nnkvyh4k/shiro-by-dinocozero-d9pj6q3-fullview.jpg", File = "n_wall_80.png"},
+    {Name = "Wall Photo 81", Url = "https://i.ibb.co/NdH16cbZ/shinomiya-kaguya-by-malyste-dd0fnp5-375w-2x.png", File = "n_wall_81.png"},
+    {Name = "Wall Photo 82", Url = "https://i.ibb.co/pjtn4PQL/shinmai-maou-no-testament-naruse-mio-by-camanime7794-dd222m5-fullview.jpg", File = "n_wall_82.png"},
+    {Name = "Wall Photo 83", Url = "https://i.ibb.co/BVsSq2zR/sexy-xenovia-wallpaper-by-succubusbrony-d8t2n33-pre.jpg", File = "n_wall_83.png"},
+    {Name = "Wall Photo 84", Url = "https://i.ibb.co/GQNfbMWP/sexy-serafall-wallpaper-by-succubusbrony-d8temu0-pre.jpg", File = "n_wall_84.png"},
+    {Name = "Wall Photo 85", Url = "https://i.ibb.co/PsrhRZ1W/sexy-neko-wallpaper-by-mythicxgamer-d58yaxb.jpg", File = "n_wall_85.png"},
+    {Name = "Wall Photo 86", Url = "https://i.ibb.co/3mNP3Szz/sexy-ecchi-girl-wallpaper-by-camanime7794-df6gosb-pre.jpg", File = "n_wall_86.png"},
+    {Name = "Wall Photo 87", Url = "https://i.ibb.co/ccnHz3gW/sexy-chicks-collab-sariel-qiu-by-dinocozero-dcxfs55.jpg", File = "n_wall_87.png"},
+    {Name = "Wall Photo 88", Url = "https://i.ibb.co/wZXYhTcB/sexy-anime-girl-wallpaper-hd-1920-x-1080-by-konekoss-d6f8qpz-pre.png", File = "n_wall_88.png"},
+    {Name = "Wall Photo 89", Url = "https://i.ibb.co/twdVV6ZS/sexy-anime-girl-wallpaper-by-robbo4-d91rz0g.jpg", File = "n_wall_89.png"},
+    {Name = "Wall Photo 90", Url = "https://i.ibb.co/QWZfQZR/sexy-akeno-wallpaper-by-succubusbrony-d8ty0ju-pre.jpg", File = "n_wall_90.png"},
+    {Name = "Wall Photo 91", Url = "https://i.ibb.co/xKsxkqyg/saya-by-malyste-dckgodd-375w-2x.png", File = "n_wall_91.png"},
+    {Name = "Wall Photo 92", Url = "https://i.ibb.co/R462mwF2/satanichia-wallpaper-by-dinocozero-dc24e1u-fullview.jpg", File = "n_wall_92.png"},
+    {Name = "Wall Photo 93", Url = "https://i.ibb.co/B5yLpPQX/sarafallvector-by-joseph-excelsior-dbtnvq9-414w-2x.jpg", File = "n_wall_93.png"},
+    {Name = "Wall Photo 94", Url = "https://i.ibb.co/3mcgW5xL/rossweisse-wedding-high-school-dxd-by-camanime7794-dd1v78y-fullview.jpg", File = "n_wall_94.png"},
+    {Name = "Wall Photo 95", Url = "https://i.ibb.co/Ps1RDJCX/rossweisse-render-11-by-knd-art-df0bhly-414w-2x.png", File = "n_wall_95.png"},
 
-local extraUrls = {
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/64b68dbc-0b98-4e3d-823f-c4361326bfde.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/78d1cb08-3888-4b23-8206-450b5b85f16b.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/167b9e3a-f11c-427f-a025-6860013e5d42.jpg",
-    "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/2a9e493a-569d-4c53-aed3-52e3bbef143f.jpg"
+    -- EXTRA PHOTOS
+    {Name = "Extra Photo 1", Url = "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/64b68dbc-0b98-4e3d-823f-c4361326bfde.jpg", File = "extra_1.jpg"},
+    {Name = "Extra Photo 2", Url = "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/78d1cb08-3888-4b23-8206-450b5b85f16b.jpg", File = "extra_2.jpg"},
+    {Name = "Extra Photo 3", Url = "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/167b9e3a-f11c-427f-a025-6860013e5d42.jpg", File = "extra_3.jpg"},
+    {Name = "Extra Photo 4", Url = "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/2a9e493a-569d-4c53-aed3-52e3bbef143f.jpg", File = "extra_4.jpg"}
 }
 
 local normalImages = {}
-local wallpaperImages = {}
-local currentImages = {}
-local selectedPhotoData = nil
+for _, v in ipairs(origUrls) do table.insert(normalImages, {Name=v.Name, Url=v.Url, File=v.File}) end
+local selectedPhotoData = normalImages[1]
+local function getPhotoNames(list) local t = {}; for _, v in ipairs(list) do table.insert(t, v.Name) end; return t end
 
-for i, url in ipairs(origUrls) do table.insert(normalImages, {Name="Original " .. i, Url=url, File="lz_img_"..i..".jpg"}) end
-for i, url in ipairs(wallUrls) do table.insert(normalImages, {Name="Wallpaper " .. i, Url=url, File="wp_img_"..i..".jpg"}) end
-for i, url in ipairs(extraUrls) do table.insert(normalImages, {Name="Extra " .. i, Url=url, File="ex_img_"..i..".jpg"}) end
-
-for i, url in ipairs(wallUrls) do table.insert(wallpaperImages, {Name="Wallpaper " .. i, Url=url, File="wp_img_"..i..".jpg"}) end
-
-currentImages = normalImages
-selectedPhotoData = currentImages[1]
-
-local function getPhotoNames(list)
-    local t = {}
-    for _, v in ipairs(list) do table.insert(t, v.Name) end
-    return t
-end
-
--- // ABA: HUB PHOTOS //
 local secPhotos = Tabs.Photos:AddSection("Escolha a Imagem de Fundo")
-
-secPhotos:AddButton({
-    Title = "Fundo Padrão (Seu ID Nativo)",
-    Description = "ID: 13147607436 (Otimizado sem downloads)",
-    Callback = function() setFluentBackground("rbxassetid://13147607436") end
-})
-
-local photoDrop 
-local catDrop = secPhotos:AddDropdown("CatDrop", {
-    Title = "Tipo de Imagens",
-    Values = {"Normal", "Wallpapers"},
-    Default = "Normal",
-    Callback = function(v)
-        currentImages = (v == "Wallpapers") and wallpaperImages or normalImages
-        if photoDrop then
-            photoDrop:SetValues(getPhotoNames(currentImages))
-            photoDrop:SetValue(currentImages[1].Name)
-        end
-    end
-})
-
-photoDrop = secPhotos:AddDropdown("PhotoDrop", {
-    Title = "Selecionar Foto",
-    Values = getPhotoNames(normalImages),
-    Default = normalImages[1].Name,
-    Callback = function(v)
-        for _, data in ipairs(currentImages) do
-            if data.Name == v then selectedPhotoData = data; break end
-        end
-    end
-})
-
-secPhotos:AddButton({
-    Title = "Baixar e Aplicar Fundo",
-    Description = "Aplica a foto selecionada no menu acima",
-    Callback = function()
-        if selectedPhotoData then
-            applyBackgroundFromUrl(selectedPhotoData.Url, selectedPhotoData.File)
-        end
-    end
-})
+secPhotos:AddButton({Title="Fundo Padrão (Seu ID Nativo)", Description="ID: 13147607436", Callback=function() setFluentBackground("rbxassetid://13147607436") end})
+local photoDrop = secPhotos:AddDropdown("PhotoDrop", {Title="Selecionar Foto", Values=getPhotoNames(normalImages), Default=normalImages[1].Name, Callback=function(v) for _, data in ipairs(normalImages) do if data.Name == v then selectedPhotoData = data; break end end end})
+secPhotos:AddButton({Title="Baixar e Aplicar Fundo", Callback=function() if selectedPhotoData then applyBackgroundFromUrl(selectedPhotoData.Url, selectedPhotoData.File) end end})
 
 -- // ABA: CONFIGURAÇÕES //
 local secSystem = Tabs.Settings:AddSection("Sistema e Customização")
 
-secSystem:AddToggle("CrosshairToggle", {
-    Title = "Crosshair Magnético", Default = false, 
-    Callback = function(v) _G.MagnetAtivado = v; circleOutline.Visible = v; circleInner.Visible = v end
+secSystem:AddParagraph({
+    Title = "Notas de Atualização",
+    Content = "Adicionados: modos de foco, silent aim e aimbot corrigidos, se quiser que eu adicione alguma coisa ou notou algo de errado no aimbot ou silent aim me mande mensagem no t1k t0k (lelezin_n) irei corrigir para deixar perfeito e para deixar vocês felizes, obrigado(a)😊"
 })
 
--- NOVO: Toggle da Bolinha do Magnet Móvel
-secSystem:AddToggle("MagnetMovelToggle", {
-    Title = "Bolinha do Magnet Móvel", Default = false, 
-    Callback = function(v) ScreenEditor.MagnetMovable = v end
-})
-
--- NOVO: Toggle do Editor de Tela (Tudo Móvel)
-toggleEditorInstance = secSystem:AddToggle("EditorTelaToggle", {
-    Title = "Editor de Tela (Botões Móveis)", Default = false, 
-    Callback = function(v) toggleScreenEditor(v) end
-})
-
-secSystem:AddDropdown("MagnetImageDrop", {
-    Title = "Imagem da Bolinha Magnet",
-    Values = {"6848903051", "5145203260", "93025361362953", "127235302188997", "70655787654400", "17692246017", "13949015366", "9382106982", "5146843572", "131536794403332", "5995357646"},
-    Default = "6848903051",
-    Callback = function(v)
-        magnetImgLabel.Image = "rbxassetid://" .. v
-    end
-})
-
-secSystem:AddSlider("MagnetSizeSlider", {
-    Title = "Tamanho da Bolinha Magnet",
-    Min = 10,
-    Max = 200,
-    Default = 40,
-    Rounding = 0,
-    Callback = function(v)
-        _G.MagnetSize = v
-    end
-})
-
-secSystem:AddDropdown("FovFormatDrop", {
-    Title = "Formato do FOV",
-    Values = {"Padrão Círculo", "Estrela", "Bola", "?"},
-    Default = "Padrão Círculo",
-    Callback = function(v)
-        _G.FovFormat = v
-    end
-})
-
-secSystem:AddSlider("FovTransSliderSettings", {
-    Title = "Transparência do FOV (Config)",
-    Min = 0,
-    Max = 1,
-    Default = 0.9,
-    Rounding = 2,
-    Callback = function(v)
-        _G.FovTransparency = v
-        if not updatingFovTrans and Fluent.Options.FovTransSliderVisuals then
-            updatingFovTrans = true
-            Fluent.Options.FovTransSliderVisuals:SetValue(v)
-            updatingFovTrans = false
-        end
-    end
-})
-
-secSystem:AddColorpicker("FovColorPicker", {
-    Title = "Cor do FOV",
-    Default = Color3.fromRGB(255, 255, 255),
-    Callback = function(color)
-        _G.FovColor = color
-    end
-})
-
-secSystem:AddInput("BtnSizeInput", {
-    Title = "Tamanho do Botão Menu", Default = "70", Numeric = true, Finished = true,
-    Callback = function(v)
-        local size = tonumber(v)
-        if size and toggleGui:FindFirstChild("OpenButton") then toggleGui.OpenButton.Size = UDim2.new(0, size, 0, size) end
-    end
-})
-
-secSystem:AddButton({
-    Title = "Destruir Hub Completamente",
-    Callback = function()
-        if renderConnection then renderConnection:Disconnect() end
-        line:Remove(); dotVisual:Remove(); circleOutline:Remove(); circleInner:Remove()
-        if magnetImgLabel then magnetImgLabel:Destroy() end
-        if toggleGui then toggleGui:Destroy() end
-        if EditorGui then EditorGui:Destroy() end -- Limpa o Editor também
-        if Window then Window:Destroy() end
-    end
-})
+secSystem:AddToggle("CrosshairToggle", {Title="Crosshair Magnético", Default=false, Callback=function(v) _G.MagnetAtivado = v; circleOutline.Visible = v; circleInner.Visible = v end})
+secSystem:AddToggle("MagnetMovelToggle", {Title="Bolinha do Magnet Móvel", Default=false, Callback=function(v) ScreenEditor.MagnetMovable = v end})
+toggleEditorInstance = secSystem:AddToggle("EditorTelaToggle", {Title="Editor de Tela (Botões Móveis)", Default=false, Callback=function(v) toggleScreenEditor(v) end})
+secSystem:AddDropdown("MagnetImageDrop", {Title="Imagem da Bolinha Magnet", Values={"6848903051", "5145203260"}, Default="6848903051", Callback=function(v) magnetImgLabel.Image = "rbxassetid://" .. v end})
+secSystem:AddSlider("MagnetSizeSlider", {Title="Tamanho da Bolinha Magnet", Min=10, Max=200, Default=40, Rounding=0, Callback=function(v) _G.MagnetSize = v end})
+-- Dropdown de formato do FOV foi removido daqui
+secSystem:AddColorpicker("FovColorPicker", {Title="Cor do FOV", Default=Color3.fromRGB(255, 255, 255), Callback=function(color) _G.FovColor = color end})
+secSystem:AddInput("BtnSizeInput", {Title="Tamanho do Botão Menu", Default="70", Numeric=true, Finished=true, Callback=function(v) local size = tonumber(v); if size and toggleGui:FindFirstChild("OpenButton") then toggleGui.OpenButton.Size = UDim2.new(0, size, 0, size) end end})
+secSystem:AddButton({Title="Destruir Hub Completamente", Callback=function() if renderConnection then renderConnection:Disconnect() end; line:Remove(); dotVisual:Remove(); circleOutline:Remove(); circleInner:Remove(); if magnetImgLabel then magnetImgLabel:Destroy() end; if toggleGui then toggleGui:Destroy() end; if EditorGui then EditorGui:Destroy() end; if Window then Window:Destroy() end end})
 
 -- // DOWNLOAD E ASSOCIAÇÃO DA IMAGEM DO BOTÃO FLUTUANTE //
 local customImageId = "rbxassetid://13147607436"
@@ -1068,54 +938,23 @@ end)
 
 -- // BOTÃO FLUTUANTE DE MENU //
 local mainBtn = Instance.new("TextButton")
-mainBtn.Name = "OpenButton"
-mainBtn.Parent = toggleGui
-mainBtn.BackgroundTransparency = 1
-mainBtn.Position = UDim2.new(0.1, 0, 0.1, 0)
-mainBtn.Size = UDim2.new(0, 70, 0, 70) 
-mainBtn.Text = ""
+mainBtn.Name = "OpenButton"; mainBtn.Parent = toggleGui; mainBtn.BackgroundTransparency = 1; mainBtn.Position = UDim2.new(0.1, 0, 0.1, 0); mainBtn.Size = UDim2.new(0, 70, 0, 70); mainBtn.Text = ""
 
 local byLezinLbl = Instance.new("TextLabel", mainBtn)
-byLezinLbl.Size = UDim2.new(1, 0, 0, 20)
-byLezinLbl.Position = UDim2.new(0, 0, 0, -20)
-byLezinLbl.BackgroundTransparency = 1
-byLezinLbl.Text = "by Lezin"
-byLezinLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-byLezinLbl.Font = Enum.Font.GothamBold
-byLezinLbl.TextSize = 14
+byLezinLbl.Size = UDim2.new(1, 0, 0, 20); byLezinLbl.Position = UDim2.new(0, 0, 0, -20); byLezinLbl.BackgroundTransparency = 1; byLezinLbl.Text = "by Lezin"; byLezinLbl.TextColor3 = Color3.fromRGB(255, 255, 255); byLezinLbl.Font = Enum.Font.GothamBold; byLezinLbl.TextSize = 14
 
 local frontImage = Instance.new("ImageLabel", mainBtn)
-frontImage.Size = UDim2.fromScale(1, 1)
-frontImage.BackgroundTransparency = 1
-frontImage.Image = customImageId
-Instance.new("UICorner", frontImage).CornerRadius = UDim.new(0.2, 0)
+frontImage.Size = UDim2.fromScale(1, 1); frontImage.BackgroundTransparency = 1; frontImage.Image = customImageId; Instance.new("UICorner", frontImage).CornerRadius = UDim.new(0.2, 0)
 
 local uiOpen = true
 mainBtn.MouseButton1Click:Connect(function()
     uiOpen = not uiOpen
-    if uiOpen then
-        PlayInterfaceSound("102528075764454")
-        Window:Show()
-    else
-        PlayInterfaceSound("102528075764454")
-        Window:Hide()
-    end
+    if uiOpen then PlayInterfaceSound("102528075764454"); Window:Show() else PlayInterfaceSound("102528075764454"); Window:Hide() end
 end)
 
--- Lógica de arrasto do Botão Flutuante
 local draggingFloat, dragStartFloat, startPosFloat = false, nil, nil
-mainBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingFloat = true; dragStartFloat = input.Position; startPosFloat = mainBtn.Position
-    end
-end)
-mainBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingFloat = false end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if draggingFloat and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        mainBtn.Position = UDim2.new(startPosFloat.X.Scale, startPosFloat.X.Offset + (input.Position - dragStartFloat).X, startPosFloat.Y.Scale, startPosFloat.Y.Offset + (input.Position - dragStartFloat).Y)
-    end
-end)
+mainBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingFloat = true; dragStartFloat = input.Position; startPosFloat = mainBtn.Position end end)
+mainBtn.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingFloat = false end end)
+UserInputService.InputChanged:Connect(function(input) if draggingFloat and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then mainBtn.Position = UDim2.new(startPosFloat.X.Scale, startPosFloat.X.Offset + (input.Position - dragStartFloat).X, startPosFloat.Y.Scale, startPosFloat.Y.Offset + (input.Position - dragStartFloat).Y) end end)
 
 Window:SelectTab(1)
