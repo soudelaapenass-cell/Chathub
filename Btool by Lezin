@@ -1,0 +1,376 @@
+-- BTools Customizado com Emoji 🔓
+-- Feito para Delta / Executores Padrão (Fix para Mobile/Touch)
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
+
+-- Variáveis de Controle
+local SelectedPart = nil
+local OriginalStates = {}
+local MoveMode = "Move" -- Pode ser "Move" ou "Rotate"
+local LastClickTime = 0
+
+-- 1. Criar a Ferramenta (Tool)
+local Tool = Instance.new("Tool")
+Tool.Name = "🔓"
+Tool.RequiresHandle = false
+Tool.Parent = Player.Backpack
+
+-- 2. Criar a Interface Gráfica (ScreenGui)
+local guiName = "CustomBToolsGUI_123"
+if CoreGui:FindFirstChild(guiName) then
+    CoreGui[guiName]:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+ScreenGui.ResetOnSpawn = false
+-- Se o executor não suportar CoreGui, tentamos PlayerGui
+local success = pcall(function() ScreenGui.Parent = CoreGui end)
+if not success then ScreenGui.Parent = Player.PlayerGui end
+
+-- Caixa de Seleção Visual
+local SelectionBox = Instance.new("SelectionBox")
+SelectionBox.Color3 = Color3.fromRGB(0, 255, 0)
+SelectionBox.LineThickness = 0.05
+SelectionBox.Parent = ScreenGui
+
+-- Frame Principal (Aparece quando seleciona algo)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 320, 0, 480)
+MainFrame.Position = UDim2.new(1, -340, 0.5, -240)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "Controle da Peça 🔓"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.Parent = MainFrame
+
+-- Função Auxiliar para Botões
+local function createButton(text, pos, size, parent)
+    local btn = Instance.new("TextButton")
+    btn.Size = size
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 14
+    btn.Text = text
+    btn.Parent = parent
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = btn
+    return btn
+end
+
+-- 3. Botões: Remover e Noclip
+local BtnRemove = createButton("Remover", UDim2.new(0.05, 0, 0.1, 0), UDim2.new(0.42, 0, 0, 30), MainFrame)
+BtnRemove.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+
+local BtnNoclip = createButton("Noclip", UDim2.new(0.53, 0, 0.1, 0), UDim2.new(0.42, 0, 0, 30), MainFrame)
+
+BtnRemove.MouseButton1Click:Connect(function()
+    if SelectedPart then
+        SelectedPart:Destroy()
+        MainFrame.Visible = false
+        SelectionBox.Adornee = nil
+        SelectedPart = nil
+    end
+end)
+
+BtnNoclip.MouseButton1Click:Connect(function()
+    if SelectedPart then
+        SelectedPart.CanCollide = false
+    end
+end)
+
+-- 4. Sliders (Transparência e Tamanho)
+local function createSlider(name, minVal, maxVal, pos, parent)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.9, 0, 0, 20)
+    Label.Position = pos
+    Label.BackgroundTransparency = 1
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 12
+    Label.Text = name .. " (" .. minVal .. " - " .. maxVal .. ")"
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = parent
+
+    local Bg = Instance.new("Frame")
+    Bg.Size = UDim2.new(0.9, 0, 0, 10)
+    Bg.Position = pos + UDim2.new(0, 0, 0, 25)
+    Bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Bg.Parent = parent
+    
+    local Fill = Instance.new("Frame")
+    Fill.Size = UDim2.new(0.5, 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    Fill.Parent = Bg
+
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(1, 0, 1, 0)
+    Button.BackgroundTransparency = 1
+    Button.Text = ""
+    Button.Parent = Bg
+
+    return Button, Fill, Bg
+end
+
+local TranspBtn, TranspFill, TranspBg = createSlider("Transparência", 0, 1, UDim2.new(0.05, 0, 0.2, 0), MainFrame)
+local SizeBtn, SizeFill, SizeBg = createSlider("Tamanho", 1, 950, UDim2.new(0.05, 0, 0.32, 0), MainFrame)
+
+local draggingTransp = false
+local draggingSize = false
+
+-- Fix para toques em Mobile e Mouse
+TranspBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingTransp = true
+    end
+end)
+
+SizeBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingSize = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingTransp = false
+        draggingSize = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if SelectedPart then
+            local inputPos = input.Position.X
+            
+            if draggingTransp then
+                local pct = math.clamp((inputPos - TranspBg.AbsolutePosition.X) / TranspBg.AbsoluteSize.X, 0, 1)
+                TranspFill.Size = UDim2.new(pct, 0, 1, 0)
+                SelectedPart.Transparency = pct
+                
+                -- Altera a transparência real de Decals e Texturas anexadas à parte
+                for _, child in pairs(SelectedPart:GetChildren()) do
+                    if child:IsA("Decal") or child:IsA("Texture") then
+                        child.Transparency = pct
+                    end
+                end
+            end
+            
+            if draggingSize then
+                local pct = math.clamp((inputPos - SizeBg.AbsolutePosition.X) / SizeBg.AbsoluteSize.X, 0, 1)
+                SizeFill.Size = UDim2.new(pct, 0, 1, 0)
+                local newSize = 1 + (pct * 949)
+                SelectedPart.Size = Vector3.new(newSize, newSize, newSize)
+            end
+        end
+    end
+end)
+
+-- 5. Botões de Movimento / Rotação (Duplo Clique)
+local ControlsLabel = Instance.new("TextLabel")
+ControlsLabel.Size = UDim2.new(0.9, 0, 0, 20)
+ControlsLabel.Position = UDim2.new(0.05, 0, 0.45, 0)
+ControlsLabel.BackgroundTransparency = 1
+ControlsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+ControlsLabel.Font = Enum.Font.Gotham
+ControlsLabel.TextSize = 12
+ControlsLabel.Text = "Controles (Duplo clique para Girar/Mover)"
+ControlsLabel.Parent = MainFrame
+
+local ModeIndicator = Instance.new("TextLabel")
+ModeIndicator.Size = UDim2.new(0.9, 0, 0, 15)
+ModeIndicator.Position = UDim2.new(0.05, 0, 0.49, 0)
+ModeIndicator.BackgroundTransparency = 1
+ModeIndicator.TextColor3 = Color3.fromRGB(0, 255, 0)
+ModeIndicator.Font = Enum.Font.GothamBold
+ModeIndicator.TextSize = 12
+ModeIndicator.Text = "Modo Atual: MOVER"
+ModeIndicator.Parent = MainFrame
+
+local moveFrame = Instance.new("Frame")
+moveFrame.Size = UDim2.new(0.9, 0, 0, 60)
+moveFrame.Position = UDim2.new(0.05, 0, 0.54, 0)
+moveFrame.BackgroundTransparency = 1
+moveFrame.Parent = MainFrame
+
+local dirs = {
+    {nome = "Cima (Y+)", vec = Vector3.new(0,1,0), pos = UDim2.new(0.35, 0, 0, 0)},
+    {nome = "Baixo (Y-)", vec = Vector3.new(0,-1,0), pos = UDim2.new(0.35, 0, 0.5, 0)},
+    {nome = "Esq (X-)", vec = Vector3.new(-1,0,0), pos = UDim2.new(0, 0, 0.5, 0)},
+    {nome = "Dir (X+)", vec = Vector3.new(1,0,0), pos = UDim2.new(0.7, 0, 0.5, 0)},
+    {nome = "Frente (Z-)", vec = Vector3.new(0,0,-1), pos = UDim2.new(0, 0, 0, 0)},
+    {nome = "Trás (Z+)", vec = Vector3.new(0,0,1), pos = UDim2.new(0.7, 0, 0, 0)},
+}
+
+local function HandleMovementControl(vec)
+    local now = tick()
+    -- Lógica de duplo clique (menos de 0.3 segundos)
+    if now - LastClickTime < 0.3 then
+        if MoveMode == "Move" then 
+            MoveMode = "Rotate"
+            ModeIndicator.Text = "Modo Atual: GIRAR"
+            ModeIndicator.TextColor3 = Color3.fromRGB(255, 150, 0)
+        else 
+            MoveMode = "Move"
+            ModeIndicator.Text = "Modo Atual: MOVER"
+            ModeIndicator.TextColor3 = Color3.fromRGB(0, 255, 0)
+        end
+    else
+        -- Lógica de ação
+        if SelectedPart then
+            if MoveMode == "Move" then
+                SelectedPart.CFrame = SelectedPart.CFrame + vec
+            else
+                SelectedPart.CFrame = SelectedPart.CFrame * CFrame.Angles(
+                    math.rad(vec.X * 15), 
+                    math.rad(vec.Y * 15), 
+                    math.rad(vec.Z * 15)
+                )
+            end
+        end
+    end
+    LastClickTime = now
+end
+
+for _, d in ipairs(dirs) do
+    local btn = createButton(d.nome, d.pos, UDim2.new(0.28, 0, 0.45, 0), moveFrame)
+    btn.TextSize = 10
+    btn.MouseButton1Click:Connect(function()
+        HandleMovementControl(d.vec)
+    end)
+end
+
+-- 6. Dropdown de Cores
+local ColorLabel = Instance.new("TextLabel")
+ColorLabel.Size = UDim2.new(0.9, 0, 0, 20)
+ColorLabel.Position = UDim2.new(0.05, 0, 0.68, 0)
+ColorLabel.BackgroundTransparency = 1
+ColorLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+ColorLabel.Font = Enum.Font.Gotham
+ColorLabel.TextSize = 12
+ColorLabel.Text = "Mudar Cor"
+ColorLabel.TextXAlignment = Enum.TextXAlignment.Left
+ColorLabel.Parent = MainFrame
+
+local ColorScroll = Instance.new("ScrollingFrame")
+ColorScroll.Size = UDim2.new(0.9, 0, 0, 50)
+ColorScroll.Position = UDim2.new(0.05, 0, 0.73, 0)
+ColorScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ColorScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
+ColorScroll.ScrollBarThickness = 5
+ColorScroll.Parent = MainFrame
+
+local ColorList = Instance.new("UIListLayout")
+ColorList.Parent = ColorScroll
+
+local Cores = {
+    {"Azul", "Bright blue"}, {"Roxo", "Bright purple"}, {"Verde", "Bright green"},
+    {"Amarelo", "Bright yellow"}, {"Laranja", "Bright orange"}, {"Vermelho", "Bright red"},
+    {"Preto", "Black"}, {"Branco", "White"}, {"Cinza", "Medium stone grey"},
+    {"Roxo Forte", "Royal purple"}, {"Azul Forte", "Navy blue"}, {"Azul meio Roxo", "Alder"}
+}
+
+for i, corInfo in ipairs(Cores) do
+    local cBtn = Instance.new("TextButton")
+    cBtn.Size = UDim2.new(1, 0, 0, 25)
+    cBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    cBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cBtn.Text = corInfo[1]
+    cBtn.Parent = ColorScroll
+    cBtn.MouseButton1Click:Connect(function()
+        if SelectedPart then
+            SelectedPart.BrickColor = BrickColor.new(corInfo[2])
+        end
+    end)
+end
+
+-- 7. Botão Redefinir (Reset)
+local BtnReset = createButton("Redefinir Tudo (Reset)", UDim2.new(0.05, 0, 0.88, 0), UDim2.new(0.9, 0, 0, 35), MainFrame)
+BtnReset.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+
+BtnReset.MouseButton1Click:Connect(function()
+    if SelectedPart and OriginalStates[SelectedPart] then
+        local state = OriginalStates[SelectedPart]
+        SelectedPart.Size = state.Size
+        SelectedPart.Transparency = state.Transparency
+        SelectedPart.BrickColor = state.BrickColor
+        SelectedPart.CFrame = state.CFrame
+        SelectedPart.CanCollide = state.CanCollide
+        
+        -- Atualiza as texturas de volta
+        for _, child in pairs(SelectedPart:GetChildren()) do
+            if child:IsA("Decal") or child:IsA("Texture") then
+                child.Transparency = state.Transparency
+            end
+        end
+        
+        -- Atualiza os sliders visuais para corresponder
+        TranspFill.Size = UDim2.new(state.Transparency, 0, 1, 0)
+        local pctSize = math.clamp((state.Size.X - 1) / 949, 0, 1)
+        SizeFill.Size = UDim2.new(pctSize, 0, 1, 0)
+    end
+end)
+
+-- 8. Lógica da Ferramenta e Mouse
+local Equipped = false
+
+Tool.Equipped:Connect(function()
+    Equipped = true
+end)
+
+Tool.Unequipped:Connect(function()
+    Equipped = false
+    MainFrame.Visible = false
+    SelectionBox.Adornee = nil
+    SelectedPart = nil
+end)
+
+Mouse.Button1Down:Connect(function()
+    if Equipped and Mouse.Target and not draggingTransp and not draggingSize then
+        local target = Mouse.Target
+        
+        -- Ignora se clicar na própria UI
+        if target:IsDescendantOf(ScreenGui) then return end
+        
+        SelectedPart = target
+        SelectionBox.Adornee = SelectedPart
+        MainFrame.Visible = true
+        
+        -- Salvar o estado original se for a primeira vez
+        if not OriginalStates[SelectedPart] then
+            OriginalStates[SelectedPart] = {
+                Size = SelectedPart.Size,
+                Transparency = SelectedPart.Transparency,
+                BrickColor = SelectedPart.BrickColor,
+                CFrame = SelectedPart.CFrame,
+                CanCollide = SelectedPart.CanCollide
+            }
+        end
+        
+        -- Ajustar visual dos sliders para a peça atual
+        TranspFill.Size = UDim2.new(SelectedPart.Transparency, 0, 1, 0)
+        local currentSizePct = math.clamp((SelectedPart.Size.X - 1) / 949, 0, 1)
+        SizeFill.Size = UDim2.new(currentSizePct, 0, 1, 0)
+    end
+end)
