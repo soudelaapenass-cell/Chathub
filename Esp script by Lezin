@@ -1,0 +1,423 @@
+-- [[ SERVIÇOS DO MOTOR ]]
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- [[ CONFIGURAÇÃO GLOBAL ]]
+local _G_Config = {
+    ChamsEnabled = false,
+    NameEnabled = false,
+    IconEnabled = false,
+    HealthEnabled = false,
+    TeamCheck = false,
+    TargetMode = "Players", 
+    HeldItemEnabled = false,
+    InventoryEnabled = false
+}
+
+-- [[ FUNÇÃO PRINCIPAL DE CRIAÇÃO DO ESP ]]
+local function CreateESP(target, isPlayer)
+    if isPlayer and target == LocalPlayer then return end
+
+    local function CharacterAdded(char)
+        local head = char:WaitForChild("Head", 5)
+        local hum = char:WaitForChild("Humanoid", 5)
+        if not head or not hum then return end
+
+        hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+
+        local bbg = Instance.new("BillboardGui")
+        bbg.Name = "LEZIN_ESP_UI"
+        bbg.Adornee = head
+        bbg.Size = UDim2.new(0, 150, 0, 160)
+        bbg.StudsOffset = Vector3.new(0, 0.5, 0)
+        bbg.AlwaysOnTop = true
+        bbg.Parent = head
+
+        local container = Instance.new("Frame", bbg)
+        container.Size = UDim2.new(1, 0, 1, 0)
+        container.BackgroundTransparency = 1
+
+        local icon = Instance.new("ImageLabel", container)
+        icon.Size = UDim2.new(0, 40, 0, 40)
+        icon.Position = UDim2.new(0.5, -20, 0, 0)
+        icon.BackgroundTransparency = 1 
+        icon.BorderSizePixel = 0
+        if isPlayer then
+            icon.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. target.UserId .. "&width=420&height=420&format=png"
+        else
+            icon.Visible = false
+        end
+
+        local nameLabel = Instance.new("TextLabel", container)
+        nameLabel.Size = UDim2.new(1, 0, 0, 20)
+        nameLabel.Position = UDim2.new(0, 0, 0, 45)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextStrokeTransparency = 0.5
+        nameLabel.Font = Enum.Font.SourceSansBold
+        nameLabel.TextSize = 16
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+        nameLabel.TextTransparency = 1
+
+        local healthBack = Instance.new("Frame", container)
+        healthBack.Size = UDim2.new(0, 100, 0, 6)
+        healthBack.Position = UDim2.new(0.5, -50, 0, 70)
+        healthBack.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        healthBack.BorderSizePixel = 0
+
+        local healthBar = Instance.new("Frame", healthBack)
+        healthBar.Size = UDim2.new(1, 0, 1, 0)
+        healthBar.Position = UDim2.new(0, 0, 0, 0)
+        healthBar.BorderSizePixel = 0
+
+        local healthText = Instance.new("TextLabel", healthBack)
+        healthText.Size = UDim2.new(1, 0, 0, 15)
+        healthText.Position = UDim2.new(0, 0, 0, -15)
+        healthText.BackgroundTransparency = 1
+        healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        healthText.Font = Enum.Font.SourceSansBold
+        healthText.TextSize = 12
+        healthText.TextStrokeTransparency = 0.5
+
+        local itemContainer = Instance.new("Frame", container)
+        itemContainer.Size = UDim2.new(0, 150, 0, 80)
+        itemContainer.Position = UDim2.new(0, 0, 0, 80)
+        itemContainer.BackgroundTransparency = 1
+
+        local highlight = Instance.new("Highlight")
+        highlight.Adornee = char
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Parent = char
+
+        local currentFade = 1
+        local smoothHp = hum.Health / hum.MaxHealth
+        
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if not char or not char.Parent or not hum then 
+                currentFade = math.min(currentFade + 0.05, 1)
+                nameLabel.TextTransparency = currentFade
+                if currentFade >= 1 then conn:Disconnect(); bbg:Destroy(); highlight:Destroy() end
+                return 
+            end
+
+            local targetAllowed = false
+            if isPlayer and (_G_Config.TargetMode == "Players" or _G_Config.TargetMode == "Both") then
+                targetAllowed = true
+            elseif not isPlayer and (_G_Config.TargetMode == "Mobs" or _G_Config.TargetMode == "Both") then
+                targetAllowed = true
+            end
+
+            local isAlly = isPlayer and (_G_Config.TeamCheck and target.Team == LocalPlayer.Team)
+            local canShow = not isAlly and targetAllowed and (_G_Config.ChamsEnabled or _G_Config.NameEnabled or _G_Config.IconEnabled or _G_Config.HealthEnabled or _G_Config.HeldItemEnabled or _G_Config.InventoryEnabled)
+            local isDead = (hum.Health <= 0)
+
+            bbg.Enabled = canShow
+            highlight.Enabled = canShow and _G_Config.ChamsEnabled and not isDead
+            icon.Visible = isPlayer and _G_Config.IconEnabled and not isDead
+            healthBack.Visible = _G_Config.HealthEnabled and not isDead
+
+            itemContainer:ClearAllChildren()
+            if not isDead and (_G_Config.HeldItemEnabled or _G_Config.InventoryEnabled) then
+                local itemsToShow = {}
+                if _G_Config.HeldItemEnabled then
+                    local t = char:FindFirstChildOfClass("Tool")
+                    if t then table.insert(itemsToShow, t) end
+                end
+                if isPlayer and _G_Config.InventoryEnabled and target:FindFirstChild("Backpack") then
+                    for _, i in pairs(target.Backpack:GetChildren()) do if i:IsA("Tool") then table.insert(itemsToShow, i) end end
+                end
+
+                for i, tool in pairs(itemsToShow) do
+                    if i > 3 then break end
+                    local frame = Instance.new("Frame", itemContainer)
+                    frame.Size = UDim2.new(0, 140, 0, 20)
+                    frame.Position = UDim2.new(0, 5, 0, (i-1)*22)
+                    frame.BackgroundTransparency = 1
+                    
+                    local img = Instance.new("ImageLabel", frame)
+                    img.Size = UDim2.new(0, 20, 0, 20)
+                    img.BackgroundTransparency = 1
+                    img.Image = (tool.TextureId ~= "" and tool.TextureId) or "rbxassetid://0"
+                    
+                    local txt = Instance.new("TextLabel", frame)
+                    txt.Size = UDim2.new(0, 110, 0, 20)
+                    txt.Position = UDim2.new(0, 25, 0, 0)
+                    txt.BackgroundTransparency = 1
+                    txt.Text = tool.Name
+                    txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    txt.TextXAlignment = Enum.TextXAlignment.Left
+                    txt.TextSize = 12
+                end
+            end
+
+            if isDead then
+                nameLabel.Text = "KILL!"
+                nameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                nameLabel.Visible = true
+                currentFade = math.max(currentFade - 0.05, 0)
+                nameLabel.TextTransparency = currentFade
+            else
+                nameLabel.Text = isPlayer and (target.DisplayName or target.Name) or char.Name
+                nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                nameLabel.Visible = _G_Config.NameEnabled
+                currentFade = math.max(currentFade - 0.05, 0)
+                nameLabel.TextTransparency = currentFade
+            end
+
+            if not isDead then
+                local targetHp = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                smoothHp = smoothHp + (targetHp - smoothHp) * 0.1
+                
+                healthBar.Size = UDim2.new(smoothHp, 0, 1, 0)
+                healthText.Text = math.floor(smoothHp * 100) .. "%"
+                healthBar.BackgroundColor3 = smoothHp > 0.6 and Color3.fromRGB(0, 255, 0) or (smoothHp > 0.25 and Color3.fromRGB(255, 165, 0) or Color3.fromRGB(255, 0, 0))
+            end
+            highlight.FillColor = isPlayer and target.TeamColor.Color or Color3.fromRGB(255, 0, 0)
+        end)
+    end
+
+    if isPlayer then
+        target.CharacterAdded:Connect(CharacterAdded)
+        if target.Character then CharacterAdded(target.Character) end
+    else
+        CharacterAdded(target)
+    end
+end
+
+for _, p in pairs(Players:GetPlayers()) do CreateESP(p, true) end
+Players.PlayerAdded:Connect(function(p) CreateESP(p, true) end)
+
+local function IsMob(model)
+    return model:IsA("Model") and model:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(model)
+end
+for _, d in pairs(workspace:GetDescendants()) do
+    if d:IsA("Humanoid") and IsMob(d.Parent) then CreateESP(d.Parent, false) end
+end
+workspace.DescendantAdded:Connect(function(d)
+    if d:IsA("Humanoid") and IsMob(d.Parent) then CreateESP(d.Parent, false) end
+end)
+
+-- [[ INTERFACE GRÁFICA ]]
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+
+-- Botão Flutuante com drag nativo do Roblox
+local HubBtn = Instance.new("ImageButton", ScreenGui)
+HubBtn.Size = UDim2.new(0, 120, 0, 120)
+HubBtn.Position = UDim2.new(0, 10, 0.5, -60)
+HubBtn.BackgroundTransparency = 1
+HubBtn.Image = "rbxassetid://93735098678772"
+HubBtn.BorderSizePixel = 0
+HubBtn.Active = true
+HubBtn.Draggable = true
+HubBtn.Selectable = false
+
+-- Texto "Lezin esp" acima do botão
+local HubTitleLabel = Instance.new("TextLabel", ScreenGui)
+HubTitleLabel.Size = UDim2.new(0, 120, 0, 20)
+HubTitleLabel.Position = UDim2.new(0, 10, 0.5, -80)
+HubTitleLabel.BackgroundTransparency = 1
+HubTitleLabel.Text = "Lezin esp"
+HubTitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+HubTitleLabel.Font = Enum.Font.SourceSansBold
+HubTitleLabel.TextSize = 14
+HubTitleLabel.TextStrokeTransparency = 0.5
+HubTitleLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Atualizar posição do texto quando o botão mover
+HubBtn:GetPropertyChangedSignal("Position"):Connect(function()
+    HubTitleLabel.Position = UDim2.new(
+        HubBtn.Position.X.Scale, 
+        HubBtn.Position.X.Offset, 
+        HubBtn.Position.Y.Scale, 
+        HubBtn.Position.Y.Offset - 20
+    )
+end)
+
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 200, 0, 0) 
+Main.Position = UDim2.new(0.1, 0, 0.1, 0)
+Main.BackgroundTransparency = 1
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Main.ClipsDescendants = true 
+
+local MainBg = Instance.new("ImageLabel", Main)
+MainBg.Size = UDim2.new(1, 0, 1, 0)
+MainBg.BackgroundTransparency = 1
+MainBg.Image = "rbxassetid://89742727170269"
+MainBg.ZIndex = 0
+
+local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local baseHubSize = 345
+local isHubOpen = false
+local isDropdownOpen = false
+
+HubBtn.MouseButton1Click:Connect(function()
+    isHubOpen = not isHubOpen
+    local targetSize = isHubOpen and baseHubSize or 0
+    TweenService:Create(Main, ti, {Size = UDim2.new(0, 200, 0, targetSize)}):Play()
+end)
+
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Text = "LEZIN ESP"
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 18
+Title.ZIndex = 2
+
+local function CreateToggle(text, yPos, configKey)
+    local btn = Instance.new("TextButton", Main)
+    btn.Size = UDim2.new(0.9, 0, 0, 32)
+    btn.Position = UDim2.new(0.05, 0, 0, yPos)
+    btn.BackgroundTransparency = 1
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Text = text .. ": OFF"
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 14
+    btn.ZIndex = 2
+    btn.MouseButton1Click:Connect(function()
+        _G_Config[configKey] = not _G_Config[configKey]
+        btn.Text = text .. ": " .. (_G_Config[configKey] and "ON" or "OFF")
+        btn.TextColor3 = _G_Config[configKey] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(200, 200, 200)
+    end)
+    return btn
+end
+
+CreateToggle("CHAMS", 50, "ChamsEnabled")
+CreateToggle("SHOW NAME", 85, "NameEnabled")
+CreateToggle("SHOW ICON", 120, "IconEnabled")
+CreateToggle("HEALTH BAR", 155, "HealthEnabled")
+CreateToggle("TEAM CHECK", 190, "TeamCheck")
+
+-- Dropdown
+local DropdownBtn = Instance.new("TextButton", Main)
+DropdownBtn.Size = UDim2.new(0.9, 0, 0, 32)
+DropdownBtn.Position = UDim2.new(0.05, 0, 0, 225)
+DropdownBtn.BackgroundTransparency = 1
+DropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DropdownBtn.Text = "player or mobs?: " .. _G_Config.TargetMode
+DropdownBtn.Font = Enum.Font.SourceSans
+DropdownBtn.TextSize = 14
+DropdownBtn.ZIndex = 2
+
+local OptionsContainer = Instance.new("Frame", Main)
+OptionsContainer.Size = UDim2.new(0.9, 0, 0, 0)
+OptionsContainer.Position = UDim2.new(0.05, 0, 0, 257)
+OptionsContainer.BackgroundTransparency = 1
+OptionsContainer.ClipsDescendants = true
+OptionsContainer.BorderSizePixel = 0
+OptionsContainer.ZIndex = 3
+
+local opts = {
+    {
+        Name = "Players", 
+        Image1 = "rbxassetid://11876609912", 
+        Image2 = "rbxassetid://10290987197",
+        Label = "Players"
+    },
+    {
+        Name = "Mobs", 
+        Image1 = "rbxassetid://9955547326", 
+        Image2 = nil,
+        Label = "NPCs"
+    },
+    {
+        Name = "Both", 
+        Image1 = nil, 
+        Image2 = nil,
+        Label = "Both"
+    }
+}
+
+for i, opt in ipairs(opts) do
+    local optBtn = Instance.new("TextButton", OptionsContainer)
+    optBtn.Size = UDim2.new(1, 0, 0, 50)
+    optBtn.Position = UDim2.new(0, 0, 0, (i-1)*50)
+    optBtn.BackgroundTransparency = 1
+    optBtn.Text = ""
+    optBtn.ZIndex = 2
+    
+    if opt.Image1 then
+        local img1 = Instance.new("ImageLabel", optBtn)
+        img1.Size = UDim2.new(0, 40, 0, 40)
+        img1.Position = UDim2.new(0, 10, 0.5, -20)
+        img1.BackgroundTransparency = 1
+        img1.Image = opt.Image1
+        img1.ScaleType = Enum.ScaleType.Fit
+        img1.ZIndex = 3
+        
+        local labelText = Instance.new("TextLabel", optBtn)
+        labelText.Size = UDim2.new(0, 60, 0, 20)
+        labelText.Position = UDim2.new(0, 55, 0.5, -10)
+        labelText.BackgroundTransparency = 1
+        labelText.Text = opt.Label
+        labelText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        labelText.Font = Enum.Font.SourceSansBold
+        labelText.TextSize = 14
+        labelText.ZIndex = 3
+        
+        if opt.Image2 then
+            local img2 = Instance.new("ImageLabel", optBtn)
+            img2.Size = UDim2.new(0, 40, 0, 40)
+            img2.Position = UDim2.new(0, 120, 0.5, -20)
+            img2.BackgroundTransparency = 1
+            img2.Image = opt.Image2
+            img2.ScaleType = Enum.ScaleType.Fit
+            img2.ZIndex = 3
+        end
+    else
+        local bothText = Instance.new("TextLabel", optBtn)
+        bothText.Size = UDim2.new(1, 0, 1, 0)
+        bothText.BackgroundTransparency = 1
+        bothText.Text = "Both"
+        bothText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        bothText.Font = Enum.Font.SourceSansBold
+        bothText.TextSize = 30
+        bothText.TextXAlignment = Enum.TextXAlignment.Center
+        bothText.ZIndex = 3
+    end
+    
+    optBtn.MouseButton1Click:Connect(function()
+        _G_Config.TargetMode = opt.Name
+        DropdownBtn.Text = "player or mobs?: " .. opt.Name
+        isDropdownOpen = false
+        TweenService:Create(OptionsContainer, ti, {Size = UDim2.new(0.9, 0, 0, 0)}):Play()
+        TweenService:Create(btnHeld, ti, {Position = UDim2.new(0.05, 0, 0, 260)}):Play()
+        TweenService:Create(btnInv, ti, {Position = UDim2.new(0.05, 0, 0, 295)}):Play()
+    end)
+end
+
+btnHeld = CreateToggle("HELD ITEM", 260, "HeldItemEnabled")
+btnInv = CreateToggle("INVENTORY", 295, "InventoryEnabled")
+
+DropdownBtn.MouseButton1Click:Connect(function()
+    isDropdownOpen = not isDropdownOpen
+    local optHeight = isDropdownOpen and 150 or 0
+    
+    TweenService:Create(OptionsContainer, ti, {Size = UDim2.new(0.9, 0, 0, optHeight)}):Play()
+    
+    TweenService:Create(btnHeld, ti, {Position = UDim2.new(0.05, 0, 0, 260 + optHeight)}):Play()
+    TweenService:Create(btnInv, ti, {Position = UDim2.new(0.05, 0, 0, 295 + optHeight)}):Play()
+end)
+
+UserInputService.InputBegan:Connect(function(k)
+    if k.KeyCode == Enum.KeyCode.Insert then 
+        isHubOpen = not isHubOpen
+        local targetSize = isHubOpen and baseHubSize or 0
+        TweenService:Create(Main, ti, {Size = UDim2.new(0, 200, 0, targetSize)}):Play()
+        if not isHubOpen then
+            isDropdownOpen = false
+            TweenService:Create(OptionsContainer, ti, {Size = UDim2.new(0.9, 0, 0, 0)}):Play()
+        end
+    end
+end)
