@@ -1,0 +1,259 @@
+-- Auto Clicker com Múltiplos Alvos (CORRIGIDO PARA MOBILE)
+-- Criado para LEZIN
+
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local GuiService = game:GetService("GuiService")
+local RunService = game:GetService("RunService")
+
+-- Prevenção de duplicação
+if CoreGui:FindFirstChild("LezinAutoClickerGui") then
+    CoreGui.LezinAutoClickerGui:Destroy()
+end
+
+-- ScreenGui Principal
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LezinAutoClickerGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = false -- Deixado em false para calcularmos a margem exata da câmera/notch do celular
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+local guiParent = (gethui and gethui()) or CoreGui
+ScreenGui.Parent = guiParent
+
+-- Variáveis de Controle
+local isAutoClicking = false
+local clickSpeed = 0.1
+local targetBalls = {}
+
+-- Função de Arrastar (Mobile)
+local function makeDraggable(guiItem)
+    local dragging, dragInput, dragStart, startPos
+
+    guiItem.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiItem.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    guiItem.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            guiItem.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- ==================== UI: BOTÃO FLUTUANTE ====================
+local FloatingButton = Instance.new("TextButton")
+FloatingButton.Name = "FloatingOpenButton"
+FloatingButton.Size = UDim2.new(0, 45, 0, 45)
+FloatingButton.Position = UDim2.new(0, 10, 0, 100)
+FloatingButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+FloatingButton.Text = "HUB"
+FloatingButton.TextColor3 = Color3.fromRGB(0, 170, 255)
+FloatingButton.Font = Enum.Font.GothamBold
+FloatingButton.TextSize = 12
+FloatingButton.Active = true
+FloatingButton.Parent = ScreenGui
+
+Instance.new("UICorner", FloatingButton).CornerRadius = UDim.new(1, 0)
+local FloatStroke = Instance.new("UIStroke", FloatingButton)
+FloatStroke.Color = Color3.fromRGB(0, 170, 255)
+FloatStroke.Thickness = 2
+
+makeDraggable(FloatingButton)
+
+-- ==================== UI: HUB PRINCIPAL ====================
+local MainHub = Instance.new("Frame")
+MainHub.Name = "MainHub"
+MainHub.Size = UDim2.new(0, 220, 0, 260)
+MainHub.Position = UDim2.new(0.5, -110, 0.5, -130)
+MainHub.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainHub.Visible = false
+MainHub.Active = true
+MainHub.Parent = ScreenGui
+
+Instance.new("UICorner", MainHub).CornerRadius = UDim.new(0, 10)
+local HubStroke = Instance.new("UIStroke", MainHub)
+HubStroke.Color = Color3.fromRGB(0, 170, 255)
+HubStroke.Thickness = 2
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "LEZIN AUTO CLICK"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.Parent = MainHub
+
+makeDraggable(MainHub)
+
+-- Botão de Toggle (Liga/Desliga)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0.9, 0, 0, 35)
+ToggleButton.Position = UDim2.new(0.05, 0, 0, 40)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleButton.Text = "Status: DESLIGADO"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 50, 50)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 14
+ToggleButton.Parent = MainHub
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 6)
+
+-- TextBox para Velocidade
+local SpeedBox = Instance.new("TextBox")
+SpeedBox.Size = UDim2.new(0.9, 0, 0, 35)
+SpeedBox.Position = UDim2.new(0.05, 0, 0, 85)
+SpeedBox.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+SpeedBox.Text = "0.1"
+SpeedBox.PlaceholderText = "Velocidade (Ex: 0.1)"
+SpeedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedBox.Font = Enum.Font.GothamSemibold
+SpeedBox.TextSize = 14
+SpeedBox.Parent = MainHub
+Instance.new("UICorner", SpeedBox).CornerRadius = UDim.new(0, 6)
+
+-- Botão Adicionar Alvo
+local AddTargetBtn = Instance.new("TextButton")
+AddTargetBtn.Size = UDim2.new(0.9, 0, 0, 35)
+AddTargetBtn.Position = UDim2.new(0.05, 0, 0, 130)
+AddTargetBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+AddTargetBtn.Text = "+ Gerar Bolinha Azul"
+AddTargetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+AddTargetBtn.Font = Enum.Font.GothamBold
+AddTargetBtn.TextSize = 14
+AddTargetBtn.Parent = MainHub
+Instance.new("UICorner", AddTargetBtn).CornerRadius = UDim.new(0, 6)
+
+-- Botão Excluir Alvos
+local ClearTargetsBtn = Instance.new("TextButton")
+ClearTargetsBtn.Size = UDim2.new(0.9, 0, 0, 35)
+ClearTargetsBtn.Position = UDim2.new(0.05, 0, 0, 175)
+ClearTargetsBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+ClearTargetsBtn.Text = "🗑 Excluir Todas"
+ClearTargetsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClearTargetsBtn.Font = Enum.Font.GothamBold
+ClearTargetsBtn.TextSize = 14
+ClearTargetsBtn.Parent = MainHub
+Instance.new("UICorner", ClearTargetsBtn).CornerRadius = UDim.new(0, 6)
+
+-- ==================== LÓGICA DO SCRIPT ====================
+
+-- Abrir/Fechar Hub
+FloatingButton.MouseButton1Click:Connect(function()
+    MainHub.Visible = not MainHub.Visible
+end)
+
+-- Toggle Auto Clicker
+ToggleButton.MouseButton1Click:Connect(function()
+    isAutoClicking = not isAutoClicking
+    if isAutoClicking then
+        ToggleButton.Text = "Status: LIGADO"
+        ToggleButton.TextColor3 = Color3.fromRGB(50, 255, 50)
+    else
+        ToggleButton.Text = "Status: DESLIGADO"
+        ToggleButton.TextColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end)
+
+-- Adicionar Bolinha (Alvo)
+AddTargetBtn.MouseButton1Click:Connect(function()
+    local Ball = Instance.new("Frame")
+    Ball.Size = UDim2.new(0, 34, 0, 34)
+    Ball.Position = UDim2.new(0.5, -17, 0.5, -17)
+    Ball.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    Ball.BackgroundTransparency = 0.6 -- Translúcida pra ver o que tem embaixo!
+    Ball.Active = false -- IMPORTANTE: Deixa false para o clique "atravessar" a bolinha e ir pro jogo
+    Ball.Parent = ScreenGui
+    
+    Instance.new("UICorner", Ball).CornerRadius = UDim.new(1, 0)
+    
+    local BallStroke = Instance.new("UIStroke")
+    BallStroke.Color = Color3.fromRGB(255, 255, 255)
+    BallStroke.Thickness = 1
+    BallStroke.Parent = Ball
+    
+    -- Ponto vermelho central pra você ter 100% de precisão de onde vai sair o clique
+    local CenterDot = Instance.new("Frame")
+    CenterDot.Size = UDim2.new(0, 4, 0, 4)
+    CenterDot.Position = UDim2.new(0.5, -2, 0.5, -2)
+    CenterDot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    CenterDot.BorderSizePixel = 0
+    CenterDot.Active = false
+    CenterDot.Parent = Ball
+    Instance.new("UICorner", CenterDot).CornerRadius = UDim.new(1, 0)
+
+    makeDraggable(Ball)
+    table.insert(targetBalls, Ball)
+end)
+
+-- Excluir todas as Bolinhas
+ClearTargetsBtn.MouseButton1Click:Connect(function()
+    for _, ball in ipairs(targetBalls) do
+        if ball and ball.Parent then
+            ball:Destroy()
+        end
+    end
+    targetBalls = {}
+end)
+
+-- Sistema Principal de Auto Clicker (COM TOQUE MOBILE)
+task.spawn(function()
+    while true do
+        if isAutoClicking then
+            clickSpeed = tonumber(SpeedBox.Text) or 0.1
+            
+            -- Pega a margem da tela (corrige o bug do toque fora da bolinha)
+            local inset = GuiService:GetGuiInset()
+            
+            -- PASSO 1: Envia evento de Dedo Pressionando (TouchDown)
+            for i, ball in ipairs(targetBalls) do
+                if ball and ball.Parent then
+                    -- Calcula o meio exato do pontinho vermelho somando a margem da tela
+                    local clickX = ball.AbsolutePosition.X + (ball.AbsoluteSize.X / 2) + inset.X
+                    local clickY = ball.AbsolutePosition.Y + (ball.AbsoluteSize.Y / 2) + inset.Y
+                    
+                    local touchId = 1500 + i -- ID único de toque pro Roblox não se confundir
+                    
+                    -- Simula o Toque! (0 = Dedo Tocou na tela)
+                    VirtualInputManager:SendTouchEvent(touchId, 0, clickX, clickY)
+                end
+            end
+            
+            task.wait(0.01) -- Pequeno delay pro botão do jogo registrar que afundou
+            
+            -- PASSO 2: Envia evento de Dedo Soltando (TouchUp)
+            for i, ball in ipairs(targetBalls) do
+                if ball and ball.Parent then
+                    local clickX = ball.AbsolutePosition.X + (ball.AbsoluteSize.X / 2) + inset.X
+                    local clickY = ball.AbsolutePosition.Y + (ball.AbsoluteSize.Y / 2) + inset.Y
+                    
+                    local touchId = 1500 + i
+                    
+                    -- Simula soltar o dedo! (2 = Dedo saiu da tela)
+                    VirtualInputManager:SendTouchEvent(touchId, 2, clickX, clickY)
+                end
+            end
+
+            task.wait(clickSpeed)
+        else
+            task.wait(0.1)
+        end
+    end
+end)
