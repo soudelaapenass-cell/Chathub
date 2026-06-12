@@ -1,0 +1,78 @@
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+-- CONFIGURAÇÃO INICIAL
+local fpsAlvo = 60 -- O jogo vai tentar não passar deste valor
+local menuAtivo = false
+
+-- INTERFACE (GUI)
+local player = Players.LocalPlayer
+local pGui = player:WaitForChild("PlayerGui")
+
+local sg = Instance.new("ScreenGui")
+sg.Name = "TravaFPS_Mobile"
+sg.IgnoreGuiInset = true
+sg.ResetOnSpawn = false
+sg.Parent = pGui
+
+-- Botão de Abrir/Fechar
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(0, 70, 0, 35)
+btn.Position = UDim2.new(0, 10, 0.4, 0)
+btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+btn.Text = "FPS: " .. fpsAlvo
+btn.TextColor3 = Color3.new(1, 1, 1)
+btn.BorderSizePixel = 0
+btn.Parent = sg
+
+-- Painel de Input
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 150, 0, 80)
+frame.Position = UDim2.new(0, 10, 0.4, 40)
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.Visible = false
+frame.Parent = sg
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, 0, 0, 30)
+label.Text = "Travar em:"
+label.TextColor3 = Color3.new(1, 1, 1)
+label.BackgroundTransparency = 1
+label.Parent = frame
+
+local input = Instance.new("TextBox")
+input.Size = UDim2.new(0.8, 0, 0, 30)
+input.Position = UDim2.new(0.1, 0, 0.5, 0)
+input.PlaceholderText = "Ex: 30"
+input.Text = ""
+input.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+input.TextColor3 = Color3.new(1, 1, 1)
+input.Parent = frame
+
+-- LÓGICA DO MENU
+btn.MouseButton1Click:Connect(function()
+	menuAtivo = not menuAtivo
+	frame.Visible = menuAtivo
+end)
+
+input.FocusLost:Connect(function(enter)
+	local valor = tonumber(input.Text)
+	if valor and valor > 0 then
+		fpsAlvo = valor
+		btn.Text = "FPS: " .. valor
+		input.Text = ""
+		frame.Visible = false
+		menuAtivo = false
+	end
+end)
+
+-- O MOTOR DA TRAVA (O que faz o FPS parar de subir)
+RunService.Heartbeat:Connect(function()
+	local tempoPorFrame = 1 / fpsAlvo
+	local inicio = os.clock()
+	
+	-- Este loop "segura" o processador até dar o tempo do próximo frame
+	while os.clock() - inicio < tempoPorFrame do
+		-- Esperando...
+	end
+end)
