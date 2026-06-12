@@ -1,0 +1,160 @@
+-- Serviços
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+
+-- Criando a ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LezinInventoryHub"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- Variáveis de estado
+local isHubOpen = false
+local lastDroppedItem = nil
+local autoSwitchActive = false
+
+-- ==========================================
+-- BOTÃO FLUTUANTE
+-- ==========================================
+local FloatingButton = Instance.new("ImageButton")
+FloatingButton.Size = UDim2.new(0, 60, 0, 60)
+FloatingButton.Position = UDim2.new(0, 50, 0.5, 0)
+FloatingButton.Image = "rbxassetid://75012424452065"
+FloatingButton.BackgroundTransparency = 1
+FloatingButton.Parent = ScreenGui
+
+local FloatingText = Instance.new("TextLabel", FloatingButton)
+FloatingText.Text = "by Lezin"; FloatingText.Position = UDim2.new(0, 0, 0, -20); FloatingText.Size = UDim2.new(1, 0, 0, 20)
+FloatingText.BackgroundTransparency = 1; FloatingText.TextColor3 = Color3.fromRGB(255, 255, 255)
+FloatingText.TextStrokeTransparency = 0; FloatingText.Font = Enum.Font.SourceSansBold; FloatingText.TextSize = 16
+
+-- Sistema de Arrastar
+local dragging, dragStart, startPos
+FloatingButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true; dragStart = input.Position; startPos = FloatingButton.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        FloatingButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end end)
+
+-- ==========================================
+-- MAIN HUB
+-- ==========================================
+local MainHub = Instance.new("Frame", ScreenGui)
+MainHub.Size = UDim2.new(0, 600, 0, 400); MainHub.Position = UDim2.new(0.5, -300, 0.5, -200)
+MainHub.BackgroundColor3 = Color3.fromRGB(20, 20, 20); MainHub.BackgroundTransparency = 0.4
+MainHub.BorderSizePixel = 0; MainHub.Visible = false
+Instance.new("UICorner", MainHub).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", MainHub).Transparency = 0.5
+
+-- Funções Utilitárias
+local function createBtn(text, pos, size)
+    local btn = Instance.new("TextButton", MainHub); btn.Size = size; btn.Position = pos; btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50); btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Font = Enum.Font.SourceSansBold
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    return btn
+end
+
+local function createTextBox(placeholder, pos, size)
+    local box = Instance.new("TextBox", MainHub); box.Size = size; box.Position = pos; box.PlaceholderText = placeholder
+    box.BackgroundColor3 = Color3.fromRGB(30, 30, 30); box.TextColor3 = Color3.fromRGB(255, 255, 255); box.Font = Enum.Font.SourceSans
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 5)
+    return box
+end
+
+-- Controles
+local BtnDropEquipped = createBtn("Drop Atual", UDim2.new(0, 10, 0, 10), UDim2.new(0, 90, 0, 30))
+local BtnCollectBack = createBtn("Coletar 1 de volta", UDim2.new(0, 110, 0, 10), UDim2.new(0, 120, 0, 30))
+local BtnCollectAll = createBtn("Coletar Mapa", UDim2.new(0, 240, 0, 10), UDim2.new(0, 90, 0, 30))
+local BtnAutoSwitch = createBtn("Auto-Switch", UDim2.new(0, 340, 0, 10), UDim2.new(0, 90, 0, 30))
+
+local TxtAmount = createTextBox("Qtd", UDim2.new(0, 10, 0, 45), UDim2.new(0, 50, 0, 30))
+local TxtItemName = createTextBox("Nome ou 'all'", UDim2.new(0, 70, 0, 45), UDim2.new(0, 150, 0, 30))
+local TxtCooldown = createTextBox("CD(s)", UDim2.new(0, 230, 0, 45), UDim2.new(0, 60, 0, 30))
+TxtCooldown.BackgroundTransparency = 1; TxtCooldown.TextTransparency = 1
+
+local BtnDropCustom = createBtn("Drop Específico", UDim2.new(0, 300, 0, 45), UDim2.new(0, 100, 0, 30))
+
+-- Inventário (Corrigido com AutomaticCanvasSize)
+local InventoryFrame = Instance.new("ScrollingFrame", MainHub)
+InventoryFrame.Size = UDim2.new(1, -20, 1, -90); InventoryFrame.Position = UDim2.new(0, 10, 0, 85); InventoryFrame.BackgroundTransparency = 1
+InventoryFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y -- FIXO: Faz os itens aparecerem
+local UIGrid = Instance.new("UIGridLayout", InventoryFrame)
+UIGrid.CellSize = UDim2.new(0, 80, 0, 100); UIGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+
+-- ==========================================
+-- LÓGICA
+-- ==========================================
+
+function UpdateInventory()
+    InventoryFrame:ClearAllChildren()
+    Instance.new("UIGridLayout", InventoryFrame).CellSize = UDim2.new(0, 80, 0, 100)
+    Instance.new("UIPadding", InventoryFrame).PaddingTop = UDim.new(0, 10)
+
+    local items = {}
+    if LocalPlayer.Backpack then for _, v in pairs(LocalPlayer.Backpack:GetChildren()) do if v:IsA("Tool") then table.insert(items, v) end end end
+    if LocalPlayer.Character then for _, v in pairs(LocalPlayer.Character:GetChildren()) do if v:IsA("Tool") then table.insert(items, v) end end end
+
+    for _, item in ipairs(items) do
+        local slot = Instance.new("Frame", InventoryFrame)
+        slot.BackgroundColor3 = Color3.fromRGB(40, 40, 40); slot.BackgroundTransparency = 0.5
+        Instance.new("UICorner", slot).CornerRadius = UDim.new(0, 8)
+        
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild(item.Name) then
+            slot.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+        end
+
+        local img = Instance.new("ImageLabel", slot); img.Size = UDim2.new(1, -10, 0, 60); img.Position = UDim2.new(0, 5, 0, 5); img.BackgroundTransparency = 1
+        img.Image = item.TextureId ~= "" and item.TextureId or "rbxassetid://13110281568"
+        
+        local name = Instance.new("TextLabel", slot); name.Size = UDim2.new(1, 0, 0, 30); name.Position = UDim2.new(0, 0, 1, -30)
+        name.BackgroundTransparency = 1; name.Text = item.Name; name.TextColor3 = Color3.new(1,1,1); name.TextScaled = true
+
+        local btn = Instance.new("TextButton", slot); btn.Size = UDim2.new(1,0,1,0); btn.BackgroundTransparency = 1; btn.Text = ""
+        btn.MouseButton1Click:Connect(function() if LocalPlayer.Character then LocalPlayer.Character.Humanoid:EquipTool(item); UpdateInventory() end end)
+    end
+end
+
+BtnAutoSwitch.MouseButton1Click:Connect(function()
+    autoSwitchActive = not autoSwitchActive
+    local goal = autoSwitchActive and 0 or 1
+    TweenService:Create(TxtCooldown, TweenInfo.new(0.5), {BackgroundTransparency = goal, TextTransparency = goal}):Play()
+    if autoSwitchActive then
+        task.spawn(function()
+            while autoSwitchActive do
+                local cd = tonumber(TxtCooldown.Text) or 1
+                local name = string.lower(TxtItemName.Text)
+                for _, t in pairs(LocalPlayer.Backpack:GetChildren()) do
+                    if t:IsA("Tool") and (name == "all" or string.find(string.lower(t.Name), name)) then
+                        if LocalPlayer.Character then LocalPlayer.Character.Humanoid:EquipTool(t) end
+                        task.wait(cd)
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end)
+
+FloatingButton.MouseButton1Click:Connect(function()
+    isHubOpen = not isHubOpen
+    if isHubOpen then 
+        MainHub.Visible = true; UpdateInventory() 
+    else MainHub.Visible = false end
+end)
+
+BtnDropEquipped.MouseButton1Click:Connect(function() if LocalPlayer.Character then local t = LocalPlayer.Character:FindFirstChildOfClass("Tool") if t then t.Parent = Workspace; UpdateInventory() end end end)
+BtnCollectBack.MouseButton1Click:Connect(function() if lastDroppedItem and lastDroppedItem.Parent == Workspace then lastDroppedItem.Parent = LocalPlayer.Backpack; UpdateInventory() end end)
+BtnCollectAll.MouseButton1Click:Connect(function() for _, o in ipairs(Workspace:GetDescendants()) do if o:IsA("Tool") and not Players:GetPlayerFromCharacter(o.Parent) then o.Parent = LocalPlayer.Backpack end end; UpdateInventory() end)
+BtnDropCustom.MouseButton1Click:Connect(function() local n = string.lower(TxtItemName.Text); local a = tonumber(TxtAmount.Text) or 1; local d = 0; for _, i in ipairs(LocalPlayer.Backpack:GetChildren()) do if i:IsA("Tool") and (n=="all" or string.lower(i.Name)==n) then i.Parent = Workspace; d = d+1; if n~="all" and d >= a then break end end end; UpdateInventory() end)
+r
