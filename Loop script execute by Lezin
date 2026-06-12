@@ -1,0 +1,269 @@
+local UIS = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game.CoreGui
+ScreenGui.Name = "Delta_Elite_V17"
+ScreenGui.ResetOnSpawn = false
+
+-- Créditos na Cabeça
+local function MostrarCreditos()
+    pcall(function()
+        local player = game.Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local head = char:WaitForChild("Head")
+        local bbg = Instance.new("BillboardGui", head)
+        bbg.Size = UDim2.new(0, 250, 0, 50)
+        bbg.Adornee = head
+        bbg.ExtentsOffset = Vector3.new(0, 3, 0)
+        bbg.AlwaysOnTop = true
+        local lbl = Instance.new("TextLabel", bbg)
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = "Script by Lezin e Gemini 🥰"
+        lbl.TextColor3 = Color3.new(1, 1, 1)
+        lbl.Font = Enum.Font.GothamBold
+        lbl.TextSize = 22
+        lbl.TextStrokeTransparency = 0
+        task.spawn(function()
+            local t = 0
+            while bbg.Parent do
+                lbl.TextStrokeColor3 = Color3.fromHSV(t, 1, 1)
+                t = (t + 0.01) % 1
+                task.wait()
+            end
+        end)
+        task.wait(5)
+        TweenService:Create(lbl, TweenInfo.new(1.5), {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+        task.wait(1.5)
+        bbg:Destroy()
+    end)
+end
+MostrarCreditos()
+
+-- Configuração de Música
+local config = {bgMusic = "0"}
+pcall(function()
+    if isfile and isfile("DeltaV17_Data.json") then
+        config = HttpService:JSONDecode(readfile("DeltaV17_Data.json"))
+    end
+end)
+
+-- Frame Principal
+local MainFrame = Instance.new("ImageLabel")
+MainFrame.Parent = ScreenGui
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 500, 0, 350)
+MainFrame.Image = "rbxassetid://126966972982411"
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Active = true
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 15)
+
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Thickness = 3
+Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+task.spawn(function()
+    while true do
+        for i = 0, 1, 0.005 do Stroke.Color = Color3.fromHSV(i, 1, 1) task.wait() end
+    end
+end)
+
+-- Som e Música
+local SoundInt = Instance.new("Sound", MainFrame)
+SoundInt.SoundId = "rbxassetid://119974879573475"
+SoundInt.Volume = 3
+
+local BGM = Instance.new("Sound", game.Workspace)
+BGM.Name = "DeltaBGM_V17"
+BGM.Looped = true
+BGM.Volume = 0.5
+if config.bgMusic ~= "0" then BGM.SoundId = "rbxassetid://"..config.bgMusic end
+
+-- Conteúdo
+local Content = Instance.new("Frame", MainFrame)
+Content.Size = UDim2.new(1, 0, 1, 0)
+Content.BackgroundTransparency = 1
+Content.ZIndex = 2
+
+-- Botão Fechar e Engrenagem
+local CloseBtn = Instance.new("TextButton", Content)
+CloseBtn.Size = UDim2.new(0, 35, 0, 35)
+CloseBtn.Position = UDim2.new(1, -45, 0, 10)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1,0)
+
+local SettingsBtn = Instance.new("TextButton", Content)
+SettingsBtn.Size = UDim2.new(0, 35, 0, 35)
+SettingsBtn.Position = UDim2.new(0, 10, 0, 10)
+SettingsBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SettingsBtn.Text = "⚙️"
+SettingsBtn.TextSize = 20
+SettingsBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", SettingsBtn).CornerRadius = UDim.new(0, 8)
+
+-- Painel Engrenagem Transparente
+local SetPanel = Instance.new("Frame", MainFrame)
+SetPanel.Size = UDim2.new(0, 240, 0, 130)
+SetPanel.Position = UDim2.new(0.5, -120, 0.5, -65)
+SetPanel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SetPanel.BackgroundTransparency = 0.4
+SetPanel.Visible = false
+SetPanel.ZIndex = 100 
+Instance.new("UICorner", SetPanel)
+
+local MusicInput = Instance.new("TextBox", SetPanel)
+MusicInput.Size = UDim2.new(0.9, 0, 0.35, 0)
+MusicInput.Position = UDim2.new(0.05, 0, 0.15, 0)
+MusicInput.PlaceholderText = "ID da Música"
+MusicInput.Text = config.bgMusic
+MusicInput.BackgroundTransparency = 0.6
+MusicInput.TextColor3 = Color3.new(1,1,1)
+MusicInput.ZIndex = 101
+
+local SaveBtn = Instance.new("TextButton", SetPanel)
+SaveBtn.Size = UDim2.new(0.9, 0, 0.3, 0)
+SaveBtn.Position = UDim2.new(0.05, 0, 0.6, 0)
+SaveBtn.Text = "SALVAR"
+SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+SaveBtn.ZIndex = 101
+
+SettingsBtn.MouseButton1Click:Connect(function() SetPanel.Visible = not SetPanel.Visible end)
+SaveBtn.MouseButton1Click:Connect(function()
+    config.bgMusic = MusicInput.Text
+    pcall(function() writefile("DeltaV17_Data.json", HttpService:JSONEncode(config)) end)
+    BGM.SoundId = "rbxassetid://"..MusicInput.Text
+    BGM:Play()
+    SetPanel.Visible = false
+end)
+
+-- Alternar Menu
+local isOpened = true
+local function toggle()
+    isOpened = not isOpened
+    SoundInt:Play()
+    if isOpened then
+        Content.Visible = true
+        MainFrame:TweenSizeAndPosition(UDim2.new(0, 500, 0, 350), UDim2.new(0.5, -250, 0.5, -175), "Out", "Back", 0.4, true)
+        MainFrame.Image = "rbxassetid://126966972982411"
+        if BGM.SoundId ~= "" then BGM:Play() end
+    else
+        Content.Visible = false
+        SetPanel.Visible = false
+        MainFrame:TweenSizeAndPosition(UDim2.new(0, 75, 0, 75), UDim2.new(0.1, 0, 0.1, 0), "Out", "Back", 0.4, true)
+        MainFrame.Image = "rbxassetid://97871211303571"
+        BGM:Pause()
+    end
+end
+CloseBtn.MouseButton1Click:Connect(toggle)
+
+-- Drag System
+local dragging, dragStart, startPos, moveAmount = false, nil, nil, 0
+MainFrame.InputBegan:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        dragging = true dragStart = input.Position startPos = MainFrame.Position moveAmount = 0
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        moveAmount = moveAmount + delta.Magnitude
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if dragging then dragging = false if not isOpened and moveAmount < 10 then toggle() end end
+end)
+
+-- EXECUÇÃO UNIVERSAL (Funciona com RemoteSpy e outros)
+local function ExecutarScript(codigo)
+    local func, err = loadstring(codigo)
+    if func then
+        -- Define o ambiente para o global do executor (getgenv)
+        setfenv(func, getfenv(0)) 
+        task.spawn(func)
+    else
+        warn("Erro no Script: " .. tostring(err))
+    end
+end
+
+-- Sistema de Abas
+local PageHolder = Instance.new("Frame", Content)
+PageHolder.Position = UDim2.new(0, 105, 0, 55)
+PageHolder.Size = UDim2.new(1, -115, 1, -85)
+PageHolder.BackgroundTransparency = 1
+
+local TabHolder = Instance.new("ScrollingFrame", Content)
+TabHolder.Position = UDim2.new(0, 10, 0, 55)
+TabHolder.Size = UDim2.new(0, 85, 1, -70)
+TabHolder.BackgroundTransparency = 1
+Instance.new("UIListLayout", TabHolder).Padding = UDim.new(0, 5)
+
+local activeLoops = {}
+function CreateTab(i)
+    local bt = Instance.new("TextButton", TabHolder)
+    bt.Size = UDim2.new(1, 0, 0, 32)
+    bt.Text = "Aba "..i
+    bt.BackgroundColor3 = Color3.new(0,0,0)
+    bt.BackgroundTransparency = 0.5
+    bt.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", bt)
+
+    local pg = Instance.new("Frame", PageHolder)
+    pg.Size = UDim2.new(1, 0, 1, 0)
+    pg.Visible = (i == 1)
+    pg.BackgroundTransparency = 1
+
+    local txt = Instance.new("TextBox", pg)
+    txt.Size = UDim2.new(1, 0, 0.5, 0)
+    txt.MultiLine = true
+    txt.PlaceholderText = "Cole o script..."
+    txt.BackgroundTransparency = 0.7
+    txt.TextColor3 = Color3.new(0,1,0)
+    Instance.new("UICorner", txt)
+
+    local spd = Instance.new("TextBox", pg)
+    spd.Size = UDim2.new(1, 0, 0.15, 0)
+    spd.Position = UDim2.new(0, 0, 0.55, 0)
+    spd.Text = "0.5"
+    spd.BackgroundTransparency = 0.7
+    spd.TextColor3 = Color3.new(1,1,1)
+
+    local go = Instance.new("TextButton", pg)
+    go.Size = UDim2.new(1, 0, 0.2, 0)
+    go.Position = UDim2.new(0, 0, 0.75, 0)
+    go.Text = "LIGAR"
+    go.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+    Instance.new("UICorner", go)
+
+    bt.MouseButton1Click:Connect(function()
+        for _, v in pairs(PageHolder:GetChildren()) do v.Visible = false end
+        pg.Visible = true
+    end)
+
+    activeLoops[i] = false
+    go.MouseButton1Click:Connect(function()
+        activeLoops[i] = not activeLoops[i]
+        SoundInt:Play()
+        if activeLoops[i] then
+            go.Text = "DESLIGAR"
+            go.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+            task.spawn(function()
+                while activeLoops[i] do
+                    ExecutarScript(txt.Text) -- Chama a função universal
+                    task.wait(tonumber(spd.Text) or 0.5)
+                end
+            end)
+        else
+            go.Text = "LIGAR"
+            go.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        end
+    end)
+end
+for i=1, 10 do CreateTab(i) end
