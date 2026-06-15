@@ -4,7 +4,7 @@
 	+ BUSCA AVANÇADA POR HUMANOIDROOTPART (IGNORA AUSÊNCIA DE HUMANOID)
 	+ MODOS DE FOCO: 1° PESSOA PADRÃO, 360, ALL
 	+ SLIDER HIT CHANCE NO SILENT AIM
-	+ MINI JANELA DE PREVIEW DE FOTOS DINÂMICA
+	+ MINI JANELA DE PREVIEW DE FOTOS DINÂMICA (CORRIGIDA)
 ]]
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -125,7 +125,7 @@ magnetImgLabel.Active = true
 local PreviewFrame = Instance.new("Frame", toggleGui)
 PreviewFrame.Name = "LezinPhotoPreview"
 PreviewFrame.Size = UDim2.new(0, 180, 0, 135)
-PreviewFrame.Position = UDim2.new(0.5, 270, 0.5, -120) -- Posicionado convenientemente à direita do menu
+PreviewFrame.Position = UDim2.new(0.5, 270, 0.5, -120) 
 PreviewFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 PreviewFrame.BackgroundTransparency = 0.1
 PreviewFrame.Visible = true
@@ -297,7 +297,7 @@ local function makeDraggable(obj, conditionFunc)
 end
 
 makeDraggable(magnetImgLabel, function() return ScreenEditor.MagnetMovable end)
-makeDraggable(PreviewFrame, function() return true end) -- Deixa a janela de preview livre para mover sempre
+makeDraggable(PreviewFrame, function() return true end) 
 
 local function toggleScreenEditor(state)
     ScreenEditor.Enabled = state
@@ -369,7 +369,7 @@ local function setFluentBackground(assetUri)
     end)
 end
 
--- // LÓGICA DE PRÉ-VISUALIZAÇÃO DENTRO DA MINI JANELA //
+-- // LÓGICA DE PRÉ-VISUALIZAÇÃO CORRIGIDA CONTRA CACHE DO ROBLOX //
 local function updatePreviewImage(data)
     if not data then return end
     local req = (syn and syn.request) or request or http_request or (http and http.request)
@@ -382,11 +382,11 @@ local function updatePreviewImage(data)
         if isfile(data.File) then
             PreviewImage.Image = getcustomasset(data.File)
         else
-            -- Faz um download temporário rápido em background só para alimentar a tela de escolha
             local imgRes = req({Url = data.Url, Method = "GET"})
             if imgRes.StatusCode == 200 and not string.find(string.lower(imgRes.Body), "<html") then
-                writefile("lz_preview_cache.png", imgRes.Body)
-                PreviewImage.Image = getcustomasset("lz_preview_cache.png")
+                -- Correção crucial: Salva direto na ID única da foto para forçar o motor do Roblox a renderizar!
+                writefile(data.File, imgRes.Body)
+                PreviewImage.Image = getcustomasset(data.File)
             else
                 PreviewImage.Image = "rbxassetid://13147607436"
             end
@@ -404,15 +404,21 @@ local function applyBackgroundFromUrl(url, fileName)
     
     Fluent:Notify({Title="Baixando Fundo", Content="Aguarde um instante...", Duration=2})
     task.spawn(function()
-        local imgRes = req({Url = url, Method = "GET"})
-        if imgRes.StatusCode == 200 and not string.find(string.lower(imgRes.Body), "<html") then
-            writefile(fileName, imgRes.Body)
+        if isfile(fileName) then
             local assetId = getcustomasset(fileName)
             setFluentBackground(assetId)
             Fluent:Notify({Title="Sucesso", Content="Fundo aplicado com sucesso!", Type="Success", Duration=3})
         else
-            setFluentBackground("rbxassetid://13147607436")
-            Fluent:Notify({Title="Erro", Content="Falha ao baixar. Fundo nativo aplicado.", Type="Warning", Duration=3})
+            local imgRes = req({Url = url, Method = "GET"})
+            if imgRes.StatusCode == 200 and not string.find(string.lower(imgRes.Body), "<html") then
+                writefile(fileName, imgRes.Body)
+                local assetId = getcustomasset(fileName)
+                setFluentBackground(assetId)
+                Fluent:Notify({Title="Sucesso", Content="Fundo aplicado com sucesso!", Type="Success", Duration=3})
+            else
+                setFluentBackground("rbxassetid://13147607436")
+                Fluent:Notify({Title="Erro", Content="Falha ao baixar. Fundo nativo aplicado.", Type="Warning", Duration=3})
+            end
         end
     end)
 end
@@ -668,7 +674,6 @@ renderConnection = RunService.RenderStepped:Connect(function()
         fovStroke.Color = _G.FovColor
         
         local currentTrans = _G.FovTransparency
-        
         fovCircle.BackgroundTransparency = currentTrans; fovCircle.ImageTransparency = 1; fovCircle.Image = ""; fovCorner.CornerRadius = UDim.new(1, 0); fovStroke.Enabled = true
     else
         fovCircle.Visible = false
@@ -846,109 +851,186 @@ local origUrls = {
     {Name = "Hub Photo 31", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/f512f83e-ed92-4e50-8333-d76157c0ba2b.jpg", File = "hub_31.jpg"},
     {Name = "Hub Photo 32", Url = "https://i.supaimg.com/169c6d04-1343-4e80-a42c-54f807de5628/b5e171c3-4a8a-45c9-9d61-4f145b23f12a.jpg", File = "hub_32.jpg"},
 
-    -- WALL PHOTOS
-    {Name = "Wall Photo 1", Url = "https://i.ibb.co/TqW0LLD9/adult-neptune-and-yatogami-tohka-by-camanime7794-ddd4xqc-fullview.jpg", File = "n_wall_1.png"},
-    {Name = "Wall Photo 2", Url = "https://i.ibb.co/whHZnt1x/akagi-and-prinz-eugen-by-camanime7794-de95ud7-pre.jpg", File = "n_wall_2.png"},
-    {Name = "Wall Photo 3", Url = "https://i.ibb.co/HZQrYjm/albedo-by-malyste-dchnftp-375w-2x.png", File = "n_wall_3.png"},
-    {Name = "Wall Photo 4", Url = "https://i.ibb.co/rKZ8xwXK/aqua-wallpaper-by-dinocozero-db3cyy1-fullview.jpg", File = "n_wall_4.png"},
-    {Name = "Wall Photo 5", Url = "https://i.ibb.co/4zzKby6/anime-ecchi-bunny-girl-wallpaper-by-camanime7794-df5zd1n.png", File = "n_wall_5.png"},
-    {Name = "Wall Photo 6", Url = "https://i.ibb.co/LLHspkB/asuna-wallpaper-by-dinocozero-d8e3jfy-fullview.jpg", File = "n_wall_6.png"},
-    {Name = "Wall Photo 7", Url = "https://i.ibb.co/zTpNwL5w/chocola-wallpaper-1920x1080-by-joliiee-d95oa6e-fullview.jpg", File = "n_wall_7.png"},
-    {Name = "Wall Photo 8", Url = "https://i.ibb.co/C50z7xmq/d5fb7to-7d06f118-567a-425e-ba34-4f46caaa9ecc.png", File = "n_wall_8.png"},
-    {Name = "Wall Photo 9", Url = "https://i.ibb.co/fVLFx5x7/dal-girls-in-lingerie-by-camanime7794-de03vt3-fullview.jpg", File = "n_wall_9.png"},
-    {Name = "Wall Photo 10", Url = "https://i.ibb.co/jkLLQpK1/date-a-live-inverse-origami-tlc-by-ecchiartist-d9apwyr-fullview.jpg", File = "n_wall_10.png"},
-    {Name = "Wall Photo 11", Url = "https://i.ibb.co/GfSjQD25/de7ol92-bc67fb1d-48a3-4e67-b671-7fff39c188f5.jpg", File = "n_wall_11.png"},
-    {Name = "Wall Photo 12", Url = "https://i.ibb.co/W43pn3b7/erio-touwa-wallpaper-by-dinocozero-db48px4-fullview.jpg", File = "n_wall_12.png"},
-    {Name = "Wall Photo 13", Url = "https://i.ibb.co/V0nTmQcv/date-a-live-wallpaper-remake-by-tammypain-d62xh6u-fullview.jpg", File = "n_wall_13.png"},
-    {Name = "Wall Photo 14", Url = "https://i.ibb.co/Ps167S1C/grayfia-and-akeno-high-school-dxd-by-camanime7794-ddjjtp1-fullview.jpg", File = "n_wall_14.png"},
-    {Name = "Wall Photo 15", Url = "https://i.ibb.co/ch7DNBWg/hanako-ikezawa-by-malyste-dcsu9cu-375w-2x.png", File = "n_wall_15.png"},
-    {Name = "Wall Photo 16", Url = "https://i.ibb.co/VYxrSQss/hestia-wallpaper-2-by-dinocozero-d8y5nif.jpg", File = "n_wall_16.png"},
-    {Name = "Wall Photo 17", Url = "https://i.ibb.co/m5YYQYBD/high-school-dxd-rossweisse-by-camanime7794-ddnht5h-fullview.jpg", File = "n_wall_17.png"},
-    {Name = "Wall Photo 18", Url = "https://i.ibb.co/Zz8MJNzF/high-school-dxd-akeno-02-by-numerum-dc34seg-pre.jpg", File = "n_wall_18.png"},
-    {Name = "Wall Photo 19", Url = "https://i.ibb.co/Rpwb553T/high-school-dxd-akeno-by-numerum-dc34sbn-pre.jpg", File = "n_wall_19.png"},
-    {Name = "Wall Photo 20", Url = "https://i.ibb.co/zTxV22Jt/high-school-dxd-kuroka-by-numerum-dc32udz-pre.jpg", File = "n_wall_20.png"},
-    {Name = "Wall Photo 21", Url = "https://i.ibb.co/PZtK4BSm/high-school-dxd-kuroka-02-by-numerum-dc334xr-pre.jpg", File = "n_wall_21.png"},
-    {Name = "Wall Photo 22", Url = "https://i.ibb.co/jkN7xBRp/high-school-dxd-rossweisse-by-numerum-dc32x12-pre.jpg", File = "n_wall_22.png"},
-    {Name = "Wall Photo 23", Url = "https://i.ibb.co/8DxLYr32/high-school-dxd-rias-03-by-numerum-dc3369x-fullview.jpg", File = "n_wall_23.png"},
-    {Name = "Wall Photo 24", Url = "https://i.ibb.co/dhb0vgV/high-school-dxd-xenovia-02-by-numerum-dc3349t-pre.jpg", File = "n_wall_24.png"},
-    {Name = "Wall Photo 25", Url = "https://i.ibb.co/KpQcDks0/high-school-dxd-xenovia-by-numerum-dc32xaz-pre.jpg", File = "n_wall_25.png"},
-    {Name = "Wall Photo 26", Url = "https://i.ibb.co/1GN6T7FQ/high-school-dxd-born-rossweisse-wallpaper-by-numerum-dc3dqql-pre.jpg", File = "n_wall_26.png"},
-    {Name = "Wall Photo 27", Url = "https://i.ibb.co/pF0MTHz/highschool-dxd-akeno-himejima-render-3-by-knd-art-dc1k56c-pre.png", File = "n_wall_27.png"},
-    {Name = "Wall Photo 28", Url = "https://i.ibb.co/m55JDr6k/highschool-dxd-kuroka-render-2-by-knd-art-dcarljg-414w-2x.png", File = "n_wall_28.png"},
-    {Name = "Wall Photo 29", Url = "https://i.ibb.co/FbzS0Wxx/horikita-wallpaper-by-dinocozero-dc6842b-fullview.jpg", File = "n_wall_29.png"},
-    {Name = "Wall Photo 30", Url = "https://i.ibb.co/4RftWr0c/hime-arikawa-wallpaper-by-dinocozero-ddd1s9u-fullview.jpg", File = "n_wall_30.png"},
-    {Name = "Wall Photo 31", Url = "https://i.ibb.co/WvXD4T1R/hot-evening-by-lordcamelot2018-dd5yaeh-375w-2x.jpg", File = "n_wall_31.png"},
-    {Name = "Wall Photo 32", Url = "https://i.ibb.co/MD04wdm5/ikaros-by-malyste-dcjbmbx-375w-2x.png", File = "n_wall_32.png"},
-    {Name = "Wall Photo 33", Url = "https://i.ibb.co/7x6qCzXL/images-bin.jpg", File = "n_wall_33.png"},
-    {Name = "Wall Photo 34", Url = "https://i.ibb.co/xSX0qmj5/isla-wallpaper-by-dinocozero-dbssk50-fullview.jpg", File = "n_wall_34.png"},
-    {Name = "Wall Photo 35", Url = "https://i.ibb.co/Lh0N5trm/inori-wallpaper-2-by-dinocozero-d8f66sn-fullview.jpg", File = "n_wall_35.png"},
-    {Name = "Wall Photo 36", Url = "https://i.ibb.co/LXYcSXP2/konosuba-aqua-by-camanime7794-ddmxv6o-fullview.jpg", File = "n_wall_36.png"},
-    {Name = "Wall Photo 37", Url = "https://i.ibb.co/FLcCjr2M/kotori-with-kurumi-cover-date-a-live-by-hikaruxkotori-d6417m9-fullview.jpg", File = "n_wall_37.png"},
-    {Name = "Wall Photo 38", Url = "https://i.ibb.co/6cZwwyx2/kurumi-in-lingerie-by-camanime7794-de45bx3.jpg", File = "n_wall_38.png"},
-    {Name = "Wall Photo 39", Url = "https://i.ibb.co/VcyDWtRD/kurumi-by-dinocozero-dbmyfms-fullview.jpg", File = "n_wall_39.png"},
-    {Name = "Wall Photo 40", Url = "https://i.ibb.co/S7Z1LcMS/kurumi-tohka-wallpaper-by-yoshisouls-d7sjr5e-pre.jpg", File = "n_wall_40.png"},
-    {Name = "Wall Photo 41", Url = "https://i.ibb.co/7dzsnLtS/kurumi-tokisaki-wallpaper-date-a-live-by-galangcp-dbv7yib-fullview.jpg", File = "n_wall_41.png"},
-    {Name = "Wall Photo 42", Url = "https://i.ibb.co/snXNqHb/lzngg-w-Cg-Fp-Q.jpg", File = "n_wall_42.png"},
-    {Name = "Wall Photo 43", Url = "https://i.ibb.co/XxWLSNF2/kurumi-tokisaki-wallpaper-by-dinocozero-ddeo2jm-pre.jpg", File = "n_wall_43.png"},
-    {Name = "Wall Photo 44", Url = "https://i.ibb.co/vC0Y7Jn5/levia-02-by-silverm00ngraphics-ddlpefh-pre.jpg", File = "n_wall_44.png"},
-    {Name = "Wall Photo 45", Url = "https://i.ibb.co/xK8smKfY/kurumi-wallpaper-2-by-dinocozero-d8zcj3e-fullview.jpg", File = "n_wall_45.png"},
-    {Name = "Wall Photo 46", Url = "https://i.ibb.co/JFxzNGMc/mio-naruse-15-by-plyboijayy-dfp1cjg-414w-2x.jpg", File = "n_wall_46.png"},
-    {Name = "Wall Photo 47", Url = "https://i.ibb.co/dsyBk9fF/mio-naruse-wallpaper-by-dinocozero-db2tboj-fullview.jpg", File = "n_wall_47.png"},
-    {Name = "Wall Photo 48", Url = "https://i.ibb.co/HfpP9DhL/naruse-maria-shinmai-maou-no-testament-by-dinocozero-dcleyae-fullview.jpg", File = "n_wall_48.png"},
-    {Name = "Wall Photo 49", Url = "https://i.ibb.co/11hRDJ1/mioproyect-by-joseph-excelsior-dbw1mpi-414w-2x.jpg", File = "n_wall_49.png"},
-    {Name = "Wall Photo 50", Url = "https://i.ibb.co/Xxx2SMm8/momo-ayase-wallpaper-by-dinocozero-dic7jdj-fullview.jpg", File = "n_wall_50.png"},
-    {Name = "Wall Photo 51", Url = "https://i.ibb.co/GvxfYjDY/naruse-mio-card-2-by-zadkielhermit-dazih4s-375w-2x.jpg", File = "n_wall_51.png"},
-    {Name = "Wall Photo 52", Url = "https://i.ibb.co/qLv05nyp/neko-paws-grey-by-t-nelly-d2nhjr0-fullview.jpg", File = "n_wall_52.png"},
-    {Name = "Wall Photo 53", Url = "https://i.ibb.co/Z1h4Tmz1/neptunia-black-heart-wallpaper-by-dinocozero-dbfjhy3-fullview.jpg", File = "n_wall_53.png"},
-    {Name = "Wall Photo 54", Url = "https://i.ibb.co/RkSV0QtL/neptunia-purple-sister-wallpaper-by-dinocozero-dbf73ht-fullview.jpg", File = "n_wall_54.png"},
-    {Name = "Wall Photo 55", Url = "https://i.ibb.co/ccL3rSsC/neptunia-purple-heart-wallpaper-by-dinocozero-dbf63cs-fullview.jpg", File = "n_wall_55.png"},
-    {Name = "Wall Photo 56", Url = "https://i.ibb.co/n8rqjQGc/newbie-succubus-by-dinocozero-dcck53c.jpg", File = "n_wall_56.png"},
-    {Name = "Wall Photo 57", Url = "https://i.ibb.co/gMj1fF93/nyan-cat-girl-by-macky-516-d5jwc6v.jpg", File = "n_wall_57.png"},
-    {Name = "Wall Photo 58", Url = "https://i.ibb.co/qLWYpkpM/rias-gremory-hair-crimson-as-blood-by-oumashudesign-d6m2odp-fullview.jpg", File = "n_wall_58.png"},
-    {Name = "Wall Photo 59", Url = "https://i.ibb.co/qM4yykbC/photoshop-signature-atempt-by-konekoss-d64612n.jpg", File = "n_wall_59.png"},
-    {Name = "Wall Photo 60", Url = "https://i.ibb.co/vxSt6JMr/rem-galleu-by-malyste-dclc5ss-375w-2x.png", File = "n_wall_60.png"},
-    {Name = "Wall Photo 61", Url = "https://i.ibb.co/mFSpPHFp/rias-x4-by-joseph-excelsior-dbw1n6y-pre.jpg", File = "n_wall_61.png"},
-    {Name = "Wall Photo 62", Url = "https://i.ibb.co/9m3jT9wL/rossweisse-base-12-by-tomoe-waterfox-dcu1ibe-fullview.jpg", File = "n_wall_62.png"},
-    {Name = "Wall Photo 63", Url = "https://i.ibb.co/ZRrrgPPY/yuuki-wallpaper-by-dinocozero-d8vpsq1-fullview.jpg", File = "n_wall_63.png"},
-    {Name = "Wall Photo 64", Url = "https://i.ibb.co/fdJ02LYZ/yukana-yame-wallpaper-by-dinocozero-dcarxvg-fullview.jpg", File = "n_wall_64.png"},
-    {Name = "Wall Photo 65", Url = "https://i.ibb.co/QjcNZMXk/wp5170732.jpg", File = "n_wall_65.png"},
-    {Name = "Wall Photo 66", Url = "https://i.ibb.co/WNV3JLVJ/wp2769282.jpg", File = "n_wall_66.png"},
-    {Name = "Wall Photo 67", Url = "https://i.ibb.co/N6jYMM82/wallpaperflare-com-wallpaper.jpg", File = "n_wall_67.png"},
-    {Name = "Wall Photo 68", Url = "https://i.ibb.co/Myy3Zt3q/venelana-gremory-render-8-by-knd-art-de6ea8a-414w-2x.png", File = "n_wall_68.png"},
-    {Name = "Wall Photo 69", Url = "https://i.ibb.co/zhTXLNwD/Utool-20260603-082612158.jpg", File = "n_wall_69.png"},
-    {Name = "Wall Photo 70", Url = "https://i.ibb.co/8gcwgLQK/tokisaki-kurumi-by-malyste-dcjnyml-375w-2x.png", File = "n_wall_70.png"},
-    {Name = "Wall Photo 71", Url = "https://i.ibb.co/fGx1BqL1/tohka-yatogami-by-malyste-dcjrpey-375w-2x.png", File = "n_wall_71.png"},
-    {Name = "Wall Photo 72", Url = "https://i.ibb.co/Ng5TvCzV/tohka-yatogami-by-lovexstrawberry-del4l5x-414w-2x.jpg", File = "n_wall_72.png"},
-    {Name = "Wall Photo 73", Url = "https://i.ibb.co/gZXbVVJD/tohka-yatogami-date-a-live-by-camanime7794-de27mir.jpg", File = "n_wall_73.png"},
-    {Name = "Wall Photo 74", Url = "https://i.ibb.co/SwHyLhmt/tohka-wallpaper-by-dinocozero-dajkw70-fullview.jpg", File = "n_wall_74.png"},
-    {Name = "Wall Photo 75", Url = "https://i.ibb.co/CNHz9Vs/tohka-wallpaper-by-dinocozero-d8k8qve-fullview.jpg", File = "n_wall_75.png"},
-    {Name = "Wall Photo 76", Url = "https://i.ibb.co/s9B5ZFXH/tohka-by-dinocozero-d8vl95h-fullview.jpg", File = "n_wall_76.png"},
-    {Name = "Wall Photo 77", Url = "https://i.ibb.co/5XhjFcP2/tejina-senpai-wallpaper-by-camanime7794-ddff722-fullview.jpg", File = "n_wall_77.png"},
-    {Name = "Wall Photo 78", Url = "https://i.ibb.co/svwg7nVX/takarada-rikka-wallpaper-by-dinocozero-dcrbsuv-fullview.jpg", File = "n_wall_78.png"},
-    {Name = "Wall Photo 79", Url = "https://i.ibb.co/ns6Wrnq4/shiro-wallpaper-by-dinocozero-dah8iie-fullview.jpg", File = "n_wall_79.png"},
-    {Name = "Wall Photo 80", Url = "https://i.ibb.co/Nnkvyh4k/shiro-by-dinocozero-d9pj6q3-fullview.jpg", File = "n_wall_80.png"},
-    {Name = "Wall Photo 81", Url = "https://i.ibb.co/NdH16cbZ/shinomiya-kaguya-by-malyste-dd0fnp5-375w-2x.png", File = "n_wall_81.png"},
-    {Name = "Wall Photo 82", Url = "https://i.ibb.co/pjtn4PQL/shinmai-maou-no-testament-naruse-mio-by-camanime7794-dd222m5-fullview.jpg", File = "n_wall_82.png"},
-    {Name = "Wall Photo 83", Url = "https://i.ibb.co/BVsSq2zR/sexy-xenovia-wallpaper-by-succubusbrony-d8t2n33-pre.jpg", File = "n_wall_83.png"},
-    {Name = "Wall Photo 84", Url = "https://i.ibb.co/GQNfbMWP/sexy-serafall-wallpaper-by-succubusbrony-d8temu0-pre.jpg", File = "n_wall_84.png"},
-    {Name = "Wall Photo 85", Url = "https://i.ibb.co/PsrhRZ1W/sexy-neko-wallpaper-by-mythicxgamer-d58yaxb.jpg", File = "n_wall_85.png"},
-    {Name = "Wall Photo 86", Url = "https://i.ibb.co/3mNP3Szz/sexy-ecchi-girl-wallpaper-by-camanime7794-df6gosb-pre.jpg", File = "n_wall_86.png"},
-    {Name = "Wall Photo 87", Url = "https://i.ibb.co/ccnHz3gW/sexy-chicks-collab-sariel-qiu-by-dinocozero-dcxfs55.jpg", File = "n_wall_87.png"},
-    {Name = "Wall Photo 88", Url = "https://i.ibb.co/wZXYhTcB/sexy-anime-girl-wallpaper-hd-1920-x-1080-by-konekoss-d6f8qpz-pre.png", File = "n_wall_88.png"},
-    {Name = "Wall Photo 89", Url = "https://i.ibb.co/twdVV6ZS/sexy-anime-girl-wallpaper-by-robbo4-d91rz0g.jpg", File = "n_wall_89.png"},
-    {Name = "Wall Photo 90", Url = "https://i.ibb.co/QWZfQZR/sexy-akeno-wallpaper-by-succubusbrony-d8ty0ju-pre.jpg", File = "n_wall_90.png"},
-    {Name = "Wall Photo 91", Url = "https://i.ibb.co/xKsxkqyg/saya-by-malyste-dckgodd-375w-2x.png", File = "n_wall_91.png"},
-    {Name = "Wall Photo 92", Url = "https://i.ibb.co/R462mwF2/satanichia-wallpaper-by-dinocozero-dc24e1u-fullview.jpg", File = "n_wall_92.png"},
-    {Name = "Wall Photo 93", Url = "https://i.ibb.co/B5yLpPQX/sarafallvector-by-joseph-excelsior-dbtnvq9-414w-2x.jpg", File = "n_wall_93.png"},
-    {Name = "Wall Photo 94", Url = "https://i.ibb.co/3mcgW5xL/rossweisse-wedding-high-school-dxd-by-camanime7794-dd1v78y-fullview.jpg", File = "n_wall_94.png"},
-    {Name = "Wall Photo 95", Url = "https://i.ibb.co/Ps1RDJCX/rossweisse-render-11-by-knd-art-df0bhly-414w-2x.png", File = "n_wall_95.png"},
-
+    -- NOVOS WALLPAPERS SUBISTITUÍDOS DO SEU ARQUIVO
+       {Name = "Wall Photo 1", Url = "https://i.ibb.co/FqsD7Dk1/22-16-06-high-school-dxd-rias-gremory-wallpaper-by-angelshadow92-d7dggma-pre.jpg", File = "n_wall_1.jpg"},
+    {Name = "Wall Photo 2", Url = "https://i.ibb.co/8gqKnz2S/22-16-20-high-school-dxd-akeno-himejima-wallpaper-by-angelshadow92-d7dvpg3-414w-2x.jpg", File = "n_wall_2.jpg"},
+    {Name = "Wall Photo 3", Url = "https://i.ibb.co/LhRmJ3SL/22-17-04-me-me-me-wallpaper-by-camanime7794-ddv15eq-fullview.jpg", File = "n_wall_3.jpg"},
+    {Name = "Wall Photo 4", Url = "https://i.ibb.co/qY3hdSnZ/22-25-35-akeno-himejima-tlc-by-ecchiartist-d9am3iy-375w-2x.jpg", File = "n_wall_4.jpg"},
+    {Name = "Wall Photo 5", Url = "https://i.ibb.co/0y9CDbMC/22-18-43-rossweisse-high-school-dxd-by-camanime7794-dd0atyp-375w-2x.jpg", File = "n_wall_5.jpg"},
+    {Name = "Wall Photo 6", Url = "https://i.ibb.co/scjpj8D/22-26-40-priestess-goblin-slayer-by-dinocozero-dcpayd0-375w-2x.jpg", File = "n_wall_6.jpg"},
+    {Name = "Wall Photo 7", Url = "https://i.ibb.co/qL1wHNwk/22-27-08-hestia-wallpaper-by-dinocozero-d8s50b2-414w-2x.jpg", File = "n_wall_7.jpg"},
+    {Name = "Wall Photo 8", Url = "https://i.ibb.co/1G8zK7H0/22-26-56-naruse-maria-wallpaper-by-dinocozero-dbz7v6s-414w-2x.jpg", File = "n_wall_8.jpg"},
+    {Name = "Wall Photo 9", Url = "https://i.ibb.co/sdrh9LvL/22-28-05-billsuu-adoptable-series-328-sold-out-by-kitsuneyin-dkvugbi-414w-2x.jpg", File = "n_wall_9.jpg"},
+    {Name = "Wall Photo 10", Url = "https://i.ibb.co/ycbnGBsS/22-29-04-dal-girls-in-lingerie-by-camanime7794-de03vt3-375w-2x.jpg", File = "n_wall_10.jpg"},
+    {Name = "Wall Photo 11", Url = "https://i.ibb.co/SXZhcQdN/22-29-42-dal2112111l-001-by-vidach-d679pe7-375w-2x.jpg", File = "n_wall_11.jpg"},
+    {Name = "Wall Photo 12", Url = "https://i.ibb.co/Z6Y5K7P2/22-30-26-akeno-himejima-render-12-by-knd-art-dcuxmb2-375w-2x.png", File = "n_wall_12.jpg"},
+    {Name = "Wall Photo 13", Url = "https://i.ibb.co/cX2QfkcN/22-30-37-commission-rias-x-akeno-highschool-dxd-by-virus-g-ddvehqe-375w-2x.jpg", File = "n_wall_13.jpg"},
+    {Name = "Wall Photo 14", Url = "https://i.ibb.co/jZf3GR5N/120120c318b7.jpg", File = "n_wall_14.jpg"},
+    {Name = "Wall Photo 15", Url = "https://i.ibb.co/HL79Pv3R/22-32-11-silica-sword-art-online-by-tatsuyakari-dbalsjj-375w-2x.jpg", File = "n_wall_15.jpg"},
+    {Name = "Wall Photo 16", Url = "https://i.ibb.co/4ZMCVJr6/devil-vii-akeno-himejima-by-zura14-dgj3ws6-375w-2x.png", File = "n_wall_16.jpg"},
+    {Name = "Wall Photo 17", Url = "https://i.ibb.co/1tvZB04d/devil-x-himejima-akeno-queen-3-by-theshowmaker-dfk0m9w-375w-2x.jpg", File = "n_wall_17.jpg"},
+    {Name = "Wall Photo 18", Url = "https://i.ibb.co/20kcz5qd/adult-neptune-and-yatogami-tohka-by-camanime7794-ddd4xqc-fullview.jpg", File = "n_wall_18.jpg"},
+    {Name = "Wall Photo 19", Url = "https://i.ibb.co/yBSjDTNj/akagi-and-prinz-eugen-by-camanime7794-de95ud7-pre.jpg", File = "n_wall_19.jpg"},
+    {Name = "Wall Photo 20", Url = "https://i.ibb.co/XfnHndQP/albedo-by-malyste-dchnftp-375w-2x.png", File = "n_wall_20.jpg"},
+    {Name = "Wall Photo 21", Url = "https://i.ibb.co/FL8ftCfz/akeno-himejima-wallpaper-hd-by-douglas1199-dc3kj7v-414w-2x.jpg", File = "n_wall_21.jpg"},
+    {Name = "Wall Photo 22", Url = "https://i.ibb.co/NgwWnyQ0/akeno-by-plyboijayy-dfpk2gj-375w-2x.jpg", File = "n_wall_22.jpg"},
+    {Name = "Wall Photo 23", Url = "https://i.ibb.co/v6hrC5xQ/anime-ecchi-bunny-girl-wallpaper-by-camanime7794-df5zd1n.png", File = "n_wall_23.jpg"},
+    {Name = "Wall Photo 24", Url = "https://i.ibb.co/p6qC1hWC/aqua-wallpaper-by-dinocozero-db3cyy1-fullview.jpg", File = "n_wall_24.jpg"},
+    {Name = "Wall Photo 25", Url = "https://i.ibb.co/QjzFqNpJ/d5fb7to-7d06f118-567a-425e-ba34-4f46caaa9ecc.png", File = "n_wall_25.jpg"},
+    {Name = "Wall Photo 26", Url = "https://i.ibb.co/rKzSxxxD/asuna-wallpaper-by-dinocozero-d8e3jfy-fullview.jpg", File = "n_wall_26.jpg"},
+    {Name = "Wall Photo 27", Url = "https://i.ibb.co/C5pH4zPX/chocola-wallpaper-1920x1080-by-joliiee-d95oa6e-fullview.jpg", File = "n_wall_27.jpg"},
+    {Name = "Wall Photo 28", Url = "https://i.ibb.co/9H97nJwT/dal-tokisaki-kurumi-wallpaper-by-camanime7794-ddn9a8g-fullview.jpg", File = "n_wall_28.jpg"},
+    {Name = "Wall Photo 29", Url = "https://i.ibb.co/VYP3jfBF/dal-girls-in-lingerie-by-camanime7794-de03vt3-fullview.jpg", File = "n_wall_29.jpg"},
+    {Name = "Wall Photo 30", Url = "https://i.ibb.co/vvmYvfhV/yatogami-tohka-by-hibarisora-dan25dm-375w-2x.jpg", File = "n_wall_30.jpg"},
+    {Name = "Wall Photo 31", Url = "https://i.ibb.co/fGpzvsr8/yuuki-wallpaper-by-dinocozero-d8vpsq1-fullview.jpg", File = "n_wall_31.jpg"},
+    {Name = "Wall Photo 32", Url = "https://i.ibb.co/fzrxJf5z/yukino-wallpaper-by-dinocozero-d8pky38-414w-2x.jpg", File = "n_wall_32.jpg"},
+    {Name = "Wall Photo 33", Url = "https://i.ibb.co/rR8Bn9Kn/yuki-sorimachi-wallpaper-by-dinocozero-dliwgs9-pre.jpg", File = "n_wall_33.jpg"},
+    {Name = "Wall Photo 34", Url = "https://i.ibb.co/SDhNvx53/yukana-yame-wallpaper-by-dinocozero-dcarxvg-fullview.jpg", File = "n_wall_34.jpg"},
+    {Name = "Wall Photo 35", Url = "https://i.ibb.co/GvjNwB93/wp5170732.jpg", File = "n_wall_35.jpg"},
+    {Name = "Wall Photo 36", Url = "https://i.ibb.co/8LJWL4hC/wallpaperflare-com-wallpaper.jpg", File = "n_wall_36.jpg"},
+    {Name = "Wall Photo 37", Url = "https://i.ibb.co/3YT2ctcH/venelana-gremory-render-8-by-knd-art-de6ea8a-414w-2x.png", File = "n_wall_37.jpg"},
+    {Name = "Wall Photo 38", Url = "https://i.ibb.co/hRxR9Htw/yukina-himeragi-wallpaper-by-dinocozero-dcpuldl-414w-2x.jpg", File = "n_wall_38.jpg"},
+    {Name = "Wall Photo 39", Url = "https://i.ibb.co/0Vdcsd83/wp2769282.jpg", File = "n_wall_39.jpg"},
+    {Name = "Wall Photo 40", Url = "https://i.ibb.co/Kdhk4WD/Utool-20260603-082612158.jpg", File = "n_wall_40.jpg"},
+    {Name = "Wall Photo 41", Url = "https://i.ibb.co/9J6ynC6/tokisaki-kurumi-by-malyste-dcjnyml-375w-2x.png", File = "n_wall_41.jpg"},
+    {Name = "Wall Photo 42", Url = "https://i.ibb.co/mrkzp1mZ/tohka-yatogami-by-malyste-dcjrpey-375w-2x.png", File = "n_wall_42.jpg"},
+    {Name = "Wall Photo 43", Url = "https://i.ibb.co/Ld9jXCJr/tohka-yatogami-by-lovexstrawberry-del4l5x-414w-2x.jpg", File = "n_wall_43.jpg"},
+    {Name = "Wall Photo 44", Url = "https://i.ibb.co/1GWj3ps7/tohka-yatogami-date-a-live-by-camanime7794-de27mir.jpg", File = "n_wall_44.jpg"},
+    {Name = "Wall Photo 45", Url = "https://i.ibb.co/prKvjrBV/tohka-wallpaper-by-dinocozero-dajkw70-fullview.jpg", File = "n_wall_45.jpg"},
+    {Name = "Wall Photo 46", Url = "https://i.ibb.co/pv1ctQ5p/tohka-wallpaper-by-dinocozero-d8k8qve-fullview.jpg", File = "n_wall_46.jpg"},
+    {Name = "Wall Photo 47", Url = "https://i.ibb.co/pjbbKq6z/tejina-senpai-wallpaper-by-camanime7794-ddff722-fullview.jpg", File = "n_wall_47.jpg"},
+    {Name = "Wall Photo 48", Url = "https://i.ibb.co/C5qVrXJV/tohka-by-dinocozero-d8vl95h-fullview.jpg", File = "n_wall_48.jpg"},
+    {Name = "Wall Photo 49", Url = "https://i.ibb.co/YFZ5bzCb/takarada-rikka-wallpaper-by-dinocozero-dcrbsuv-fullview.jpg", File = "n_wall_49.jpg"},
+    {Name = "Wall Photo 50", Url = "https://i.ibb.co/CKFQ1W72/shiro-by-dinocozero-d9pj6q3-fullview.jpg", File = "n_wall_50.jpg"},
+    {Name = "Wall Photo 51", Url = "https://i.ibb.co/4Zdk2zS5/shiro-wallpaper-by-dinocozero-dah8iie-fullview.jpg", File = "n_wall_51.jpg"},
+    {Name = "Wall Photo 52", Url = "https://i.ibb.co/Fbkpz33Q/shinomiya-kaguya-by-malyste-dd0fnp5-375w-2x.png", File = "n_wall_52.jpg"},
+    {Name = "Wall Photo 53", Url = "https://i.ibb.co/hFz4Yzrh/shinmai-maou-no-testament-naruse-mio-by-camanime7794-dd222m5-fullview.jpg", File = "n_wall_53.jpg"},
+    {Name = "Wall Photo 54", Url = "https://i.ibb.co/Z1xVs32V/sexy-xenovia-wallpaper-by-succubusbrony-d8t2n33-pre.jpg", File = "n_wall_54.jpg"},
+    {Name = "Wall Photo 55", Url = "https://i.ibb.co/LzgzCRrj/sexy-serafall-wallpaper-by-succubusbrony-d8temu0-pre.jpg", File = "n_wall_55.jpg"},
+    {Name = "Wall Photo 56", Url = "https://i.ibb.co/S7Gn4kMm/sexy-neko-wallpaper-by-mythicxgamer-d58yaxb.jpg", File = "n_wall_56.jpg"},
+    {Name = "Wall Photo 57", Url = "https://i.ibb.co/NgC7Mp2r/sexy-ecchi-girl-wallpaper-by-camanime7794-df6gosb-pre.jpg", File = "n_wall_57.jpg"},
+    {Name = "Wall Photo 58", Url = "https://i.ibb.co/PsKfLQx4/sexy-chicks-collab-sariel-qiu-by-dinocozero-dcxfs55.jpg", File = "n_wall_58.jpg"},
+    {Name = "Wall Photo 59", Url = "https://i.ibb.co/ccb5KH9Q/sexy-anime-girl-wallpaper-hd-1920-x-1080-by-konekoss-d6f8qpz-pre.png", File = "n_wall_59.jpg"},
+    {Name = "Wall Photo 60", Url = "https://i.ibb.co/1tCkB5ZC/sexy-anime-girl-wallpaper-by-robbo4-d91rz0g.jpg", File = "n_wall_60.jpg"},
+    {Name = "Wall Photo 61", Url = "https://i.ibb.co/N6TwjL7t/sexy-akeno-wallpaper-by-succubusbrony-d8ty0ju-pre.jpg", File = "n_wall_61.jpg"},
+    {Name = "Wall Photo 62", Url = "https://i.ibb.co/cX1cjNCh/serafall-s-underwear-vector-by-succubusbrony-d8tearv-375w-2x.png", File = "n_wall_62.jpg"},
+    {Name = "Wall Photo 63", Url = "https://i.ibb.co/p6HfN2CX/saya-by-malyste-dckgodd-375w-2x.png", File = "n_wall_63.jpg"},
+    {Name = "Wall Photo 64", Url = "https://i.ibb.co/Jw6zf7gt/satanichia-wallpaper-by-dinocozero-dc24e1u-fullview.jpg", File = "n_wall_64.jpg"},
+    {Name = "Wall Photo 65", Url = "https://i.ibb.co/vxPy9ryN/sarafallvector-by-joseph-excelsior-dbtnvq9-414w-2x.jpg", File = "n_wall_65.jpg"},
+    {Name = "Wall Photo 66", Url = "https://i.ibb.co/4R150kFD/s1-25-murayama-by-theshowmaker-df0ikek-414w-2x.jpg", File = "n_wall_66.jpg"},
+    {Name = "Wall Photo 67", Url = "https://i.ibb.co/93WRFTpB/rossweisse-wedding-high-school-dxd-by-camanime7794-dd1v78y-fullview.jpg", File = "n_wall_67.jpg"},
+    {Name = "Wall Photo 68", Url = "https://i.ibb.co/R88xrVB/rossweisse-vol-2-v1-by-tatsuyasan-da5x4a6-375w-2x.png", File = "n_wall_68.jpg"},
+    {Name = "Wall Photo 69", Url = "https://i.ibb.co/FLWJ5jrZ/rossweisse-base-12-by-tomoe-waterfox-dcu1ibe-fullview.jpg", File = "n_wall_69.jpg"},
+    {Name = "Wall Photo 70", Url = "https://i.ibb.co/Ng6kMjcQ/rossweisse-render-11-by-knd-art-df0bhly-414w-2x.png", File = "n_wall_70.jpg"},
+    {Name = "Wall Photo 71", Url = "https://i.ibb.co/9kfFmdyL/rias-x4-by-joseph-excelsior-dbw1n6y-pre.jpg", File = "n_wall_71.jpg"},
+    {Name = "Wall Photo 72", Url = "https://i.ibb.co/HL1NVyr1/rias-gremory-hdxd035-by-jrl-hdxd-dd7spcs-375w-2x.jpg", File = "n_wall_72.jpg"},
+    {Name = "Wall Photo 73", Url = "https://i.ibb.co/sdBNv9R4/rias-gremory-wallpaper-hd-by-douglas1199-dbtz052-414w-2x.jpg", File = "n_wall_73.jpg"},
+    {Name = "Wall Photo 74", Url = "https://i.ibb.co/SwVtx51m/rias-gremory-hair-crimson-as-blood-by-oumashudesign-d6m2odp-fullview.jpg", File = "n_wall_74.jpg"},
+    {Name = "Wall Photo 75", Url = "https://i.ibb.co/mFbByFbK/rem-galleu-by-malyste-dclc5ss-375w-2x.png", File = "n_wall_75.jpg"},
+    {Name = "Wall Photo 76", Url = "https://i.ibb.co/wZsTDwhf/photoshop-signature-atempt-by-konekoss-d64612n.jpg", File = "n_wall_76.jpg"},
+    {Name = "Wall Photo 77", Url = "https://i.ibb.co/0pCBdVpD/nyan-cat-girl-by-macky-516-d5jwc6v.jpg", File = "n_wall_77.jpg"},
+    {Name = "Wall Photo 78", Url = "https://i.ibb.co/chK3grWw/newbie-succubus-by-dinocozero-dcck53c.jpg", File = "n_wall_78.jpg"},
+    {Name = "Wall Photo 79", Url = "https://i.ibb.co/mrLQGVSF/neptunia-purple-sister-wallpaper-by-dinocozero-dbf73ht-fullview.jpg", File = "n_wall_79.jpg"},
+    {Name = "Wall Photo 80", Url = "https://i.ibb.co/4RKTK7xW/neptunia-purple-heart-wallpaper-by-dinocozero-dbf63cs-fullview.jpg", File = "n_wall_80.jpg"},
+    {Name = "Wall Photo 81", Url = "https://i.ibb.co/BVd12D8p/neptunia-black-heart-wallpaper-by-dinocozero-dbfjhy3-fullview.jpg", File = "n_wall_81.jpg"},
+    {Name = "Wall Photo 82", Url = "https://i.ibb.co/4g5pQCK5/neko-paws-grey-by-t-nelly-d2nhjr0-fullview.jpg", File = "n_wall_82.jpg"},
+    {Name = "Wall Photo 83", Url = "https://i.ibb.co/V08RfPQ0/neko-kuroha-wallpaper-by-dinocozero-dbvt4b2-414w-2x.jpg", File = "n_wall_83.jpg"},
+    {Name = "Wall Photo 84", Url = "https://i.ibb.co/3mJcK48T/naruse-mio-card-2-by-zadkielhermit-dazih4s-375w-2x.jpg", File = "n_wall_84.jpg"},
+    {Name = "Wall Photo 85", Url = "https://i.ibb.co/9H9PsfKQ/naruse-maria-shinmai-maou-no-testament-by-dinocozero-dcleyae-fullview.jpg", File = "n_wall_85.jpg"},
+    {Name = "Wall Photo 86", Url = "https://i.ibb.co/F4rVWhWT/nakano-miku-wallpaper-by-dinocozero-ddajsn9-fullview.jpg", File = "n_wall_86.jpg"},
+    {Name = "Wall Photo 87", Url = "https://i.ibb.co/SXy000ww/momo-ayase-wallpaper-by-dinocozero-dic7jdj-fullview.jpg", File = "n_wall_87.jpg"},
+    {Name = "Wall Photo 88", Url = "https://i.ibb.co/hJR6yrxX/mioproyect-by-joseph-excelsior-dbw1mpi-414w-2x.jpg", File = "n_wall_88.jpg"},
+    {Name = "Wall Photo 89", Url = "https://i.ibb.co/DPPW6nGY/mio-naruse-wallpaper-by-dinocozero-db2tboj-fullview.jpg", File = "n_wall_89.jpg"},
+    {Name = "Wall Photo 90", Url = "https://i.ibb.co/zgKHTCq/mio-naruse-15-by-plyboijayy-dfp1cjg-414w-2x.jpg", File = "n_wall_90.jpg"},
+    {Name = "Wall Photo 91", Url = "https://i.ibb.co/Mkc29R95/lzngg-w-Cg-Fp-Q.jpg", File = "n_wall_91.jpg"},
+    {Name = "Wall Photo 92", Url = "https://i.ibb.co/BHVPkCNn/levia-02-by-silverm00ngraphics-ddlpefh-pre.jpg", File = "n_wall_92.jpg"},
+    {Name = "Wall Photo 93", Url = "https://i.ibb.co/QFWKzpj7/kurumi-wallpaper-2-by-dinocozero-d8zcj3e-fullview.jpg", File = "n_wall_93.jpg"},
+    {Name = "Wall Photo 94", Url = "https://i.ibb.co/x8twkhdZ/kurumi-tokisaki-wallpaper-by-dinocozero-ddeo2jm-pre.jpg", File = "n_wall_94.jpg"},
+    {Name = "Wall Photo 95", Url = "https://i.ibb.co/7dWrC3yX/kurumi-tokisaki-wallpaper-date-a-live-by-galangcp-dbv7yib-fullview.jpg", File = "n_wall_95.jpg"},
+    {Name = "Wall Photo 96", Url = "https://i.ibb.co/VcXFfmNG/kurumi-tohka-wallpaper-by-yoshisouls-d7sjr5e-pre.jpg", File = "n_wall_96.jpg"},
+    {Name = "Wall Photo 97", Url = "https://i.ibb.co/Nn7Gf5ks/kurumi-in-lingerie-by-camanime7794-de45bx3.jpg", File = "n_wall_97.jpg"},
+    {Name = "Wall Photo 98", Url = "https://i.ibb.co/j9bgwRY6/kurumi-by-dinocozero-dbmyfms-fullview.jpg", File = "n_wall_98.jpg"},
+    {Name = "Wall Photo 99", Url = "https://i.ibb.co/PzxgymF9/kotori-with-kurumi-cover-date-a-live-by-hikaruxkotori-d6417m9-fullview.jpg", File = "n_wall_99.jpg"},
+    {Name = "Wall Photo 100", Url = "https://i.ibb.co/DHSsMMtF/konosuba-aqua-by-camanime7794-ddmxv6o-fullview.jpg", File = "n_wall_100.jpg"},
+    {Name = "Wall Photo 101", Url = "https://i.ibb.co/2bmyJGL/konjiki-no-yami-2-fb-signature-by-wixxneko-da16yl1-375w-2x.jpg", File = "n_wall_101.jpg"},
+    {Name = "Wall Photo 102", Url = "https://i.ibb.co/cS9ZP4rT/isla-wallpaper-by-dinocozero-dbssk50-fullview.jpg", File = "n_wall_102.jpg"},
+    {Name = "Wall Photo 103", Url = "https://i.ibb.co/b5W1h25N/inori-wallpaper-2-by-dinocozero-d8f66sn-fullview.jpg", File = "n_wall_103.jpg"},
+    {Name = "Wall Photo 104", Url = "https://i.ibb.co/wF8VdLFd/images-bin.jpg", File = "n_wall_104.jpg"},
+    {Name = "Wall Photo 105", Url = "https://i.ibb.co/whvGGqVp/ikaros-by-malyste-dcjbmbx-375w-2x.png", File = "n_wall_105.jpg"},
+    {Name = "Wall Photo 106", Url = "https://i.ibb.co/35CHNkVy/hsdxd-rossweisse-by-camanime7794-de4gobw-414w-2x.jpg", File = "n_wall_106.jpg"},
+    {Name = "Wall Photo 107", Url = "https://i.ibb.co/R4CQ9vY6/horikita-wallpaper-by-dinocozero-dc6842b-fullview.jpg", File = "n_wall_107.jpg"},
+    {Name = "Wall Photo 108", Url = "https://i.ibb.co/DHbfTp4Z/himejima-akeno-rias-gremory-and-rossweisse-by-camanime7794-dd9mxxn-414w-2x.jpg", File = "n_wall_108.jpg"},
+    {Name = "Wall Photo 109", Url = "https://i.ibb.co/d0yhhd16/himejima-akeno-high-school-dxd-by-camanime7794-dd2jrsy-375w-2x.jpg", File = "n_wall_109.jpg"},
+    {Name = "Wall Photo 110", Url = "https://i.ibb.co/jZVGKvy8/hot-evening-by-lordcamelot2018-dd5yaeh-375w-2x.jpg", File = "n_wall_110.jpg"},
+    {Name = "Wall Photo 111", Url = "https://i.ibb.co/RG2GX5Hw/himejima-akeno-high-school-dxd-by-camanime7794-dd1mpbt-414w-2x.jpg", File = "n_wall_111.jpg"},
+    {Name = "Wall Photo 112", Url = "https://i.ibb.co/67ZGggq1/himejima-akeno-high-school-dxd-by-camanime7794-dd0dqme-fullview.jpg", File = "n_wall_112.jpg"},
+    {Name = "Wall Photo 113", Url = "https://i.ibb.co/5f963K7/hime-arikawa-wallpaper-by-dinocozero-ddd1s9u-fullview.jpg", File = "n_wall_113.jpg"},
+    {Name = "Wall Photo 114", Url = "https://i.ibb.co/N6rHcnFr/highschool-dxd-rias-akeno-xenovia-pantsu-png-by-otakurenders-service-d8g1dqo-pre.png", File = "n_wall_114.jpg"},
+    {Name = "Wall Photo 115", Url = "https://i.ibb.co/wmYQ3gv/highschool-dxd-kuroka-render-2-by-knd-art-dcarljg-414w-2x.png", File = "n_wall_115.jpg"},
+    {Name = "Wall Photo 116", Url = "https://i.ibb.co/Xx3S0sfG/highschool-dxd-akeno-himejima-render-3-by-knd-art-dc1k56c-pre.png", File = "n_wall_116.jpg"},
+    {Name = "Wall Photo 117", Url = "https://i.ibb.co/Y7tbKyBK/highschool-dxd-raynare-by-camanime7794-ddkgrjs-fullview.jpg", File = "n_wall_117.jpg"},
+    {Name = "Wall Photo 118", Url = "https://i.ibb.co/nXKHXkt/high-school-dxd-born-rossweisse-wallpaper-by-numerum-dc3dqql-pre.jpg", File = "n_wall_118.jpg"},
+    {Name = "Wall Photo 119", Url = "https://i.ibb.co/YFy24ZW9/high-school-dxd-born-rossweisse-wallpaper-02-by-numerum-dc3e0ij-414w-2x.jpg", File = "n_wall_119.jpg"},
+    {Name = "Wall Photo 120", Url = "https://i.ibb.co/G1ztsmJ/high-school-dxd-xenovia-quarta-wallpaper-by-camanime7794-dczr2bx-fullview.jpg", File = "n_wall_120.jpg"},
+    {Name = "Wall Photo 121", Url = "https://i.ibb.co/h19F90xX/high-school-dxd-xenovia-by-numerum-dc32xaz-pre.jpg", File = "n_wall_121.jpg"},
+    {Name = "Wall Photo 122", Url = "https://i.ibb.co/3657jbv/high-school-dxd-xenovia-02-by-numerum-dc3349t-pre.jpg", File = "n_wall_122.jpg"},
+    {Name = "Wall Photo 123", Url = "https://i.ibb.co/7tXYNqYG/high-school-dxd-shidou-irina-by-numerum-dc3cago-414w-2x.jpg", File = "n_wall_123.jpg"},
+    {Name = "Wall Photo 124", Url = "https://i.ibb.co/0vHFvXW/high-school-dxd-rossweisse-by-numerum-dc32x12-pre.jpg", File = "n_wall_124.jpg"},
+    {Name = "Wall Photo 125", Url = "https://i.ibb.co/cKJhLY6r/high-school-dxd-rossweisse-02-by-numerum-dc333y0-fullview.jpg", File = "n_wall_125.jpg"},
+    {Name = "Wall Photo 126", Url = "https://i.ibb.co/35ySNS07/high-school-dxd-rias-by-numerum-dc32wh1-414w-2x.jpg", File = "n_wall_126.jpg"},
+    {Name = "Wall Photo 127", Url = "https://i.ibb.co/VcDbXVP5/high-school-dxd-rias-03-by-numerum-dc3369x-fullview.jpg", File = "n_wall_127.jpg"},
+    {Name = "Wall Photo 128", Url = "https://i.ibb.co/My3MgVQ1/high-school-dxd-rias-02-by-numerum-dc333nj-414w-2x.jpg", File = "n_wall_128.jpg"},
+    {Name = "Wall Photo 129", Url = "https://i.ibb.co/yF6B7TkF/aaa2d5facc3b.jpg", File = "n_wall_129.jpg"},
+    {Name = "Wall Photo 130", Url = "https://i.ibb.co/pvnR0636/high-school-dxd-ravel-phenex-and-rias-gremory-by-numerum-dc38qsw-414w-2x.jpg", File = "n_wall_130.jpg"},
+    {Name = "Wall Photo 131", Url = "https://i.ibb.co/LVW2QQL/high-school-dxd-kuroka-by-numerum-dc32udz-pre.jpg", File = "n_wall_131.jpg"},
+    {Name = "Wall Photo 132", Url = "https://i.ibb.co/JWWwKx61/high-school-dxd-kuroka-02-by-numerum-dc334xr-pre.jpg", File = "n_wall_132.jpg"},
+    {Name = "Wall Photo 133", Url = "https://i.ibb.co/S481F6gF/high-school-dxd-grayfia-by-numerum-dc32xo3-414w-2x.jpg", File = "n_wall_133.jpg"},
+    {Name = "Wall Photo 134", Url = "https://i.ibb.co/1YFWy84b/high-school-dxd-grayfia-02-by-numerum-dc334pj-414w-2x.jpg", File = "n_wall_134.jpg"},
+    {Name = "Wall Photo 135", Url = "https://i.ibb.co/8gJPLVY4/high-school-dxd-akeno-by-numerum-dc3i130-414w-2x.jpg", File = "n_wall_135.jpg"},
+    {Name = "Wall Photo 136", Url = "https://i.ibb.co/xSQRJmWn/high-school-dxd-akeno-by-numerum-dc34sbn-pre.jpg", File = "n_wall_136.jpg"},
+    {Name = "Wall Photo 137", Url = "https://i.ibb.co/zVFdFFVr/high-school-dxd-akeno-02-by-numerum-dc34seg-pre.jpg", File = "n_wall_137.jpg"},
+    {Name = "Wall Photo 138", Url = "https://i.ibb.co/JWZMmhW0/high-school-dxd-rossweisse-by-camanime7794-ddnht5h-fullview.jpg", File = "n_wall_138.jpg"},
+    {Name = "Wall Photo 139", Url = "https://i.ibb.co/Mkt7SvbL/hestia-wallpaper-2-by-dinocozero-d8y5nif.jpg", File = "n_wall_139.jpg"},
+    {Name = "Wall Photo 140", Url = "https://i.ibb.co/wrLJX85Q/hanako-ikezawa-by-malyste-dcsu9cu-375w-2x.png", File = "n_wall_140.jpg"},
+    {Name = "Wall Photo 141", Url = "https://i.ibb.co/VYZSqq6m/grayfia-and-akeno-high-school-dxd-by-camanime7794-ddjjtp1-fullview.jpg", File = "n_wall_141.jpg"},
+    {Name = "Wall Photo 142", Url = "https://i.ibb.co/CsKdDNYd/foto-perfil.jpg", File = "n_wall_142.jpg"},
+    {Name = "Wall Photo 143", Url = "https://i.ibb.co/XZVhGctG/erio-touwa-wallpaper-by-dinocozero-db48px4-fullview.jpg", File = "n_wall_143.jpg"},
+    {Name = "Wall Photo 144", Url = "https://i.ibb.co/chBHfp5Y/df0j73q-748528ec-a2c7-47a8-bc7d-f4a76ba88379.jpg", File = "n_wall_144.jpg"},
+    {Name = "Wall Photo 145", Url = "https://i.ibb.co/mV0dRf4p/de7ol92-bc67fb1d-48a3-4e67-b671-7fff39c188f5.jpg", File = "n_wall_145.jpg"},
+    {Name = "Wall Photo 146", Url = "https://i.ibb.co/Jw9H3PzD/dc38uqa-4342138d-524e-460b-aaf0-c458ff5fd33f.jpg", File = "n_wall_146.jpg"},
+    {Name = "Wall Photo 147", Url = "https://i.ibb.co/NdqmkXVm/dc32xo3-e1c2fefe-346b-4798-af47-46ef9ebf94ef.jpg", File = "n_wall_147.jpg"},
+    {Name = "Wall Photo 148", Url = "https://i.ibb.co/pvr5wgps/date-a-live-wallpaper-remake-by-tammypain-d62xh6u-fullview.jpg", File = "n_wall_148.jpg"},
+    {Name = "Wall Photo 149", Url = "https://i.ibb.co/xSBSwzzP/date-a-live-yatogami-tohka-by-hazamaraven017-dalxpzy-375w-2x.jpg", File = "n_wall_149.jpg"},
+    {Name = "Wall Photo 150", Url = "https://i.ibb.co/WvK28p2z/date-a-live-mayuri-by-hazamaraven017-da1pljq-fullview.jpg", File = "n_wall_150.jpg"},
+    {Name = "Wall Photo 151", Url = "https://i.ibb.co/ymDD4chY/date-a-live-inverse-origami-tlc-by-ecchiartist-d9apwyr-fullview.jpg", File = "n_wall_151.jpg"},
     -- EXTRA PHOTOS
     {Name = "Extra Photo 1", Url = "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/64b68dbc-0b98-4e3d-823f-c4361326bfde.jpg", File = "extra_1.jpg"},
     {Name = "Extra Photo 2", Url = "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/78d1cb08-3888-4b23-8206-450b5b85f16b.jpg", File = "extra_2.jpg"},
     {Name = "Extra Photo 3", Url = "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/167b9e3a-f11c-427f-a025-6860013e5d42.jpg", File = "extra_3.jpg"},
     {Name = "Extra Photo 4", Url = "https://i.supaimg.com/c818563f-c81e-4c5f-a6d4-b1e937ece1f9/2a9e493a-569d-4c53-aed3-52e3bbef143f.jpg", File = "extra_4.jpg"}
 }
+
+-- // CARREGADOR AUTOMÁTICO DINÂMICO DE WALLPAPERS.TXT //
+-- Se você salvar seu arquivo com todos os links como "wallpapers.txt" na pasta 'workspace' do seu executor, o script puxará TODOS eles sem precisar editar o código!
+if isfile and readfile and isfile("wallpapers.txt") then
+    local content = readfile("wallpapers.txt")
+    local count = 1
+    for line in string.gmatch(content, "[^\r\n]+") do
+        local url = string.match(line, "https?://[%w-_%.%?%.:/%+=&]+")
+        if url then
+            local exists = false
+            for _, ext in ipairs(origUrls) do if ext.Url == url then exists = true break end end
+            if not exists then
+                table.insert(origUrls, {
+                    Name = "Wall Auto " .. count,
+                    Url = url,
+                    File = "auto_wall_" .. count .. ".jpg"
+                })
+                count = count + 1
+            end
+        end
+    end
+end
 
 local normalImages = {}
 for _, v in ipairs(origUrls) do table.insert(normalImages, {Name=v.Name, Url=v.Url, File=v.File}) end
@@ -966,7 +1048,7 @@ local photoDrop = secPhotos:AddDropdown("PhotoDrop", {
         for _, data in ipairs(normalImages) do 
             if data.Name == v then 
                 selectedPhotoData = data
-                updatePreviewImage(data) -- Atualiza a mini janela de preview imediatamente
+                updatePreviewImage(data) 
                 break 
             end 
         end 
@@ -989,7 +1071,7 @@ secSystem:AddParagraph({
 secSystem:AddToggle("CrosshairToggle", {Title="Crosshair Magnético", Default=false, Callback=function(v) _G.MagnetAtivado = v; circleOutline.Visible = v; circleInner.Visible = v end})
 secSystem:AddToggle("MagnetMovelToggle", {Title="Bolinha do Magnet Móvel", Default=false, Callback=function(v) ScreenEditor.MagnetMovable = v end})
 toggleEditorInstance = secSystem:AddToggle("EditorTelaToggle", {Title="Editor de Tela (Botões Móveis)", Default=false, Callback=function(v) toggleScreenEditor(v) end})
-secSystem:AddDropdown("MagnetImageDrop", {Title="Imagem da Bolinha Magnet", Values={"6848903051", "5145203260"}, Default="6848903051", Callback=function(v) magnetImgLabel.Image = "rbxassetid://" .. v end})
+secSystem:AddDropdown("MagnetImageDrop", {Title="Imagem da Bolinha Magnet", Values={"6848903051", "5146843572"}, "5995357646", "131536794403332", "9382106982", "13949015366", "17692246017", "70655787654400", "127235302188997", "93025361362953", "6848903051", "5145203260", Default="6848903051", Callback=function(v) magnetImgLabel.Image = "rbxassetid://" .. v end})
 secSystem:AddSlider("MagnetSizeSlider", {Title="Tamanho da Bolinha Magnet", Min=10, Max=200, Default=40, Rounding=0, Callback=function(v) _G.MagnetSize = v end})
 secSystem:AddColorpicker("FovColorPicker", {Title="Cor do FOV", Default=Color3.fromRGB(255, 255, 255), Callback=function(color) _G.FovColor = color end})
 secSystem:AddInput("BtnSizeInput", {Title="Tamanho do Botão Menu", Default="70", Numeric=true, Finished=true, Callback=function(v) local size = tonumber(v); if size and toggleGui:FindFirstChild("OpenButton") then toggleGui.OpenButton.Size = UDim2.new(0, size, 0, size) end end})
