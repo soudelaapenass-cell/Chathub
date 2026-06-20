@@ -6,6 +6,14 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+-- Pasta segura na CoreGui para armazenar os Chams
+local ChamsFolder = game.CoreGui:FindFirstChild("LEZIN_CHAMS_FOLDER")
+if not ChamsFolder then
+    ChamsFolder = Instance.new("Folder")
+    ChamsFolder.Name = "LEZIN_CHAMS_FOLDER"
+    ChamsFolder.Parent = game.CoreGui
+end
+
 -- [[ CONFIGURAÇÃO GLOBAL ]]
 local _G_Config = {
     ChamsEnabled = false,
@@ -23,9 +31,16 @@ local function CreateESP(target, isPlayer)
     if isPlayer and target == LocalPlayer then return end
 
     local function CharacterAdded(char)
+        -- Aguarda o personagem ser devidamente anexado ao Workspace
+        if not char.Parent then
+            char:GetPropertyChangedSignal("Parent"):Wait()
+        end
+        if not char.Parent then return end 
+
         local head = char:WaitForChild("Head", 5)
         local hum = char:WaitForChild("Humanoid", 5)
-        if not head or not hum then return end
+        local hrp = char:WaitForChild("HumanoidRootPart", 5)
+        if not head or not hum or not hrp then return end
 
         hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 
@@ -89,21 +104,26 @@ local function CreateESP(target, isPlayer)
         itemContainer.BackgroundTransparency = 1
 
         local highlight = Instance.new("Highlight")
+        highlight.Name = "Lezin_Cham_Instance"
         highlight.Adornee = char
         highlight.FillTransparency = 0.5
         highlight.OutlineTransparency = 0
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.Parent = char
+        highlight.Parent = ChamsFolder
 
         local currentFade = 1
         local smoothHp = hum.Health / hum.MaxHealth
         
         local conn
         conn = RunService.RenderStepped:Connect(function()
-            if not char or not char.Parent or not hum then 
+            if not char or not char.Parent or not hum or not hrp then 
                 currentFade = math.min(currentFade + 0.05, 1)
                 nameLabel.TextTransparency = currentFade
-                if currentFade >= 1 then conn:Disconnect(); bbg:Destroy(); highlight:Destroy() end
+                if currentFade >= 1 then 
+                    conn:Disconnect()
+                    bbg:Destroy()
+                    highlight:Destroy() 
+                end
                 return 
             end
 
@@ -118,12 +138,16 @@ local function CreateESP(target, isPlayer)
             local canShow = not isAlly and targetAllowed and (_G_Config.ChamsEnabled or _G_Config.NameEnabled or _G_Config.IconEnabled or _G_Config.HealthEnabled or _G_Config.HeldItemEnabled or _G_Config.InventoryEnabled)
             local isDead = (hum.Health <= 0)
 
+            local distance = (hrp.Position - Camera.CFrame.Position).Magnitude
+            local withinDistanceLimit = (distance <= 400)
+
             bbg.Enabled = canShow
-            highlight.Enabled = canShow and _G_Config.ChamsEnabled and not isDead
+            highlight.Enabled = canShow and _G_Config.ChamsEnabled and not isDead and withinDistanceLimit
             icon.Visible = isPlayer and _G_Config.IconEnabled and not isDead
             healthBack.Visible = _G_Config.HealthEnabled and not isDead
 
             itemContainer:ClearAllChildren()
+            
             if not isDead and (_G_Config.HeldItemEnabled or _G_Config.InventoryEnabled) then
                 local itemsToShow = {}
                 if _G_Config.HeldItemEnabled then
@@ -183,42 +207,54 @@ local function CreateESP(target, isPlayer)
         end)
     end
 
+    -- CORREÇÃO: Utilização do task.spawn para evitar yield e garantir que funcione com respawns fluídos
     if isPlayer then
-        target.CharacterAdded:Connect(CharacterAdded)
-        if target.Character then CharacterAdded(target.Character) end
+        target.CharacterAdded:Connect(function(char)
+            task.spawn(CharacterAdded, char)
+        end)
+        
+        if target.Character then 
+            task.spawn(CharacterAdded, target.Character) 
+        end
     else
-        CharacterAdded(target)
+        task.spawn(CharacterAdded, target)
     end
 end
 
-for _, p in pairs(Players:GetPlayers()) do CreateESP(p, true) end
-Players.PlayerAdded:Connect(function(p) CreateESP(p, true) end)
+-- CORREÇÃO: Usando task.spawn no loop e no evento PlayerAdded
+for _, p in pairs(Players:GetPlayers()) do 
+    task.spawn(CreateESP, p, true) 
+end
+
+Players.PlayerAdded:Connect(function(p) 
+    task.spawn(CreateESP, p, true) 
+end)
 
 local function IsMob(model)
     return model:IsA("Model") and model:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(model)
 end
+
 for _, d in pairs(workspace:GetDescendants()) do
-    if d:IsA("Humanoid") and IsMob(d.Parent) then CreateESP(d.Parent, false) end
+    if d:IsA("Humanoid") and IsMob(d.Parent) then task.spawn(CreateESP, d.Parent, false) end
 end
+
 workspace.DescendantAdded:Connect(function(d)
-    if d:IsA("Humanoid") and IsMob(d.Parent) then CreateESP(d.Parent, false) end
+    if d:IsA("Humanoid") and IsMob(d.Parent) then task.spawn(CreateESP, d.Parent, false) end
 end)
 
 -- [[ INTERFACE GRÁFICA ]]
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 
--- Botão Flutuante com drag nativo do Roblox
 local HubBtn = Instance.new("ImageButton", ScreenGui)
 HubBtn.Size = UDim2.new(0, 120, 0, 120)
 HubBtn.Position = UDim2.new(0, 10, 0.5, -60)
 HubBtn.BackgroundTransparency = 1
-HubBtn.Image = "rbxassetid://93735098678772"
+HubBtn.Image = "rbxassetid://85362313821089"
 HubBtn.BorderSizePixel = 0
 HubBtn.Active = true
 HubBtn.Draggable = true
 HubBtn.Selectable = false
 
--- Texto "Lezin esp" acima do botão
 local HubTitleLabel = Instance.new("TextLabel", ScreenGui)
 HubTitleLabel.Size = UDim2.new(0, 120, 0, 20)
 HubTitleLabel.Position = UDim2.new(0, 10, 0.5, -80)
@@ -230,7 +266,6 @@ HubTitleLabel.TextSize = 14
 HubTitleLabel.TextStrokeTransparency = 0.5
 HubTitleLabel.TextXAlignment = Enum.TextXAlignment.Center
 
--- Atualizar posição do texto quando o botão mover
 HubBtn:GetPropertyChangedSignal("Position"):Connect(function()
     HubTitleLabel.Position = UDim2.new(
         HubBtn.Position.X.Scale, 
@@ -252,7 +287,7 @@ Main.ClipsDescendants = true
 local MainBg = Instance.new("ImageLabel", Main)
 MainBg.Size = UDim2.new(1, 0, 1, 0)
 MainBg.BackgroundTransparency = 1
-MainBg.Image = "rbxassetid://89742727170269"
+MainBg.Image = "rbxassetid://124061013162592"
 MainBg.ZIndex = 0
 
 local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -285,6 +320,7 @@ local function CreateToggle(text, yPos, configKey)
     btn.Font = Enum.Font.SourceSans
     btn.TextSize = 14
     btn.ZIndex = 2
+     
     btn.MouseButton1Click:Connect(function()
         _G_Config[configKey] = not _G_Config[configKey]
         btn.Text = text .. ": " .. (_G_Config[configKey] and "ON" or "OFF")
@@ -299,7 +335,6 @@ CreateToggle("SHOW ICON", 120, "IconEnabled")
 CreateToggle("HEALTH BAR", 155, "HealthEnabled")
 CreateToggle("TEAM CHECK", 190, "TeamCheck")
 
--- Dropdown
 local DropdownBtn = Instance.new("TextButton", Main)
 DropdownBtn.Size = UDim2.new(0.9, 0, 0, 32)
 DropdownBtn.Position = UDim2.new(0.05, 0, 0, 225)
@@ -319,25 +354,12 @@ OptionsContainer.BorderSizePixel = 0
 OptionsContainer.ZIndex = 3
 
 local opts = {
-    {
-        Name = "Players", 
-        Image1 = "rbxassetid://11876609912", 
-        Image2 = "rbxassetid://10290987197",
-        Label = "Players"
-    },
-    {
-        Name = "Mobs", 
-        Image1 = "rbxassetid://9955547326", 
-        Image2 = nil,
-        Label = "NPCs"
-    },
-    {
-        Name = "Both", 
-        Image1 = nil, 
-        Image2 = nil,
-        Label = "Both"
-    }
+    {Name = "Players", Image1 = "rbxassetid://11876609912", Image2 = "rbxassetid://10290987197", Label = "Players"},
+    {Name = "Mobs", Image1 = "rbxassetid://9955547326", Image2 = nil, Label = "NPCs"},
+    {Name = "Both", Image1 = nil, Image2 = nil, Label = "Both"}
 }
+
+local btnHeld, btnInv
 
 for i, opt in ipairs(opts) do
     local optBtn = Instance.new("TextButton", OptionsContainer)
@@ -392,8 +414,8 @@ for i, opt in ipairs(opts) do
         DropdownBtn.Text = "player or mobs?: " .. opt.Name
         isDropdownOpen = false
         TweenService:Create(OptionsContainer, ti, {Size = UDim2.new(0.9, 0, 0, 0)}):Play()
-        TweenService:Create(btnHeld, ti, {Position = UDim2.new(0.05, 0, 0, 260)}):Play()
-        TweenService:Create(btnInv, ti, {Position = UDim2.new(0.05, 0, 0, 295)}):Play()
+        if btnHeld then TweenService:Create(btnHeld, ti, {Position = UDim2.new(0.05, 0, 0, 260)}):Play() end
+        if btnInv then TweenService:Create(btnInv, ti, {Position = UDim2.new(0.05, 0, 0, 295)}):Play() end
     end)
 end
 
@@ -405,9 +427,8 @@ DropdownBtn.MouseButton1Click:Connect(function()
     local optHeight = isDropdownOpen and 150 or 0
     
     TweenService:Create(OptionsContainer, ti, {Size = UDim2.new(0.9, 0, 0, optHeight)}):Play()
-    
-    TweenService:Create(btnHeld, ti, {Position = UDim2.new(0.05, 0, 0, 260 + optHeight)}):Play()
-    TweenService:Create(btnInv, ti, {Position = UDim2.new(0.05, 0, 0, 295 + optHeight)}):Play()
+    if btnHeld then TweenService:Create(btnHeld, ti, {Position = UDim2.new(0.05, 0, 0, 260 + optHeight)}):Play() end
+    if btnInv then TweenService:Create(btnInv, ti, {Position = UDim2.new(0.05, 0, 0, 295 + optHeight)}):Play() end
 end)
 
 UserInputService.InputBegan:Connect(function(k)
