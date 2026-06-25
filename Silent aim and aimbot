@@ -27,7 +27,7 @@ local plr = plrs.LocalPlayer
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-loadstring(game:HttpGet("https://raw.githubusercontent.com/hm5650/HBSS/refs/heads/main/HBSS_Loader.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/soudelaapenass-cell/Chathub/refs/heads/main/Start%20notify"))()
 local Alurt = loadstring(game:HttpGet("https://raw.githubusercontent.com/azir-py/project/refs/heads/main/Zwolf/AlurtUI.lua"))()
 
 local function n(opts)
@@ -45,7 +45,7 @@ local notif1 = (function()
             Content = "Pode ser instável/não funcionar em alguns jogos.",
             Audio = "rbxassetid://17208361335",
             Length = 1,
-            Image = "rbxassetid://4483362458",
+            Image = "rbxassetid://124861400964895",
             BarColor = Color3.fromRGB(0, 170, 255)
         })
     end)
@@ -56,7 +56,7 @@ n({
     Content = "by Lezin",
     Audio = "rbxassetid://17208361335",
     Length = 8,
-    Image = "rbxassetid://4483362458",
+    Image = "rbxassetid://124861400964895",
     BarColor = Color3.fromRGB(0, 170, 255)
 })
 
@@ -5116,17 +5116,17 @@ end
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 math.randomseed(os.time())
 local btntitle = {
-    "hey y close me",
-    "Gui size decreases",
-    "dude",
-    "yh",
-    "rock solid ui",
-    "what",
-    "version: idk",
+    "ei não me feche😔 ",
+    "WWWWWWW",
+    "te amo",
+    "hh",
+    "incrível",
+    "que",
+    "versão: seilaKKK",
 }
 local choose = btntitle[math.random(1, #btntitle)]
 local Window = WindUI:CreateWindow({
-    Title = "Lezin>.<",
+    Title = "Lezin:3",
     Theme = "Dark",
     Icon = "heart",
     Size = UDim2.fromOffset(600, 70),
@@ -5141,6 +5141,39 @@ local Window = WindUI:CreateWindow({
         ButtonsType = "Default"
     }
 })
+
+-- ====================================================================
+-- IMAGEM DE FUNDO (DEVE FICAR AQUI, DEPOIS QUE O WINDOW FOI FECHADO)
+-- ====================================================================
+-- ====================================================================
+-- IMAGEM DE FUNDO (ATUALIZADA PARA O EXECUTOR DELTA)
+-- ====================================================================
+pcall(function()
+    local ImageID = "rbxassetid://13147607436" 
+    
+    -- Usa gethui() para acessar a área segura de UI do executor
+    local guiService = (gethui and gethui()) or game:GetService("CoreGui")
+    
+    -- Cria uma ScreenGui dedicada só para a imagem, garantindo que ela seja renderizada
+    local bgGui = Instance.new("ScreenGui")
+    bgGui.Name = "FundoLezin"
+    bgGui.IgnoreGuiInset = true -- Faz a imagem preencher toda a tela do celular
+    bgGui.Parent = guiService
+    
+    local Background = Instance.new("ImageLabel")
+    Background.Name = "ImagemFundo"
+    Background.Parent = bgGui
+    Background.Size = UDim2.new(1, 0, 1, 0)
+    Background.Position = UDim2.new(0, 0, 0, 0)
+    Background.Image = ImageID
+    Background.BackgroundTransparency = 1
+    Background.ImageTransparency = 0.3 -- Ajuste a transparência se a imagem ficar muito forte
+    Background.ScaleType = Enum.ScaleType.Stretch 
+    Background.ZIndex = -100 -- Um valor bem negativo garante que a imagem fique atrás do Hub
+end)
+-- ====================================================================
+
+
 
 local nd = function()
     local m = {
@@ -5174,7 +5207,7 @@ local nd = function()
         "3.1415926535",
         "1.6180339887",
         "print(''*imprime fofo*'')\nerror(''*erros fofinhos*'')\nwarn(''*avisa fofo*'')",
-        "Lezin aimbot/silentAim and + 🥀",
+        "🥀",
         "Lezinnnnnnnnnnnnnnnnn",
         "O dente-de-leão dourado que é o dente-de-leão dourado",
         "Pode me lembrar da proporção áurea da próxima vez",
@@ -5224,16 +5257,146 @@ local MainTab = Window:Tab({
         Desc = "Global settings for targeting and utilities",
         Color = lightGreen
     })
-    
-    MainTab:Paragraph({
-        Title = "Global",
-        Desc = "Global configurations",
-        Color = lightGreen
+    -- ====================================================================
+    -- SISTEMA DE TRADUÇÃO COMPLETO
+    -- ====================================================================
+
+    local translations = {
+        ["Main"] = "Principal",
+        ["Main settings..."] = "Configurações principais...",
+        ["Visuals"] = "Visuais",
+        ["ESP and visual enhancements"] = "ESP e aprimoramentos visuais",
+        ["AntiAim"] = "AntiAim",
+        ["Anti-aim and evasion features"] = "Recursos de anti-aim e evasão",
+        ["Aimbot"] = "Aimbot",
+        ["Configuration for aimbot behavior"] = "Configuração do comportamento do aimbot",
+        ["Info"] = "Informações",
+        ["Information and documentation"] = "Informações e documentação",
+        ["Targetseen Switch Rate"] = "Taxa de Troca de Alvo Visível",
+        ["Time between target switches (seconds)"] = "Tempo entre trocas de alvo (segundos)",
+        ["Ignore Forcefield"] = "Ignorar Forcefield",
+        ["Skip targets with forcefields"] = "Pular alvos com escudos",
+        ["Enable Keybinds"] = "Ativar Atalhos de Teclado",
+        ["Toggle keybind system on/off"] = "Ligar/desligar sistema de atalhos",
+        ["Hold Key Mode"] = "Modo Segurar Tecla",
+        ["Require holding modifier key for keybinds"] = "Exigir segurar tecla modificadora",
+        ["Hold Key Modifier"] = "Tecla Modificadora",
+        ["Key to hold for combos (like LeftAlt + Keybind)"] = "Tecla para segurar nos combos",
+        ["Toggle AntiKick Checkcallers"] = "Verificação do AntiKick",
+        ["Enable/disable Antikick Checkcallers (fixes nil and index errors)"] = "Ativar/desativar verificadores do AntiKick",
+        ["Optimization"] = "Otimização",
+        ["Performance optimization settings"] = "Configurações de performance",
+        ["Copy and execute optimization code"] = "Copiar e executar código de otimização",
+        ["Cache Cleaners"] = "Limpadores de Cache",
+        ["Turning this off Might cause lag"] = "Desativar isso pode causar lag",
+        ["Low Render"] = "Renderização Baixa",
+        ["Renders the game in lower visuals"] = "Gráficos mais baixos",
+        ["ESP Master"] = "Mestre do ESP",
+        ["Master control for ESP features"] = "Controle mestre do ESP",
+        ["Toggle ESP ('Z')"] = "Alternar ESP ('Z')",
+        ["Enable/disable all ESP features"] = "Ativar/desativar todo o ESP",
+        ["ESP Components"] = "Componentes do ESP",
+        ["Individual ESP component settings"] = "Configurações individuais do ESP",
+        ["Tracer ESP Only Targets"] = "Tracers Apenas em Alvos",
+        ["Only show lines when targeting with aimbot/silent aim"] = "Apenas mostrar linhas no alvo focado",
+        ["Tracer Start Position"] = "Posição Inicial do Tracer",
+        ["Where lines start from on screen"] = "De onde as linhas começam",
+        ["ESP Colour Based On Health"] = "Cor do ESP Baseada na Vida",
+        ["Dynamic color based on health"] = "Cor baseada nos pontos de vida",
+        ["AntiAim Master"] = "Mestre do AntiAim",
+        ["Master control for AntiAim features"] = "Controle mestre do AntiAim",
+        ["Toggle AntiAim ('L')"] = "Alternar AntiAim ('L')",
+        ["Enable/disable AntiAim"] = "Ativar/desativar AntiAim",
+        ["AntiAim Settings"] = "Configurações do AntiAim",
+        ["Configuration for AntiAim modes"] = "Configuração dos modos",
+        ["Teleport Distance (Raycast)"] = "Distância de Teleporte",
+        ["Distance to teleport when targeted"] = "Distância para teleportar",
+        ["Above Height (Above Player)"] = "Altura Superior",
+        ["Height above target"] = "Altura acima do alvo",
+        ["Behind Distance (Behind Player)"] = "Distância Traseira",
+        ["Distance behind target"] = "Distância atrás do alvo",
+        ["Orbit Speed (Orbit)"] = "Velocidade da Órbita",
+        ["Angular speed multiplier"] = "Multiplicador de velocidade angular",
+        ["Orbit Radius (Orbit)"] = "Raio da Órbita",
+        ["Distance from target"] = "Distância do alvo",
+        ["Aimbot Settings"] = "Configurações do Aimbot",
+        ["WallCheck AB ('H')"] = "Verificação de Parede AB ('H')",
+        ["Check for walls"] = "Verificar paredes/obstáculos",
+        ["SilentAim Master"] = "Mestre do SilentAim",
+        ["Master control for hook-based silent aim"] = "Controle mestre do silent aim",
+        ["Toggle SilentAim (HK) ('R')"] = "Alternar SilentAim ('R')",
+        ["Enable/disable silent aim"] = "Ativar/desativar o silent aim",
+        ["SilentAim Settings"] = "Configurações do SilentAim",
+        ["Configuration for hook-based silent aim"] = "Configuração do silent aim",
+        ["WallCheck ('T')"] = "Verificação de Parede ('T')",
+        ["Check for walls (Might lag)"] = "Verificar paredes (Pode dar lag)",
+        ["Wallbang"] = "Wallbang",
+        ["Shoot through walls"] = "Atirar através das paredes",
+        ["FOV Radius"] = "Raio do FOV",
+        ["Field of View size"] = "Tamanho do FOV",
+        ["Target Range"] = "Alcance do Alvo",
+        ["How far a target should a targeted"] = "Alcance máximo do alvo",
+        ["R6 Animation Presets"] = "Presets de Animação R6",
+        ["Select from R6 animation presets"] = "Selecionar presets R6",
+        ["R15 Animation Presets"] = "Presets de Animação R15",
+        ["Select from R15 animation presets"] = "Selecionar presets R15",
+        ["Custom Animation ID"] = "ID de Animação Customizada",
+        ["Enter custom animation ID"] = "Insira o ID de animação",
+        ["Animation Speed"] = "Velocidade da Animação",
+        ["Adjust animation playback speed"] = "Ajustar velocidade de reprodução",
+        ["Stop Animation"] = "Parar Animação",
+        ["Other"] = "Outros",
+        ["Additional miscellaneous features"] = "Recursos adicionais diversos",
+        ["Cframe View"] = "Visualização CFrame",
+        ["WallOver Offset Value"] = "Valor do Offset WallOver",
+        ["Vertical offset amount (0-500)"] = "Deslocamento vertical (0-500)"
+    }
+
+    local function applyLanguage(lang)
+        local targets = {game:GetService("CoreGui"), game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")}
+        for _, source in pairs(targets) do
+            if source then
+                for _, obj in pairs(source:GetDescendants()) do
+                    -- Altera TextLabels (títulos e descrições) e TextButtons
+                    if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                        if lang == "pt" then
+                            for eng, pt in pairs(translations) do
+                                if obj.Text == eng then obj.Text = pt end
+                            end
+                        elseif lang == "en" then
+                            for eng, pt in pairs(translations) do
+                                if obj.Text == pt then obj.Text = eng end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    MainTab:Dropdown({
+        Title = "Language / Idioma",
+        Desc = "Choose your preferred language / Escolha seu idioma",
+        Values = {"English", "Português"},
+        Value = "English",
+        Multi = false,
+        Callback = function(Option)
+            if Option == "Português" then
+                applyLanguage("pt")
+            else
+                applyLanguage("en")
+            end
+        end
     })
     
+    MainTab:Space()
+    -- ====================================================================
+
+    MainTab:Space()
+
     MainTab:Dropdown({
         Title = "Team Target",
-        Desc = "Select Target Team",
+        Desc = "Seleção de equipe",
         Values = {"Enemies", "Teams", "All"},
         Value = config.masterTeamTarget or "Enemies",
         Multi = false,
@@ -5260,7 +5423,7 @@ local MainTab = Window:Tab({
     
     MainTab:Dropdown({
         Title = "TargetType",
-        Desc = "Select target type",
+        Desc = "Selecione o tipo de alvo",
         Values = {"Players", "NPCs", "Both"},
         Value = config.masterTarget or "Players",
         Multi = false,
@@ -5271,7 +5434,7 @@ local MainTab = Window:Tab({
     
     MainTab:Dropdown({
         Title = "GetTarget",
-        Desc = "Target selection method",
+        Desc = "Método de seleção de alvos",
         Values = {"Closest", "Lowest Health", "TargetSeen"},
         Value = config.masterGetTarget or "Closest",
         Multi = false,
@@ -5287,7 +5450,7 @@ local MainTab = Window:Tab({
     
     MainTab:Slider({
         Title = "Targetseen Switch Rate",
-        Desc = "Time between target switches (seconds)",
+        Desc = "Tempo entre as trocas de alvo (segundos)",
         IsTextbox = true,
         Step = 0.1,
         Value = {
@@ -5302,7 +5465,7 @@ local MainTab = Window:Tab({
     
     MainTab:Toggle({
         Title = "Ignore Forcefield",
-        Desc = "Skip targets with forcefields",
+        Desc = "Pule alvos com (english)› [forcefield] (BR)› [campo de força] ",
         Value = config.ignoreForcefield or true,
         Callback = function(v)
             config.ignoreForcefield = v
@@ -5311,7 +5474,7 @@ local MainTab = Window:Tab({
 MainTab:Space()
 MainTab:Toggle({
     Title = "Enable Keybinds",
-    Desc = "Toggle keybind system on/off",
+    Desc = "Sistema de alternância de teclas ligado/desligado",
     Value = config.KeybindsEnabled or true,
     Callback = function(v)
         config.KeybindsEnabled = v
@@ -5326,7 +5489,7 @@ MainTab:Toggle({
 
 MainTab:Toggle({
     Title = "Hold Key Mode",
-    Desc = "Require holding modifier key for keybinds",
+    Desc = "É necessário manter a tecla modificadora pressionada para atalhos de teclas",
     Value = config.HoldKeysEnabled or false,
     Callback = function(v)
         config.HoldKeysEnabled = v
@@ -5341,7 +5504,7 @@ MainTab:Toggle({
 
 MainTab:Keybind({
     Title = "Hold Key Modifier",
-    Desc = "Key to hold for combos (like LeftAlt + Keybind)",
+    Desc = "Chave para segurar em combos (como LeftAlt + Keybind)",
     Value = config.Keybinds.HoldKeybind or "LeftAlt",
     Callback = function(key)
         config.Keybinds.HoldKeybind = key
@@ -5350,7 +5513,7 @@ MainTab:Keybind({
 MainTab:Space()
 MainTab:Keybind({
     Title = "Silent Aim (HB)",
-    Desc = "Toggle Silent Aim (Hitbox-based)",
+    Desc = "Alternar SilentAim (Baseada em hitbox)",
     Value = config.Keybinds.silentaim or "E",
     Callback = function(key)
         config.Keybinds.silentaim = key
@@ -5359,7 +5522,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "Silent Aim (HK)",
-    Desc = "Toggle Silent Aim (Hook-based)",
+    Desc = "Alternar SilentAim (Baseada em Hook)",
     Value = config.Keybinds.silentaimhk or "R",
     Callback = function(key)
         config.Keybinds.silentaimhk = key
@@ -5368,7 +5531,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "Aimbot",
-    Desc = "Toggle Aimbot",
+    Desc = "alternar Aimbot",
     Value = config.Keybinds.aimbot or "Q",
     Callback = function(key)
         config.Keybinds.aimbot = key
@@ -5377,7 +5540,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "Auto Farm",
-    Desc = "Toggle Auto Farm",
+    Desc = "alternar Auto Farm",
     Value = config.Keybinds.autofarm or "F",
     Callback = function(key)
         config.Keybinds.autofarm = key
@@ -5386,7 +5549,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "Anti Aim",
-    Desc = "Toggle Anti Aim",
+    Desc = "alternar Anti Aim",
     Value = config.Keybinds.antiaim or "L",
     Callback = function(key)
         config.Keybinds.antiaim = key
@@ -5395,7 +5558,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "Hitbox",
-    Desc = "Toggle Hitbox Expansion",
+    Desc = "alternar expansão Hitbox ",
     Value = config.Keybinds.hitbox or "G",
     Callback = function(key)
         config.Keybinds.hitbox = key
@@ -5404,7 +5567,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "ESP",
-    Desc = "Toggle ESP",
+    Desc = "alternar ESP",
     Value = config.Keybinds.esp or "Z",
     Callback = function(key)
         config.Keybinds.esp = key
@@ -5413,7 +5576,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "Client",
-    Desc = "Toggle Client Features",
+    Desc = "alternar modificações Client",
     Value = config.Keybinds.client or "V",
     Callback = function(key)
         config.Keybinds.client = key
@@ -5422,7 +5585,7 @@ MainTab:Keybind({
 MainTab:Space()
 MainTab:Keybind({
     Title = "Silent Aim Wall Check",
-    Desc = "Toggle wall check for Silent Aim",
+    Desc = "alternar wall check para o Silent Aim",
     Value = config.Keybinds.silentaimwallcheck or "B",
     Callback = function(key)
         config.Keybinds.silentaimwallcheck = key
@@ -5431,7 +5594,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "Aimbot Wall Check",
-    Desc = "Toggle wall check for Aimbot",
+    Desc = "alternar wall check para o Aimbot",
     Value = config.Keybinds.aimbotwallcheck or "H",
     Callback = function(key)
         config.Keybinds.aimbotwallcheck = key
@@ -5440,7 +5603,7 @@ MainTab:Keybind({
 
 MainTab:Keybind({
     Title = "Silent Aim HK Wall Check",
-    Desc = "Toggle wall check for Silent Aim (HK)",
+    Desc = "alternar wall check para o Silent Aim (HK)",
     Value = config.Keybinds.silentaimhkwallcheck or "T",
     Callback = function(key)
         config.Keybinds.silentaimhkwallcheck = key
@@ -5450,19 +5613,19 @@ MainTab:Keybind({
     
     MainTab:Paragraph({
         Title = "Utilities",
-        Desc = "AutoFarm and utility features",
+        Desc = "AutoFarm Recursos de Utilidades",
         Color = lightGreen
     })
     
     MainTab:Paragraph({
         Title = "Lezin",
-        Desc = "[ Autofarm might not work for every game]",
+        Desc = "[ O autofarm pode não funcionar em alguns jogos]",
         Color = darkGray
     })
     
     MainTab:Toggle({
-        Title = "Toggle AutoFarm ('F')",
-        Desc = "Enable/disable auto farm",
+        Title = "alternar AutoFarm ('F')",
+        Desc = "Ativar/desativar o autofarm",
         Value = config.autoFarmEnabled or false,
         Callback = function(v)
             config.autoFarmEnabled = v
@@ -5492,7 +5655,7 @@ MainTab:Keybind({
     
     MainTab:Toggle({
         Title = "Autofarm Wall Check",
-        Desc = "Prevent teleporting targets behind walls",
+        Desc = "Evitar teletransporte de alvos atrás de paredes",
         Value = config.autoFarmWallCheck or false,
         Callback = function(v)
             config.autoFarmWallCheck = v
@@ -5520,7 +5683,7 @@ MainTab:Keybind({
     
     MainTab:Toggle({
         Title = "QuickToggles",
-        Desc = "Show/hide QuickToggles GUI",
+        Desc = "Mostrar/ocultar a interface gráfica do QuickToggles",
         Value = config.QuickToggles or false,
         Callback = function(v)
             config.QuickToggles = v
@@ -5532,7 +5695,7 @@ MainTab:Keybind({
     
     MainTab:Button({
         Title = "Partclaim",
-        Desc = "Use if NPC mode isn't working well",
+        Desc = "Use caso o modo NPC não estiver funcionando bem",
         Callback = function()
             pc()
             n({
@@ -5548,7 +5711,7 @@ MainTab:Keybind({
     
     MainTab:Dropdown({
         Title = "Align Part (Autofarm)",
-        Desc = "Part to align with crosshair",
+        Desc = "Parte para alinhar com a mira",
         Values = {"Head", "HumanoidRootPart"},
         Value = config.autoFarmTargetPart or "Head",
         Multi = false,
@@ -5559,7 +5722,7 @@ MainTab:Keybind({
     
     MainTab:Slider({
         Title = "GetPart (Partclaim)",
-        Desc = "Part replication distance",
+        Desc = "Distância de replicação da part",
         IsTextbox = true,
         Step = 10,
         Value = {
@@ -5574,7 +5737,7 @@ MainTab:Keybind({
     
     MainTab:Slider({
         Title = "TP Max Range (Autofarm)",
-        Desc = "Maximum distance to teleport targets",
+        Desc = "Distância máxima para teletransportar alvos",
         IsTextbox = true,
         Step = 50,
         Value = {
@@ -5589,7 +5752,7 @@ MainTab:Keybind({
     
     MainTab:Slider({
         Title = "TP Distance (Autofarm)",
-        Desc = "Teleport distance for autofarm",
+        Desc = "Distância de teletransporte para autofarm",
         IsTextbox = true,
         Step = 1,
         Value = {
@@ -5604,7 +5767,7 @@ MainTab:Keybind({
     
     MainTab:Slider({
         Title = "Vertical Offset (Autofarm)",
-        Desc = "Vertical offset for autofarm",
+        Desc = "Deslocamento vertical para autofarm",
         IsTextbox = true,
         Step = 1,
         Value = {
@@ -5619,19 +5782,19 @@ MainTab:Keybind({
     
     MainTab:Paragraph({
         Title = "Antikick [ We didn't made this ]",
-        Desc = "Client-side anti-kick protection",
+        Desc = "Proteção anti-kick client-side",
         Color = lightGreen
     })
     
     MainTab:Paragraph({
         Title = "Lezin",
-        Desc = "[ AntiKick only prevents client kicks ]\n[ Good Injectors are recommend ]",
+        Desc = "[ AntiKick só previne expulsões do cliente ] [ Bons Injetores são recomendados ]",
         Color = darkGray
     })
     
     MainTab:Toggle({
         Title = "Toggle AntiKick",
-        Desc = "Enable/disable Antikick",
+        Desc = "Ativar/desativar o Antikick",
         Value = ED_AntiKick.Enabled or true,
         Callback = function(v)
             ED_AntiKick.Enabled = v
@@ -5648,7 +5811,7 @@ MainTab:Keybind({
     
     MainTab:Toggle({
         Title = "Show AntiKick Notifications",
-        Desc = "Enable/disable Antikick Notifications",
+        Desc = "Ativar/desativar as notificações antikick",
         Value = ED_AntiKick.SendNotifications or false,
         Callback = function(v)
             ED_AntiKick.SendNotifications = v
@@ -5665,7 +5828,7 @@ MainTab:Keybind({
     
     MainTab:Toggle({
         Title = "Toggle AntiKick Checkcallers",
-        Desc = "Enable/disable Antikick Checkcallers (fixes nil and index errors)",
+        Desc = "Ativar/desativar os Checkcallers Antikick (corrige erros de nil e index)",
         Value = ED_AntiKick.CheckCaller or true,
         Callback = function(v)
             ED_AntiKick.CheckCaller = v
@@ -5683,13 +5846,13 @@ MainTab:Keybind({
     
     MainTab:Paragraph({
         Title = "Optimization",
-        Desc = "Performance optimization settings",
+        Desc = "Configurações de otimização de desempenho",
         Color = lightGreen
     })
     
     MainTab:Paragraph({
         Title = "Optimization",
-        Desc = "Copy and execute optimization code",
+        Desc = "Copiar e executar código de otimização",
         Color = darkGray,
         Buttons = {
             {
@@ -5751,7 +5914,7 @@ local Optiz = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/
     
     MainTab:Slider({
         Title = "Updaters speed",
-        Desc = "Increase performance when increased costs Accuracy",
+        Desc = "Aumentar o desempenho quando os custos aumentam Precisão",
         IsTextbox = true,
         Step = 0.1,
         Value = {
@@ -5766,7 +5929,7 @@ local Optiz = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/
     
     MainTab:Toggle({
         Title = "Updaters",
-        Desc = "Stops other Updaters when disabled Increases performance. Might cause features to not work",
+        Desc = "Para outros Atualizadores quando desativados. Aumenta o desempenho. Pode fazer com que as funcionalidades não funcionem",
         Value = patcher or true,
         Callback = function(v)
             patcher = v
@@ -5775,7 +5938,7 @@ local Optiz = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/
 
     MainTab:Slider({
         Title = "Clean Cache Every",
-        Desc = "Cleans up cache every second",
+        Desc = "Limpa o cache a cada segundo",
         IsTextbox = false,
         Step = 0.01,
         Value = {
@@ -5790,8 +5953,8 @@ local Optiz = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/
     
     MainTab:Toggle({
         Title = "Cache Cleaners",
-        Desc = "Turning this off Might cause lag",
-        Value = patcher or false
+        Desc = "Desligar isso pode causar lag",
+        Value = patcher or true,
         Callback = function(v)
             lowpatcher = v
         end
@@ -5799,7 +5962,7 @@ local Optiz = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/
     
     MainTab:Toggle({
         Title = "Low Render",
-        Desc = "Renders the game in lower visuals",
+        Desc = "Renderiza o jogo com visuais mais baixos",
         Value = config.LowRender or false,
         Callback = function(v)
             config.LowRender = v
@@ -5808,19 +5971,19 @@ local Optiz = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/
 end
 local VisualsTab = Window:Tab({
     Title = "Visuals",
-    Desc = "ESP and visual enhancements",
+    Desc = "ESP e melhorias visuais",
     Icon = "eye",
     IconColor = lightGray
 }) do
     VisualsTab:Paragraph({
         Title = "ESP Master",
-        Desc = "Master control for ESP features",
+        Desc = "Controle mestre para recursos ESP",
         Color = lightGreen
     })
     VisualsTab:Space()
     VisualsTab:Toggle({
         Title = "Toggle ESP ('Z')",
-        Desc = "Enable/disable all ESP features",
+        Desc = "Ativar/desativar todos os recursos de ESP",
         Value = config.espMasterEnabled or false,
         Callback = function(v)
             applyESPMaster(v)
@@ -5848,13 +6011,13 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Paragraph({
         Title = "ESP Components",
-        Desc = "Individual ESP component settings",
+        Desc = "Configurações individuais de componentes ESP",
         Color = lightGreen
     })
     
     VisualsTab:Toggle({
         Title = "Toggle Highlight ESP",
-        Desc = "Enable player highlight",
+        Desc = "Ativar Highlight do jogador",
         Value = config.prefHighlightESP or false,
         Callback = function(v)
             toggleHighlightESP(v)
@@ -5864,7 +6027,7 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Toggle({
         Title = "Toggle Text ESP",
-        Desc = "Show player names/health",
+        Desc = "Mostrar nomes/saúde dos jogadores",
         Value = config.prefTextESP or false,
         Callback = function(v)
             toggleTextESP(v)
@@ -5874,7 +6037,7 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Toggle({
         Title = "Toggle Box ESP",
-        Desc = "Show bounding boxes",
+        Desc = "Mostrar caixas dos players",
         Value = config.prefBoxESP or false,
         Callback = function(v)
             toggleBoxESP(v)
@@ -5884,7 +6047,7 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Toggle({
         Title = "Toggle Health ESP",
-        Desc = "Show health bars",
+        Desc = "Mostrar barras de vida",
         Value = config.prefHealthESP or false,
         Callback = function(v)
             toggleHealthESP(v)
@@ -5894,7 +6057,7 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Toggle({
         Title = "Toggle Head Dot ESP",
-        Desc = "Show head indicators",
+        Desc = "mostrar Indicadores da cabeça",
         Value = config.prefHeadDotESP or false,
         Callback = function(v)
             config.prefHeadDotESP = v
@@ -5912,7 +6075,7 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Toggle({
         Title = "Toggle Tracer ESP",
-        Desc = "Draw lines to targets",
+        Desc = "mostra as linhas para os alvos",
         Value = config.lineESPEnabled or false,
         Callback = function(v)
             config.lineESPEnabled = v
@@ -5927,7 +6090,7 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Toggle({
         Title = "Tracer ESP Only Targets",
-        Desc = "Only show lines when targeting with aimbot/silent aim",
+        Desc = "Só mostra as linhas ao mirar com aimbot/silentAim",
         Value = config.lineESPOnlyTarget or false,
         Callback = function(v)
             config.lineESPOnlyTarget = v
@@ -5937,7 +6100,7 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Dropdown({
         Title = "Tracer Start Position",
-        Desc = "Where lines start from on screen",
+        Desc = "Onde as linhas começam na tela",
         Values = {"Center", "Bottom", "Top", "BottomLeft", "BottomRight", "TopLeft", "TopRight"},
         Value = config.lineStartPosition or "Center",
         Multi = false,
@@ -5948,7 +6111,7 @@ local VisualsTab = Window:Tab({
     
     VisualsTab:Toggle({
         Title = "ESP Colour Based On Health",
-        Desc = "Dynamic color based on health",
+        Desc = "Cor dinâmica baseada na saúde",
         Value = config.prefColorByHealth or false,
         Callback = function(v)
             config.prefColorByHealth = v
@@ -5959,7 +6122,7 @@ local VisualsTab = Window:Tab({
     VisualsTab:Space()
     VisualsTab:Toggle({
         Title = "Full Bright",
-        Desc = "Enable/disable full bright (no lighting)",
+        Desc = "Ativar/desativar o brilho total (sem iluminação)",
         Value = false,
         Callback = function(v)
             if v then
@@ -6194,19 +6357,19 @@ local AntiAimTab = Window:Tab({
 }) do
     AntiAimTab:Paragraph({
         Title = "Lezin",
-        Desc = "[ Bad Injectors might work here ]\n[ This might not work on every game ]",
+        Desc = "[Isso pode não funcionar em todos os jogos]",
         Color = darkGray
     })
 
     AntiAimTab:Paragraph({
         Title = "AntiAim Master",
-        Desc = "Master control for AntiAim features",
+        Desc = "Controle mestre para recursos do AntiAim",
         Color = lightGreen
     })
     
     AntiAimTab:Toggle({
         Title = "Toggle AntiAim ('L')",
-        Desc = "Enable/disable AntiAim",
+        Desc = "Ativar/desativar o AntiAim",
         Value = config.antiAimEnabled or false,
         Callback = function(v)
             config.antiAimEnabled = v
@@ -6245,13 +6408,13 @@ local AntiAimTab = Window:Tab({
     AntiAimTab:Space()
     AntiAimTab:Paragraph({
         Title = "AntiAim Modes",
-        Desc = "Different AntiAim evasion modes",
+        Desc = "Diferentes modos do AntiAim",
         Color = lightGreen
     })
     
     AntiAimTab:Toggle({
         Title = "Raycast AntiAim",
-        Desc = "Teleport when targeted",
+        Desc = "Teletransporte-se para o alvo",
         Value = config.raycastAntiAim or false,
         Callback = function(v)
             config.raycastAntiAim = v
@@ -6265,7 +6428,7 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Toggle({
         Title = "Above Player",
-        Desc = "Teleport above target",
+        Desc = "Teleporte-se acima do alvo",
         Value = config.antiAimAbovePlayer or false,
         Callback = function(v)
             config.antiAimAbovePlayer = v
@@ -6281,7 +6444,7 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Toggle({
         Title = "Behind Player",
-        Desc = "Teleport behind target",
+        Desc = "Teleporte-se atrás do alvo",
         Value = config.antiAimBehindPlayer or false,
         Callback = function(v)
             config.antiAimBehindPlayer = v
@@ -6297,7 +6460,7 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Toggle({
         Title = "Orbit Players",
-        Desc = "Orbit around nearest target",
+        Desc = "Órbita ao redor do alvo mais próximo",
         Value = config.antiAimOrbitEnabled or false,
         Callback = function(v)
             config.antiAimOrbitEnabled = v
@@ -6316,13 +6479,13 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Paragraph({
         Title = "AntiAim Settings",
-        Desc = "Configuration for AntiAim modes",
+        Desc = "Configuração para modos AntiAim",
         Color = lightGreen
     })
     
     AntiAimTab:Slider({
         Title = "Teleport Distance (Raycast)",
-        Desc = "Distance to teleport when targeted",
+        Desc = "Distância para se teletransportar para o alvo",
         IsTextbox = true,
         Step = 0.5,
         Value = {
@@ -6337,7 +6500,7 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Slider({
         Title = "Above Height (Above Player)",
-        Desc = "Height above target",
+        Desc = "Altura acima do alvo",
         IsTextbox = true,
         Step = 1,
         Value = {
@@ -6352,7 +6515,7 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Slider({
         Title = "Behind Distance (Behind Player)",
-        Desc = "Distance behind target",
+        Desc = "Distância atrás do alvo",
         IsTextbox = true,
         Step = 0.5,
         Value = {
@@ -6367,7 +6530,7 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Slider({
         Title = "Orbit Speed (Orbit)",
-        Desc = "Angular speed multiplier",
+        Desc = "Multiplicador de velocidade angular",
         IsTextbox = true,
         Step = 0.5,
         Value = {
@@ -6382,7 +6545,7 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Slider({
         Title = "Orbit Radius (Orbit)",
-        Desc = "Distance from target",
+        Desc = "Distância do alvo",
         IsTextbox = true,
         Step = 0.5,
         Value = {
@@ -6397,7 +6560,7 @@ local AntiAimTab = Window:Tab({
     
     AntiAimTab:Slider({
         Title = "Orbit Height (Orbit)",
-        Desc = "Vertical offset",
+        Desc = "Deslocamento vertical",
         IsTextbox = true,
         Step = 1,
         Value = {
@@ -6414,25 +6577,25 @@ end
 -- Aimbot Tab
 local AimbotTab = Window:Tab({
     Title = "Aimbot",
-    Desc = "Aimbot and targeting features",
+    Desc = "Aimbot e recursos de mira",
     Icon = "crosshair",
     IconColor = lightGray
 }) do
     AimbotTab:Paragraph({
         Title = "Lezin",
-        Desc = "[ Bad Injectors might work here ]",
+        Desc = "[ Injetores ruins podem funcionar aqui ]",
         Color = darkGray
     })
     
     AimbotTab:Paragraph({
         Title = "Aimbot Master",
-        Desc = "Master control for aimbot features",
+        Desc = "Controle mestre para recursos do aimbot",
         Color = lightGreen
     })
     AimbotTab:Space()
     AimbotTab:Toggle({
         Title = "Toggle Aimbot ('Q')",
-        Desc = "Enable/disable aimbot",
+        Desc = "Ativar/desativar o aimbot",
         Value = config.aimbotEnabled or false,
         Callback = function(v)
             handleAimbotToggle(v)
@@ -6460,7 +6623,7 @@ local AimbotTab = Window:Tab({
     
     AimbotTab:Paragraph({
         Title = "Aimbot Settings",
-        Desc = "Configuration for aimbot behavior",
+        Desc = "Configuração para comportamento do aimbot",
         Color = lightGreen
     })
     
@@ -6475,7 +6638,7 @@ local AimbotTab = Window:Tab({
     
     AimbotTab:Toggle({
         Title = "360° Aimbot",
-        Desc = "Target in all directions",
+        Desc = "pega em todas as direções",
         Value = config.aimbot360Enabled or false,
         Callback = function(v)
             toggle360Aimbot(v)
@@ -6484,7 +6647,7 @@ local AimbotTab = Window:Tab({
     
     AimbotTab:Dropdown({
         Title = "Target Part",
-        Desc = "Part to aim at",
+        Desc = "Parte do corpo do alvo",
         Values = {"Head", "HumanoidRootPart", "Torso"},
         Value = config.aimbotTargetPart or "Head",
         Multi = false,
@@ -6495,7 +6658,7 @@ local AimbotTab = Window:Tab({
     
     AimbotTab:Slider({
         Title = "Aim Strength",
-        Desc = "Smoothing strength",
+        Desc = "Resistência de suavização",
         Step = 0.05,
         Value = {
             Min = 0,
@@ -6509,7 +6672,7 @@ local AimbotTab = Window:Tab({
     
     AimbotTab:Slider({
         Title = "FOV Size",
-        Desc = "Aimbot field of view",
+        Desc = "tamanho do fov",
         IsTextbox = true,
         Step = 10,
         Value = {
@@ -6528,25 +6691,25 @@ end
 -- SilentAim Tab (HB)
 local SilentAimTab = Window:Tab({
     Title = "SilentAim (HB)",
-    Desc = "Hitbox-based silent aim",
+    Desc = "SilentAim baseada em hitbox",
     Icon = "circle",
     IconColor = lightGray
 }) do
     SilentAimTab:Paragraph({
         Title = "Lezin",
-        Desc = "[ Hitbox Based ]\n[ Bad Injectors might work here ]\n[ This might not work on every game ]",
+        Desc = "[ Baseado em hitbox ] [isso pode não funcionar em todos os jogos ]",
         Color = darkGray
     })
 
     SilentAimTab:Paragraph({
         Title = "SilentAim Master",
-        Desc = "Master control for hitbox silent aim",
+        Desc = "Controle mestre para SilentAim com hitbox",
         Color = lightGreen
     })
     
     SilentAimTab:Toggle({
         Title = "Toggle SilentAim (HB) ('E')",
-        Desc = "Enable/disable silent aim",
+        Desc = "Ativar/desativar Silent aim",
         Value = config.startsa or false,
         Callback = function(v)
             config.startsa = v
@@ -6587,13 +6750,13 @@ local SilentAimTab = Window:Tab({
     SilentAimTab:Space()
     SilentAimTab:Paragraph({
         Title = "SilentAim Settings",
-        Desc = "Configuration for silent aim behavior",
+        Desc = "Configuração para comportamento de SilentAim",
         Color = lightGreen
     })
     
     SilentAimTab:Toggle({
         Title = "WallCheck SA ('B')",
-        Desc = "Check for walls",
+        Desc = "Verifique se há paredes",
         Value = config.wallc or false,
         Callback = function(v)
             config.wallc = v
@@ -6602,7 +6765,7 @@ local SilentAimTab = Window:Tab({
 
     SilentAimTab:Toggle({
         Title = "Scale To Screen",
-        Desc = "Scale hitbox to cover the fov circle",
+        Desc = "Escala do hitbox para cobrir o círculo de campo de visão",
         Value = config.scaleToScreen or false,
         Callback = function(v)
             config.scaleToScreen = v
@@ -6611,7 +6774,7 @@ local SilentAimTab = Window:Tab({
     
     SilentAimTab:Slider({
         Title = "STS Distance",
-        Desc = "distance from player to prevent clipping",
+        Desc = "distância do jogador para evitar clipping",
         IsTextbox = true,
         Step = 1,
         Value = {
@@ -6626,7 +6789,7 @@ local SilentAimTab = Window:Tab({
     
     SilentAimTab:Dropdown({
         Title = "Target Part",
-        Desc = "Part to target",
+        Desc = "Parte do alvo",
         Values = {"Head", "HumanoidRootPart", "Both"},
         Value = config.bodypart or "Head",
         Multi = false,
@@ -6644,7 +6807,7 @@ local SilentAimTab = Window:Tab({
     
     SilentAimTab:Slider({
         Title = "HitChance",
-        Desc = "Chance to hit target",
+        Desc = "Chance de acertar o alvo",
         Step = 1,
         Suffix = "%",
         Value = {
@@ -6659,7 +6822,7 @@ local SilentAimTab = Window:Tab({
     
     SilentAimTab:Slider({
         Title = "FovSize",
-        Desc = "Silent aim field of view",
+        Desc = "tamanho do fov SilentAim",
         IsTextbox = true,
         Step = 10,
         Value = {
@@ -6677,7 +6840,7 @@ local SilentAimTab = Window:Tab({
     
     SilentAimTab:Slider({
         Title = "Hitbox Transparency",
-        Desc = "SilentAim Hitbox Transparency",
+        Desc = "Transparência da Hitbox do SilentAim",
         Step = 0.1,
         Value = {
             Min = 0,
@@ -6694,25 +6857,25 @@ end
 -- SilentAim (HK)
 local SilentAimTab2 = Window:Tab({
     Title = "SilentAim (HK)",
-    Desc = "Hook-based silent aim",
+    Desc = "Hook-baseada no silent aim",
     Icon = "target",
     IconColor = lightGray
 }) do
     SilentAimTab2:Paragraph({
         Title = "Lezin",
-        Desc = "[ Hooked Based ]\n[ Bad injectors might not work here ]\n[ risky towards anticheats ]\n[ Might not work on every game ]",
+        Desc = "[usando Hook ] [ arriscado para mapas que tenham anti-Cheats] [ Pode não funcionar em todos os jogos ]",
         Color = darkGray
     })
     
     SilentAimTab2:Paragraph({
         Title = "SilentAim Master",
-        Desc = "Master control for hook-based silent aim",
+        Desc = "Controle mestre para base de hook do silent aim",
         Color = lightGreen
     })
     
     SilentAimTab2:Toggle({
         Title = "Toggle SilentAim (HK) ('R')",
-        Desc = "Enable/disable silent aim",
+        Desc = "Ativar/desativar silent aim",
         Value = config.SA2_Enabled or false,
         Callback = function(v)
             config.SA2_Enabled = v
@@ -6729,13 +6892,13 @@ local SilentAimTab2 = Window:Tab({
     SilentAimTab2:Space()
     SilentAimTab2:Paragraph({
         Title = "SilentAim Settings",
-        Desc = "Configuration for hook-based silent aim",
+        Desc = "Configuração para base de hook silent aim",
         Color = lightGreen
     })
     
     SilentAimTab2:Toggle({
         Title = "WallCheck ('T')",
-        Desc = "Check for walls (Might lag)",
+        Desc = "Verifique se há paredes (pode lagar/demorar",
         Value = config.SA2_Wallcheck or false,
         Callback = function(v)
             config.SA2_Wallcheck = v
@@ -6744,7 +6907,7 @@ local SilentAimTab2 = Window:Tab({
     
     SilentAimTab2:Toggle({
         Title = "Wallbang",
-        Desc = "Shoot through walls",
+        Desc = "Atire através das paredes",
         Value = config.SA2_WallbangEnabled or false,
         Callback = function(v)
             config.SA2_WallbangEnabled = v
@@ -6772,7 +6935,7 @@ local SilentAimTab2 = Window:Tab({
     
     SilentAimTab2:Toggle({
         Title = "360 Mode",
-        Desc = "Enable silent aim in all directions",
+        Desc = "pegar a SilentAim em todas as direções",
         Value = config.SA2_ThreeSixtyMode or false,
         Callback = function(v)
             config.SA2_ThreeSixtyMode = v
@@ -6781,7 +6944,7 @@ local SilentAimTab2 = Window:Tab({
     
     SilentAimTab2:Dropdown({
         Title = "Aim Method",
-        Desc = "Raycast method to hook",
+        Desc = "Método de raycast para o hook",
         Values = {"Raycast", "Cast", "FindPartOnRay", "FindPartOnRayWithWhitelist", "FindPartOnRayWithIgnoreList", "Mouse.Hit", "All"},
         Value = config.SA2_Method or "Raycast",
         Multi = false,
@@ -6792,7 +6955,7 @@ local SilentAimTab2 = Window:Tab({
     
     SilentAimTab2:Dropdown({
         Title = "Target Part",
-        Desc = "Part to target",
+        Desc = "parte do alvo",
         Values = {"Head", "HumanoidRootPart"},
         Value = config.SA2_TargetPart or "Head",
         Multi = false,
@@ -6811,7 +6974,7 @@ local SilentAimTab2 = Window:Tab({
     
     SilentAimTab2:Slider({
         Title = "Hit Chance",
-        Desc = "Accuracy percentage",
+        Desc = "chance de acerto",
         Step = 1,
         Suffix = "%",
         Value = {
@@ -6826,7 +6989,7 @@ local SilentAimTab2 = Window:Tab({
     
     SilentAimTab2:Slider({
         Title = "FOV Radius",
-        Desc = "Field of View size",
+        Desc = "raio do fov",
         IsTextbox = true,
         Step = 10,
         Value = {
@@ -6840,7 +7003,7 @@ local SilentAimTab2 = Window:Tab({
     })
     SilentAimTab2:Slider({
         Title = "Target Range",
-        Desc = "How far a target should a targeted",
+        Desc = "qual distância pegar",
         IsTextbox = true,
         Step = 10,
         Value = {
@@ -6857,25 +7020,25 @@ end
 -- Hitbox Tab
 local HitboxTab = Window:Tab({
     Title = "Hitbox",
-    Desc = "Hitbox expansion features",
+    Desc = "Recursos de expansão do hitbox",
     Icon = "box",
     IconColor = lightGray
 }) do
     HitboxTab:Paragraph({
         Title = "Lezin",
-        Desc = "[ Bad Injectors might work here ]\n[ This might not work on every game ]",
+        Desc = "[Isso pode não funcionar em todos os jogos]",
         Color = darkGray
     })
     
     HitboxTab:Paragraph({
         Title = "Hitbox Master",
-        Desc = "Master control for hitbox expansion",
+        Desc = "Controle mestre para expansão de hitbox",
         Color = lightGreen
     })
     
     HitboxTab:Toggle({
         Title = "Toggle Hitbox ('G')",
-        Desc = "Expand hitboxes",
+        Desc = "Expandir hitboxes",
         Value = config.hitboxEnabled or false,
         Callback = function(v)
             config.hitboxEnabled = v
@@ -6908,13 +7071,13 @@ local HitboxTab = Window:Tab({
     HitboxTab:Space()
     HitboxTab:Paragraph({
         Title = "Hitbox Settings",
-        Desc = "Configuration for hitbox expansion",
+        Desc = "Configuração para expansão de hitbox",
         Color = lightGreen
     })
     
     HitboxTab:Dropdown({
         Title = "Team Target",
-        Desc = "Select target team preference",
+        Desc = "Preferência de seleção do time-alvo",
         Values = {"Enemies", "Teams", "All"},
         Value = config.hitboxTeamTarget or "Enemies",
         Multi = false,
@@ -6927,7 +7090,7 @@ local HitboxTab = Window:Tab({
     
     HitboxTab:Slider({
         Title = "Hitbox Size",
-        Desc = "Size of expanded hitboxes",
+        Desc = "Tamanho das hitboxes",
         IsTextbox = true,
         Step = 5,
         Value = {
@@ -6955,19 +7118,19 @@ end
 
 local ReachTab = Window:Tab({
     Title = "Reach",
-    Desc = "Extended reach for melee weapons",
+    Desc = "Alcance estendido para armas corpo a corpo",
     Icon = "sword",
     IconColor = lightGray
 }) do
     ReachTab:Paragraph({
         Title = "Lezin",
-        Desc = "[ FireTouchInterest ]\n[ Melees Recommended ]\n[ Bad Injectors might work here ]\n[ This might not work for every game ]",
+        Desc = "[ FireTouchInterest ] [ Melees recomendados ] [ Isso pode não funcionar em alguns jogos ]",
         Color = darkGray
     })
     
     ReachTab:Paragraph({
         Title = "Reach Master",
-        Desc = "Master control for extended reach",
+        Desc = "Controle mestre para alcance estendido",
         Color = lightGreen
     })
     
@@ -6985,7 +7148,7 @@ local ReachTab = Window:Tab({
 
     ReachTab:Toggle({
         Title = "Enable Reach",
-        Desc = "Extend weapon reach distance",
+        Desc = "Estender a distância de alcance da arma",
         Value = config.reach.enabled,
         Callback = function(v)
             config.reach.enabled = v
@@ -7009,13 +7172,13 @@ local ReachTab = Window:Tab({
     
     ReachTab:Paragraph({
         Title = "Reach Settings",
-        Desc = "Configuration for extended reach",
+        Desc = "Configuração para alcance estendido",
         Color = lightGreen
     })
     
     ReachTab:Dropdown({
         Title = "Reach Type",
-        Desc = "Shape of the reach area",
+        Desc = "Forma da área do Reach",
         Values = {"Sphere", "Flat"},
         Value = config.reach.type,
         Multi = false,
@@ -7026,7 +7189,7 @@ local ReachTab = Window:Tab({
     
     ReachTab:Input({
         Title = "Reach Distance",
-        Desc = "Enter exact reach value",
+        Desc = "Insira o valor exato do alcance",
         Placeholder = "10",
         Value = tostring(config.reach.distance),
         ClearTextOnFocus = true,
@@ -7040,13 +7203,13 @@ local ReachTab = Window:Tab({
     
     ReachTab:Paragraph({
         Title = "Visuals",
-        Desc = "Visual settings for reach indicator",
+        Desc = "Configurações visuais para indicação de alcance",
         Color = lightGreen
     })
     
     ReachTab:Toggle({
         Title = "Show Visualizer",
-        Desc = "Display reach area visually",
+        Desc = "irá mostrar o tamanho da área de alcance do Reach",
         Value = config.visualizer.enabled,
         Callback = function(v)
             config.visualizer.enabled = v
@@ -7058,7 +7221,7 @@ local ReachTab = Window:Tab({
     
     ReachTab:Dropdown({
         Title = "Visualizer Material",
-        Desc = "Material for visualizer",
+        Desc = "Material para a visualização do Reach",
         Values = {"ForceField", "Plastic", "Glass", "Neon", "SmoothPlastic", "Metal", "DiamondPlate"},
         Value = config.visualizer.material,
         Multi = false,
@@ -7072,7 +7235,7 @@ local ReachTab = Window:Tab({
     
     ReachTab:Slider({
         Title = "Visualizer Transparency",
-        Desc = "Transparency of reach visualizer",
+        Desc = "Transparência da área do Reach",
         Step = 0.05,
         Value = {
             Min = 0,
@@ -7087,7 +7250,7 @@ local ReachTab = Window:Tab({
     
     ReachTab:Toggle({
         Title = "Auto activate",
-        Desc = "Automatically activate tool",
+        Desc = "usa a tool automaticamente quando equipar",
         Value = config.reach.autoSwing.enabled,
         Callback = function(v)
             config.reach.autoSwing.enabled = v
@@ -7243,13 +7406,13 @@ local ReachTab = Window:Tab({
     
     ReachTab:Paragraph({
         Title = "Utilities",
-        Desc = "Utility functions for reach",
+        Desc = "Funções utilitárias para o Reach",
         Color = lightGreen
     })
     
     ReachTab:Button({
         Title = "Clear Visualizer",
-        Desc = "Remove reach visualizer",
+        Desc = "Remover visualização do Reach",
         Callback = function()
             visualizer.Parent = nil
             n({
@@ -7264,7 +7427,7 @@ local ReachTab = Window:Tab({
     
     ReachTab:Button({
         Title = "Find Nearby Weapons",
-        Desc = "Scan for nearby weapons/tools",
+        Desc = "Escaneie por armas/tools próximas",
         Callback = function()
             local weapons = {}
             local character = game.Players.LocalPlayer.Character
@@ -7307,19 +7470,19 @@ end
 -- Client Tab
 local ClientTab = Window:Tab({
     Title = "Client",
-    Desc = "Client-side modifications and utilities",
+    Desc = "Modificações e utilidades do client-side",
     Icon = "user",
     IconColor = lightGray
 }) do
     ClientTab:Paragraph({
         Title = "Client Master",
-        Desc = "Master control for client features",
+        Desc = "Controle mestre para recursos do cliente",
         Color = lightGreen
     })
     
     ClientTab:Toggle({
         Title = "Enable Client Values ('V')",
-        Desc = "Enable/disable all client features",
+        Desc = "Ativar/desativar todos os recursos do cliente",
         Value = config.clientMasterEnabled or false,
         Callback = function(v)
             applyClientMaster(v)
@@ -7328,13 +7491,13 @@ local ClientTab = Window:Tab({
     
     ClientTab:Paragraph({
         Title = "Client Features",
-        Desc = "Individual client feature toggles",
+        Desc = "Alternância de recursos individuais para clientes",
         Color = lightGreen
     })
     
     ClientTab:Toggle({
         Title = "Noclip",
-        Desc = "Walk through walls",
+        Desc = "Atravessar paredes",
         Value = config.clientNoclipEnabled or false,
         Callback = function(v)
             config.clientNoclipEnabled = v
@@ -7355,7 +7518,7 @@ local ClientTab = Window:Tab({
     
     ClientTab:Toggle({
         Title = "Enable WalkSpeed",
-        Desc = "Custom walk speed",
+        Desc = "Velocidade de caminhada personalizada",
         Value = config.clientWalkEnabled or false,
         Callback = function(v)
             config.clientWalkEnabled = v
@@ -7367,7 +7530,7 @@ local ClientTab = Window:Tab({
     
     ClientTab:Toggle({
         Title = "Enable JumpPower",
-        Desc = "Custom jump power",
+        Desc = "Poder de salto personalizado",
         Value = config.clientJumpEnabled or false,
         Callback = function(v)
             config.clientJumpEnabled = v
@@ -7379,7 +7542,7 @@ local ClientTab = Window:Tab({
     
     ClientTab:Toggle({
         Title = "CFrame Walk",
-        Desc = "Smooth CFrame movement",
+        Desc = "caminhar com Cframe",
         Value = config.clientCFrameWalkToggle or false,
         Callback = function(v)
             config.clientCFrameWalkToggle = v
@@ -7400,13 +7563,13 @@ local ClientTab = Window:Tab({
     
     ClientTab:Paragraph({
         Title = "Client Values",
-        Desc = "Numerical values for client features",
+        Desc = "Valores numéricos para recursos do cliente",
         Color = lightGreen
     })
     
     ClientTab:Slider({
         Title = "WalkSpeed Value",
-        Desc = "Custom walk speed value",
+        Desc = "mude a velocidade de caminhar com WalkSpeed",
         IsTextbox = true,
         Step = 5,
         Value = {
@@ -7424,7 +7587,7 @@ local ClientTab = Window:Tab({
     
     ClientTab:Slider({
         Title = "JumpPower Value",
-        Desc = "Custom jump power value",
+        Desc = "Valor personalizado de poder de salto",
         IsTextbox = true,
         Step = 5,
         Value = {
@@ -7442,7 +7605,7 @@ local ClientTab = Window:Tab({
     
     ClientTab:Slider({
         Title = "CFrame Walk Speed",
-        Desc = "CFrame movement speed",
+        Desc = "Velocidade de movimento do CFrame",
         IsTextbox = true,
         Step = 5,
         Value = {
@@ -7457,13 +7620,13 @@ local ClientTab = Window:Tab({
     
     ClientTab:Paragraph({
         Title = "Client Stuff",
-        Desc = "Additional client utilities",
+        Desc = "Utilidades adicionais do cliente",
         Color = lightGreen
     })
     
     ClientTab:Toggle({
         Title = "Truss",
-        Desc = "Creates a claimable part to fly (Less detectable)",
+        Desc = "Cria uma peça de escada reivindicável para voar (menos detectável)",
         Value = config.trussEnabled or false,
         Callback = function(v)
             config.trussEnabled = v
@@ -7556,7 +7719,7 @@ local ClientTab = Window:Tab({
     
     ClientTab:Toggle({
         Title = "Airwalk",
-        Desc = "Walk on air",
+        Desc = "Caminhe no ar",
         Value = config.airwalkEnabled or false,
         Callback = function(v)
             config.airwalkEnabled = v
@@ -7644,7 +7807,7 @@ local ClientTab = Window:Tab({
     
     ClientTab:Toggle({
         Title = "Auto Respawn",
-        Desc = "Respawns where you died from",
+        Desc = "Renasce onde você morreu",
         Value = config.autorespawnEnabled or false,
         Callback = function(v)
             config.autorespawnEnabled = v
@@ -7733,7 +7896,7 @@ local ClientTab = Window:Tab({
     
     ClientTab:Toggle({
         Title = "FastSpawn",
-        Desc = "Auto Respawn faster (Might cause deathloops)",
+        Desc = "Reaparecimento automático mais rápido (Pode causar loop de reset )",
         Value = config.fastspawn or false,
         Callback = function(v)
             config.fastspawn = v
@@ -7752,19 +7915,19 @@ end
 -- Misc Tab
 local MiscTab = Window:Tab({
     Title = "Miscellaneous",
-    Desc = "Additional features and utilities",
+    Desc = "Recursos e utilidades adicionais",
     Icon = "settings",
     IconColor = lightGray
 }) do
     MiscTab:Paragraph({
         Title = "Animation System",
-        Desc = "Character animation controls",
+        Desc = "Controles de animação de personagem",
         Color = lightGreen
     })
     
     MiscTab:Toggle({
         Title = "Enable Animations",
-        Desc = "Toggle animation system on/off",
+        Desc = "Ativar/desativar o sistema de animação",
         Value = config.animations or false,
         Callback = function(v)
             config.animations = v
@@ -7779,7 +7942,7 @@ local MiscTab = Window:Tab({
     
     local r6AnimDropdown = MiscTab:Dropdown({
         Title = "R6 Animation Presets",
-        Desc = "Select from R6 animation presets",
+        Desc = "Selecione entre os presets de animação do R6",
         Values = config.Ids_R6 or {},
         Value = "",
         Multi = false,
@@ -7793,7 +7956,7 @@ local MiscTab = Window:Tab({
     
     local r15AnimDropdown = MiscTab:Dropdown({
         Title = "R15 Animation Presets",
-        Desc = "Select from R15 animation presets",
+        Desc = "Selecione entre os presets de animação do R15",
         Values = config.Ids_R15 or {},
         Value = "",
         Multi = false,
@@ -7807,7 +7970,7 @@ local MiscTab = Window:Tab({
     
     MiscTab:Input({
         Title = "Custom Animation ID",
-        Desc = "Enter custom animation ID",
+        Desc = "Insira o ID de animação personalizado",
         Placeholder = "1234567891011",
         Value = "",
         ClearTextOnFocus = true,
@@ -7820,7 +7983,7 @@ local MiscTab = Window:Tab({
     
     MiscTab:Slider({
         Title = "Animation Speed",
-        Desc = "Adjust animation playback speed",
+        Desc = "Ajustar a velocidade de reprodução da animação",
         Step = 0.1,
         Value = {
             Min = 0.1,
@@ -7835,7 +7998,7 @@ local MiscTab = Window:Tab({
     
     MiscTab:Button({
         Title = "Stop Animation",
-        Desc = "Stop current animation",
+        Desc = "Parar a animação atual",
         Callback = function()
             stopCurrentAnimation()
             currentAnimation = nil
@@ -7850,7 +8013,7 @@ local MiscTab = Window:Tab({
     
     MiscTab:Paragraph({
         Title = "Other",
-        Desc = "Additional miscellaneous features",
+        Desc = "Recursos adicionais diversos",
         Color = lightGreen
     })
 
@@ -7864,7 +8027,7 @@ local MiscTab = Window:Tab({
 
     MiscTab:Button({
         Title = "🍪 (pls ignore)",
-        Desc = "wowzerz iz dats a cookie?!",
+        Desc = "você quer um cookie?!^-^",
         Callback = function()
             WindUI:Notify({
                 Title = "wowo SOosoo yummy :3",
@@ -7890,7 +8053,7 @@ local MiscTab = Window:Tab({
 
     MiscTab:Toggle({
         Title = "Toggle AntiAfk",
-        Desc = "Prevents idle kick",
+        Desc = "pode ficar 30 minutos afk não levará kick;) ",
         Value = config.antiafk or false,
         Callback = function(v)
             config.antiafk = v
@@ -7904,7 +8067,7 @@ local MiscTab = Window:Tab({
     })
 MiscTab:Toggle({
     Title = "Cframe View",
-    Desc = "view randos with cframe camera & kill em >:]",
+    Desc = "Veja Randoms com câmera Cframe & kill >:]",
     Value = config.wallc or false,
     Callback = function(v)
         local Players = game:GetService("Players")
@@ -8101,7 +8264,7 @@ MiscTab:Toggle({
 })
 MiscTab:Slider({
     Title = "Zoom",
-    Desc = "cframe view distance from target :7",
+    Desc = "Distância de visão em Cframe em torno do alvo :7",
     IsTextbox = true,
     Step = 1,
     Value = {
@@ -8115,7 +8278,7 @@ MiscTab:Slider({
 })
 MiscTab:Toggle({
     Title = "WallOver",
-    Desc = "Enable/disable WallOver (allows you to shoot over walls1!1!)",
+    Desc = "Ativar/desativar o WallOver (permite atirar por cima de paredes1!1!)",
     Value = config.camYOffsetEnabled or false,
     Callback = function(v)
         config.camYOffsetEnabled = v
@@ -8150,7 +8313,7 @@ MiscTab:Toggle({
 
 MiscTab:Slider({
     Title = "WallOver Offset Value",
-    Desc = "Vertical offset amount (0-500)",
+    Desc = "Quantidade de deslocamento vertical (0-500)",
     IsTextbox = true,
     Step = 1,
     Value = {
@@ -8167,179 +8330,179 @@ end
 -- Info Tab
 local InfoTab = Window:Tab({
     Title = "Info",
-    Desc = "Information and documentation",
+    Desc = "Informações e documentação",
     Icon = "info",
     IconColor = lightGray
 }) do
     InfoTab:Paragraph({
         Title = "lezin",
-        Desc = "Our YouTube channel is LezinScripts",
+        Desc = "Meu canal no YouTube é Lezin Script!",
         Color = Red
     })
     InfoTab:Space()
     InfoTab:Paragraph({
         Title = "Tabs",
-        Desc = "Information about each tab",
+        Desc = "Informações sobre cada aba",
         Color = Blue
     })
     
     InfoTab:Paragraph({
         Title = "MainTab",
-        Desc = "All basic features, Team targeting, Configuring, optimizing and etc",
+        Desc = "Todas as funcionalidades básicas: segmentação de equipes, configuração, otimização, etc",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "Visualstab",
-        Desc = "Changes your visuals full bright or rendering in esps",
+        Desc = "Muda seus visuais para o brilho total ou renderização no esps",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "AntiAimTab",
-        Desc = "It would do it's best to make your opponents miss every shot",
+        Desc = "Faz o possível para fazer seus adversários errarem todos os tiros",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "AimbotTab",
-        Desc = "Manipulates your camera and it would automatically aim at your opponents",
+        Desc = "Manipula sua câmera e automaticamente mira nos seus oponentes",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "SilentAimTab (HB)",
-        Desc = "Automatically resizes opponents hitbox and aligning it to your crosshair or the center of your screen (the only working SilentAim)",
+        Desc = "Redimensiona automaticamente a hitbox do oponente e a alinha ao seu mirador ou ao centro da tela (o único SilentAim HB funcionando)",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "SilentAimTab (HK)",
-        Desc = "Intercepts raycasts to accurately hit targets.",
+        Desc = "Intercepta raycasts para atingir alvos com precisão.",
         Color = darkgray
     })
 
     InfoTab:Paragraph({
         Title = "HitboxTab",
-        Desc = "Resizes opponents hitbox to easily hit or shoot at opponents",
+        Desc = "Redimensiona a hitbox dos oponentes para que facilmente acertem ou atire em oposição",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "ReachTab",
-        Desc = "Resizes your melee or any tools Firetouchinterest to hit opponents further",
+        Desc = "Redimensiona seu corpo a corpo ou qualquer tool Firetouch Interesse para atingir ainda mais os oponentes",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "ClientTab",
-        Desc = "Change your walkspeed or jump power or even fly around to dodge any attacks from your opponents",
+        Desc = "Mude sua velocidade de caminhada, poder de salto ou até mesmo voar para desviar de ataques dos seus oponentes",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "MiscTab",
-        Desc = "Basically experiment any features that are or aren't related to combating",
+        Desc = "Basicamente, experimente qualquer recurso que esteja ou não relacionado ao combate",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
         Title = "InfoTab",
-        Desc = "InfoTab the tab that your in just shows informations or details",
+        Desc = "InfoTab, a aba onde está apenas mostrando informações ou detalhes",
         Color = darkGray
     })
 
     InfoTab:Paragraph({
         Title = "BotTab",
-        Desc = "Deleted due to 200 variable limit & uselessness",
+        Desc = "Excluído devido ao limite de 200 variáveis e inutilidade",
         Color = Red
     })
     InfoTab:Space()
     InfoTab:Paragraph({
         Title = "Credits",
-        Desc = "Credits to other creators",
+        Desc = "Créditos ao criador",
         Color = lightGreen
     })
     
     InfoTab:Paragraph({
         Title = "Lezin",
-        Desc = "UI: WindUI\nNotification: Alurt",
+        Desc = "UI: WindUI\nNotificação: Alurt",
         Color = darkGray
     })
     InfoTab:Space()
     InfoTab:Paragraph({
         Title = "Updatelog",
-        Desc = "Update history and changes",
+        Desc = "Histórico de atualizações e mudanças",
         Color = lightGreen
     })
     
     InfoTab:Paragraph({
         Title = "Lezin (14/01/2026)",
-        Desc = "Added: Legacy\nAdded: Reachtab\nAdded: Wallbang in Silentaim HK\nFixed Bugs: 0",
+        Desc = "Adicionado: Legado\Adicionado: Reachtab\Adicionado: Wallbang no Silentaim HK\Bugs corrigidos : 0",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
-        Title = "Gravel (22/01/2026)",
-        Desc = "Added: MiscTab\nChanged: Redesigned the OptionGui\nFixed Bugs: 9",
+        Title = "Lezin (22/01/2026)",
+        Desc = "Adicionado: MiscTab\Mudou: Redesenhou a Opção Gui\bugs Corrigidos: 9",
         Color = darkGray
     })
     
     InfoTab:Paragraph({
-        Title = "Gravel (23/01/2026)",
-        Desc = "Fixed: Execution Problem\nFixed: Bugs in the SilentAimTab (HK)\nAdded: BackgroundBlur on the loading screeen\nFixed Bugs: 27",
+        Title = "Lezin (23/01/2026)",
+        Desc = "Corrigido: Problema de Execução\Corrigido: Bugs no SilentAimTab (HK)\Adicionado: BackgroundBlur no carregamento\bugs corrigidos : 27",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (2/02/2026)",
-        Desc = "Changed: DummyUI to WindUI Rewritten UI Creation\nFixed: Keybind Systems are now more accurate and Rewritten\nFixed: SilentAimTab (HK) hooks now less laggy\nFixed: Loop Errors\nFixed: Notification Spam\nAdded: Colorpickers to the VisualsTab\nAdded: Random Messages to the OpenButton and Popup UI\nFixed: UI Causing errors, Callback errors\nFixed Bugs: 34+",
+        Title = "Lezin (2/02/2026)",
+        Desc = "Alterado: DummyUI para WindUI Reescrita Criação de UI\Corrigido: Sistemas de Teclas agora são mais precisos e Reescritos\Corrigido: hooks do SilentAimTab (HK) agora menos lentos\Corrigidos: Erros de Loop\Corrigidos: Spam de Notificações\Adicionado: Colorpickers para a Aba Visual\Adicionado: Mensagens aleatórias para o OpenButton e Popup UI\Corrigido: UI causando erros, erros de retorno de chamada\bugs Corrigidos : 34+",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (10/02/2026)",
-        Desc = "Added: Optimization and tweaks\nFixed: Optimized SilentAimTab (HK)\nAdded: Distance limitation to SilentAimTab (HK)\nAdded: Cache Optimization\nFixed Bugs: 5",
+        Title = "Lezin (10/02/2026)",
+        Desc = "Adicionado: Otimização e ajustes\Corrigido: Otimizado SilentAimTab (HK)\Adicionado: Limitação de distância ao SilentAimTab (HK)\Adicionado: Otimização de cache\bugs Corrigidos : 5",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (6/06/2026)",
-        Desc = "More optimizations!",
+        Title = "Lezin (6/06/2026)",
+        Desc = "Mais otimizações!",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (18/05/2026)",
-        Desc = "Removed: Bot Tab has been removed to avoid 200 variable limit\nInfo: SilentAim (HK) would no longer work at this time.\nAdded: Cam-Y or WallOver toggle to SilentAimTab (HB)\nAdded: Cframe View to MiscTab\nInfo: At this time Gravel.cc might be buggy for now.",
+        Title = "Lezin (18/05/2026)",
+        Desc = "Removido: Bot Tab foi removido para evitar o limite de 200 variáveis\Info: SilentAim (HK) não funcionaria mais neste momento.\Adicionado: Cam-Y ou WallOver alternando para SilentAimTab (HB)\Adicionado: Cframe View para MiscTab\Info: Neste momento, Lezin.scripts pode estar com bugs por enquanto.",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (18/05/2026)",
-        Desc = "Removed: SilentAim (HK) is now removed due to an update :(",
+        Title = "Lezin (18/05/2026)",
+        Desc = "Removido: O SilentAim (HK) agora foi removido devido a uma atualização :(",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (18/05/2026)",
-        Desc = "Improved: SilentAim (HB) Accuracy",
+        Title = "Lezin (18/05/2026)",
+        Desc = "Melhorada: Precisão do SilentAim (HB)",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (19/06/2026)",
-        Desc = "Fixed: Targeting Systems\nFixed Bugs: 10",
+        Title = "Lezin (19/06/2026)",
+        Desc = "Corrigido: Sistemas de Alvo\Corrigido Bugs: 10",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (21/01/2026)",
-        Desc = "Re-Added: SilentAim (HK) [Nothing wrong actually happened.. I'm just stupid]",
+        Title = "Lezin (21/01/2026)",
+        Desc = "Readicionado: SilentAim (HK) [Nada de errado realmente aconteceu.. Eu sou simplesmente burro:<]",
         Color = darkGray
     })
     InfoTab:Paragraph({
-        Title = "Gravel (23/03/2026)",
-        Desc = "Fixed: SilentAim (HK) Targeting issues\nMoved: WallOver/Cam-Y to MiscTab\nAdded: ScaleToScreen Toggle & STSDistance to SilentAim (HB)\nAdded: some other additional features :p",
+        Title = "Lezin (23/03/2026)",
+        Desc = "Corrigido: Problemas de mira do SilentAim (HK)\Movido: WallOver/Cam-Y para MiscTab\Adicionado: Toggle ScaleToScreen & STSDistance para SilentAim (HB)\Adicionado: alguns outros recursos adicionais :p",
         Color = darkGray
     })
 end
 
 --[[
     InfoTab:Paragraph({
-        Title = "Gravel (//)",
+        Title = "Lezin (//)",
         Desc = "",
         Color = darkGray
     })
