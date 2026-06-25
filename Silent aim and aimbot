@@ -5143,35 +5143,78 @@ local Window = WindUI:CreateWindow({
 })
 
 -- ====================================================================
--- IMAGEM DE FUNDO (DEVE FICAR AQUI, DEPOIS QUE O WINDOW FOI FECHADO)
--- ====================================================================
--- ====================================================================
--- IMAGEM DE FUNDO (ATUALIZADA PARA O EXECUTOR DELTA)
+-- IMAGEM DE FUNDO POR LINK (DENTRO DO HUB E TRANSLÚCIDA)
 -- ====================================================================
 pcall(function()
-    local ImageID = "rbxassetid://13147607436" 
+    -- Link da internet e nome do arquivo
+    local linkImagem = "https://i.ibb.co/20kcz5qd/adult-neptune-and-yatogami-tohka-by-camanime7794-ddd4xqc-fullview.jpg"
+    local nomeArquivo = "fundo_hub_lezin.jpg"
     
-    -- Usa gethui() para acessar a área segura de UI do executor
+    -- Baixa a imagem se ainda não estiver salva
+    if not isfile(nomeArquivo) then
+        local dadosImagem = game:HttpGet(linkImagem)
+        writefile(nomeArquivo, dadosImagem)
+    end
+    
+    local ImageID = getcustomasset(nomeArquivo)
     local guiService = (gethui and gethui()) or game:GetService("CoreGui")
+    local framePrincipal = nil
     
-    -- Cria uma ScreenGui dedicada só para a imagem, garantindo que ela seja renderizada
-    local bgGui = Instance.new("ScreenGui")
-    bgGui.Name = "FundoLezin"
-    bgGui.IgnoreGuiInset = true -- Faz a imagem preencher toda a tela do celular
-    bgGui.Parent = guiService
+    -- Procura inteligentemente a janela do seu script pelo título "Lezin:3"
+    for _, gui in ipairs(guiService:GetChildren()) do
+        if gui:IsA("ScreenGui") or gui:IsA("Folder") then
+            for _, desc in ipairs(gui:GetDescendants()) do
+                if desc:IsA("TextLabel") and desc.Text == "Lezin:3" then 
+                    local atual = desc
+                    while atual and atual.Parent and not atual.Parent:IsA("ScreenGui") and not atual.Parent:IsA("Folder") do
+                        if atual:IsA("Frame") or atual:IsA("CanvasGroup") then
+                            framePrincipal = atual
+                        end
+                        atual = atual.Parent
+                    end
+                    break
+                end
+            end
+        end
+        if framePrincipal then break end
+    end
     
-    local Background = Instance.new("ImageLabel")
-    Background.Name = "ImagemFundo"
-    Background.Parent = bgGui
-    Background.Size = UDim2.new(1, 0, 1, 0)
-    Background.Position = UDim2.new(0, 0, 0, 0)
-    Background.Image = ImageID
-    Background.BackgroundTransparency = 1
-    Background.ImageTransparency = 0.3 -- Ajuste a transparência se a imagem ficar muito forte
-    Background.ScaleType = Enum.ScaleType.Stretch 
-    Background.ZIndex = -100 -- Um valor bem negativo garante que a imagem fique atrás do Hub
+    -- Se achou a janela do hub, injeta a imagem e aplica o efeito vidro
+    if framePrincipal then
+        -- 1. Cria a imagem
+        local Background = Instance.new("ImageLabel")
+        Background.Name = "FundoDentroDoHub"
+        Background.Parent = framePrincipal
+        Background.Size = UDim2.new(1, 0, 1, 0) -- Preenche o hub
+        Background.Position = UDim2.new(0, 0, 0, 0)
+        Background.Image = ImageID
+        Background.BackgroundTransparency = 1
+        Background.ImageTransparency = 0.2 -- Deixa a imagem bem visível
+        Background.ScaleType = Enum.ScaleType.Crop
+        Background.ZIndex = 0 -- Fica na camada mais funda do hub
+        Background.Active = false -- Garante que não bloqueie seus cliques
+        
+        -- Arredonda os cantos para acompanhar o estilo do WindUI
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = Background
+        
+        -- 2. A MÁGICA: Varre todo o hub e deixa os fundos escuros transparentes
+        for _, elemento in ipairs(framePrincipal:GetDescendants()) do
+            -- Ignora a própria imagem, mas afeta Frames e CanvasGroups
+            if elemento ~= Background and (elemento:IsA("Frame") or elemento:IsA("CanvasGroup") or elemento:IsA("ScrollingFrame")) then
+                -- Se a parte do hub for muito sólida (< 0.4), deixamos meio transparente
+                if elemento.BackgroundTransparency < 0.4 then
+                    elemento.BackgroundTransparency = 0.45
+                end
+            end
+        end
+    end
 end)
 -- ====================================================================
+
+
+
 
 
 
