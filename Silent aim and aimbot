@@ -5997,7 +5997,7 @@ local Optiz = loadstring(game:HttpGet('https://raw.githubusercontent.com/hm5650/
     MainTab:Toggle({
         Title = "Cache Cleaners",
         Desc = "Desligar isso pode causar lag",
-        Value = patcher or true,
+        Value = false,
         Callback = function(v)
             lowpatcher = v
         end
