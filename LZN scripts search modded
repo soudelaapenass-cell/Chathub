@@ -1,0 +1,2062 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local SoundService = game:GetService("SoundService")
+local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- LIMPEZA DE PASTAS ANTIGAS
+pcall(function()
+    if isfolder and delfolder then
+        if isfolder(".ScriptBlox_Thumbnails") then delfolder(".ScriptBlox_Thumbnails") end
+        if isfolder("ScriptBlox_Thumbnails") then delfolder("ScriptBlox_Thumbnails") end
+    end
+end)
+
+if PlayerGui:FindFirstChild("ScriptBloxUI") then
+    PlayerGui.ScriptBloxUI:Destroy()
+end
+
+local UITransparency = 0.08
+
+-- NOVA PALETA: BRANCO + VERMELHO SANGUE
+local Colors = {
+    Background = Color3.fromRGB(255, 255, 255),
+    Secondary = Color3.fromRGB(245, 245, 245),
+    Card = Color3.fromRGB(255, 255, 255),
+    Primary = Color3.fromRGB(200, 20, 40), -- Vermelho Sangue
+    PrimaryGradientStart = Color3.fromRGB(230, 40, 60),
+    PrimaryGradientEnd = Color3.fromRGB(160, 10, 25),
+    Yellow = Color3.fromRGB(255, 215, 0),
+    Text = Color3.fromRGB(20, 20, 20),
+    SubText = Color3.fromRGB(80, 80, 80),
+    Border = Color3.fromRGB(200, 40, 55),
+    Red = Color3.fromRGB(200, 20, 40),
+    Green = Color3.fromRGB(40, 180, 60),
+    White = Color3.fromRGB(255, 255, 255),
+}
+
+-- Sistema de Idiomas
+local currentLang = "PT"
+local Translations = {
+    PT = {
+        SearchPlaceholder = "Pesquisar scripts ou ID...",
+        TabAll = "🌐 Todos",
+        TabThisGame = "🎮 Este Jogo",
+        TabSaved = "⭐ Salvos",
+        TabRefresh = "🔄 Recarregar",
+        LoadingScripts = "🔄 Carregando Scripts...",
+        NoScripts = "❌ Nenhum script encontrado",
+        ScriptCount = "📊 %d scripts",
+        ConfirmUI = "Tem certeza que deseja fechar a interface?",
+        ConfirmExec = "Deseja executar este script?",
+        Yes = "Sim",
+        Cancel = "Cancelar",
+        Working = "✓ Funcionando",
+        Patched = "✕ Patched",
+        Key = "🔑 Com Key",
+        Free = "🔓 Grátis",
+        Match = "✓ Compatível",
+        View = "👁 Ver",
+        Execute = "▶ Executar",
+        CopyScript = "📋 Copiar",
+        CopyUrl = "🔗 Link",
+        SaveScript = "⭐ Salvar",
+        Saved = "✓ Salvo!",
+        AlreadySaved = "⭐ Já Salvo",
+        Remove = "🗑 Remover",
+        Teleport = "🚀 TP",
+        Desc = "📝 Descrição",
+        Code = "📜 Código",
+        Comments = "💬 Comentários (%d)",
+        By = "Por: ",
+        GameInfo = "🎮 %s (ID: %s)",
+        SearchRes = "🔍 Resultados da Busca",
+        AllScripts = "🌐 Todos os Scripts",
+        SavedTabTitle = "⭐ Scripts Salvos",
+        NoSaved = "Nenhum script salvo ainda"
+    },
+    EN = {
+        SearchPlaceholder = "Search scripts or ID...",
+        TabAll = "🌐 All",
+        TabThisGame = "🎮 This Game",
+        TabSaved = "⭐ Saved",
+        TabRefresh = "🔄 Refresh",
+        LoadingScripts = "🔄 Loading Scripts...",
+        NoScripts = "❌ No scripts found",
+        ScriptCount = "📊 %d scripts",
+        ConfirmUI = "Are you sure about removing the UI?",
+        ConfirmExec = "Do you want to execute this script?",
+        Yes = "Yes",
+        Cancel = "Cancel",
+        Working = "✓ Working",
+        Patched = "✕ Patched",
+        Key = "🔑 Key",
+        Free = "🔓 Free",
+        Match = "✓ Match",
+        View = "👁 View",
+        Execute = "▶ Execute",
+        CopyScript = "📋 Copy",
+        CopyUrl = "🔗 Link",
+        SaveScript = "⭐ Save",
+        Saved = "✓ Saved!",
+        AlreadySaved = "⭐ Already Saved",
+        Remove = "🗑 Remove",
+        Teleport = "🚀 TP",
+        Desc = "📝 Description",
+        Code = "📜 View Raw",
+        Comments = "💬 Comments (%d)",
+        By = "By: ",
+        GameInfo = "🎮 %s (ID: %s)",
+        SearchRes = "🔍 Search Results",
+        AllScripts = "🌐 All Scripts",
+        SavedTabTitle = "⭐ Saved Scripts",
+        NoSaved = "No saved scripts yet"
+    }
+}
+
+local function T(key)
+    return Translations[currentLang][key] or key
+end
+
+-- Blur
+local Blur = Instance.new("BlurEffect")
+Blur.Name = "ScriptBloxBlur"
+Blur.Size = 14
+Blur.Enabled = true
+Blur.Parent = Lighting
+
+-- Sons
+local openSound = Instance.new("Sound")
+openSound.SoundId = "rbxassetid://137965684634919"
+openSound.Volume = 0.4
+openSound.Parent = SoundService
+openSound:Play()
+
+local bgm = Instance.new("Sound")
+bgm.SoundId = "rbxassetid://109497192124382"
+bgm.Volume = 0.18
+bgm.Looped = true
+bgm.Parent = SoundService
+bgm:Play()
+local musicPlaying = true
+
+-- Salvamento
+local SavedScriptsList = {}
+local function SaveScriptsToFile()
+    pcall(function()
+        if writefile then
+            writefile("ScriptBlox_SavedScripts.json", HttpService:JSONEncode(SavedScriptsList))
+        end
+    end)
+end
+
+local function LoadSavedScriptsFromFile()
+    pcall(function()
+        if readfile and isfile and isfile("ScriptBlox_SavedScripts.json") then
+            SavedScriptsList = HttpService:JSONDecode(readfile("ScriptBlox_SavedScripts.json")) or {}
+        end
+    end)
+end
+LoadSavedScriptsFromFile()
+
+local TabData = {
+    Free = { page = 1, hasMore = true, isLoading = false, totalLoaded = 0, totalApi = 0, query = nil, seen = {} },
+    ThisGame = { page = 1, hasMore = true, isLoading = false, totalLoaded = 0, totalApi = 0, query = nil, seen = {} },
+    Saved = { page = 1, hasMore = false, isLoading = false, totalLoaded = 0, totalApi = 0, query = nil, seen = {} },
+    Search = { page = 1, hasMore = true, isLoading = false, totalLoaded = 0, totalApi = 0, query = nil, seen = {} }
+}
+local CurrentTab = "Free"
+local maxPerPage = 50 
+
+local CurrentGameId = game.PlaceId
+local CurrentGameName = "Unknown Game"
+local CurrentGameNameEN = "Unknown Game"
+local CurrentGameNamePT = "Jogo Desconhecido"
+local currentScriptData = nil
+local currentScriptForView = ""
+local currentUrlForView = ""
+local isUIDraggable = true
+
+local function SplitString(str, delim)
+    local result = {}
+    for match in (str..delim):gmatch("(.-)"..delim) do table.insert(result, match) end
+    return result
+end
+
+local function FormatNumber(num)
+    if not num or num == 0 then return "0" end
+    if num >= 1000000 then return string.format("%.1fM", num / 1000000):gsub("%.0M", "M")
+    elseif num >= 1000 then return string.format("%.1fK", num / 1000):gsub("%.0K", "K") end
+    return tostring(num)
+end
+
+local function FormatTimeAgo(dateString)
+    if not dateString then return "?" end
+    local ok, result = pcall(function()
+        local y, mo, d, h, mi, s = dateString:match("(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)")
+        if not y then return "?" end
+        local t = os.time({year=tonumber(y), month=tonumber(mo), day=tonumber(d), hour=tonumber(h), min=tonumber(mi), sec=tonumber(s)})
+        local diff = os.time() - t
+        if diff < 60 then return "now"
+        elseif diff < 3600 then return math.floor(diff/60).."m"
+        elseif diff < 86400 then return math.floor(diff/3600).."h"
+        elseif diff < 604800 then return math.floor(diff/86400).."d"
+        else return math.floor(diff/604800).."w" end
+    end)
+    return ok and result or "?"
+end
+
+local function GetScriptUrl(data)
+    if not data then return "https://scriptblox.com/" end
+    if data.slug and data.slug \~= "" then return "https://scriptblox.com/script/" .. data.slug
+    elseif data._id and data._id \~= "" then return "https://scriptblox.com/script/" .. data._id end
+    return "https://scriptblox.com/"
+end
+
+local function GetCurrentGameInfo()
+    local gameId = game.PlaceId
+    local gameNameEN = "Unknown Game"
+    local gameNamePT = "Jogo Desconhecido"
+    pcall(function()
+        local info = MarketplaceService:GetProductInfo(gameId)
+        if info and info.Name then 
+            gameNameEN = info.Name 
+            gameNamePT = info.Name -- Roblox normalmente retorna em EN, mas guardamos
+        end
+    end)
+    return gameId, gameNameEN, gameNamePT
+end
+
+local function HttpRequest(url)
+    local ok, res = pcall(function()
+        local req = syn and syn.request or http_request or request or (http and http.request)
+        if req then
+            local r = req({Url=url, Method="GET"})
+            if r and (r.Body or r.body) then return HttpService:JSONDecode(r.Body or r.body) end
+        end
+    end)
+    return ok and res or nil
+end
+
+local MemoryCache = {}
+local function GetTempImageAsset(url)
+    if not url or url == "" then return nil end
+    if MemoryCache[url] then return MemoryCache[url] end 
+
+    local requestFunc = syn and syn.request or http_request or request or (http and http.request)
+    local gca = getcustomasset or getsynasset
+    if not requestFunc or not writefile or not gca or not delfile then return nil end
+    
+    local success, result = pcall(function()
+        local res = requestFunc({Url = url, Method = "GET"})
+        if res and (res.StatusCode == 200 or res.Success) then
+            local tempFileName = "sb_ghost_" .. tostring(tick()):gsub("%.","") .. math.random(1000, 9999) .. ".png"
+            writefile(tempFileName, res.Body or res.body)
+            local assetId = gca(tempFileName)
+            pcall(function() delfile(tempFileName) end)
+            if assetId then MemoryCache[url] = assetId end
+            return assetId
+        end
+    end)
+    return success and result or nil
+end
+
+local function CopyToClipboard(text)
+    pcall(function()
+        if setclipboard then setclipboard(text)
+        elseif toclipboard then toclipboard(text)
+        elseif Clipboard and Clipboard.set then Clipboard.set(text) end
+    end)
+end
+
+-- Interface Principal
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ScriptBloxUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 5
+ScreenGui.Parent = PlayerGui
+
+ScreenGui.Destroying:Connect(function()
+    pcall(function() Blur:Destroy() end)
+    pcall(function() bgm:Destroy() end)
+end)
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "Main"
+MainFrame.Size = UDim2.new(0, 540, 0, 440)
+MainFrame.Position = UDim2.new(0.5, -270, 0.5, -220)
+MainFrame.BackgroundColor3 = Colors.Background
+MainFrame.BackgroundTransparency = 1
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+MainFrame.Active = true 
+
+local mainCorner = Instance.new("UICorner", MainFrame)
+mainCorner.CornerRadius = UDim.new(0, 18)
+
+local mainStroke = Instance.new("UIStroke", MainFrame)
+mainStroke.Color = Colors.Border
+mainStroke.Transparency = 0.15
+mainStroke.Thickness = 2
+
+-- FUNDO DIVIDIDO: ESQUERDA VERMELHA + DIREITA BRANCA
+local LeftBG = Instance.new("Frame")
+LeftBG.Name = "LeftBG"
+LeftBG.Size = UDim2.new(0.5, 0, 1, 0)
+LeftBG.Position = UDim2.new(0, 0, 0, 0)
+LeftBG.BackgroundColor3 = Color3.fromRGB(180, 15, 30)
+LeftBG.BorderSizePixel = 0
+LeftBG.ZIndex = 0
+LeftBG.Parent = MainFrame
+
+local RightBG = Instance.new("Frame")
+RightBG.Name = "RightBG"
+RightBG.Size = UDim2.new(0.5, 0, 1, 0)
+RightBG.Position = UDim2.new(0.5, 0, 0, 0)
+RightBG.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+RightBG.BorderSizePixel = 0
+RightBG.ZIndex = 0
+RightBG.Parent = MainFrame
+
+-- MANCHAS REALISTAS NO LADO VERMELHO
+local function CreateStain(parent, color, size, pos, transparency)
+    local stain = Instance.new("Frame")
+    stain.Size = UDim2.new(0, size, 0, size * math.random(70,110)/100)
+    stain.Position = pos
+    stain.BackgroundColor3 = color
+    stain.BackgroundTransparency = transparency
+    stain.BorderSizePixel = 0
+    stain.ZIndex = 1
+    stain.Parent = parent
+    local corner = Instance.new("UICorner", stain)
+    corner.CornerRadius = UDim.new(1, 0)
+    -- Deformação irregular
+    local aspect = Instance.new("UIAspectRatioConstraint", stain)
+    aspect.AspectRatio = math.random(80,140)/100
+end
+
+task.spawn(function()
+    for i = 1, 18 do
+        local colors = {
+            Color3.fromRGB(220, 30, 50),
+            Color3.fromRGB(255, 255, 255),
+            Color3.fromRGB(255, 220, 50),
+            Color3.fromRGB(190, 20, 40)
+        }
+        local c = colors[math.random(1, #colors)]
+        local size = math.random(18, 55)
+        local x = math.random(5, 240)
+        local y = math.random(10, 400)
+        local trans = math.random(55, 82)/100
+        CreateStain(LeftBG, c, size, UDim2.new(0, x, 0, y), trans)
+    end
+end)
+
+-- EFEITO DE SANGUE PINGANDO NO LADO BRANCO
+local BloodContainer = Instance.new("Folder", RightBG)
+BloodContainer.Name = "BloodDrips"
+
+task.spawn(function()
+    math.randomseed(tick())
+    while ScreenGui.Parent do
+        task.wait(math.random(35, 90)/100)
+        if not MainFrame.Visible then continue end
+        
+        local drip = Instance.new("Frame")
+        local width = math.random(3, 7)
+        drip.Size = UDim2.new(0, width, 0, math.random(12, 28))
+        drip.Position = UDim2.new(math.random(5, 95)/100, 0, 0, -20)
+        drip.BackgroundColor3 = Color3.fromRGB(160 + math.random(0,40), 10, 20)
+        drip.BackgroundTransparency = math.random(10, 35)/100
+        drip.BorderSizePixel = 0
+        drip.ZIndex = 2
+        drip.Parent = BloodContainer
+        
+        local corner = Instance.new("UICorner", drip)
+        corner.CornerRadius = UDim.new(1, 0)
+        
+        -- Gota no final
+        local drop = Instance.new("Frame")
+        drop.Size = UDim2.new(0, width + 2, 0, width + 2)
+        drop.Position = UDim2.new(0.5, -(width+2)/2, 1, -2)
+        drop.BackgroundColor3 = drip.BackgroundColor3
+        drop.BackgroundTransparency = drip.BackgroundTransparency
+        drop.BorderSizePixel = 0
+        drop.Parent = drip
+        Instance.new("UICorner", drop).CornerRadius = UDim.new(1, 0)
+        
+        task.spawn(function()
+            local speed = math.random(45, 85)
+            local startX = drip.Position.X.Scale
+            local elapsed = 0
+            while drip.Parent and drip.Position.Y.Offset < RightBG.AbsoluteSize.Y + 40 do
+                elapsed = elapsed + task.wait()
+                local y = elapsed * speed
+                local sway = math.sin(elapsed * 1.8) * 3
+                drip.Position = UDim2.new(startX, sway, 0, y)
+            end
+            drip:Destroy()
+        end)
+    end
+end)
+
+-- Botão Flutuante
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "Toggle"
+ToggleBtn.Size = UDim2.new(0, 72, 0, 72)
+ToggleBtn.Position = UDim2.new(1, -90, 0.5, -36)
+ToggleBtn.BackgroundColor3 = Colors.Primary
+ToggleBtn.BackgroundTransparency = 0.1
+ToggleBtn.Text = "" 
+ToggleBtn.Visible = false
+ToggleBtn.ZIndex = 100
+ToggleBtn.ClipsDescendants = false
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.Active = true 
+
+local toggleCorner = Instance.new("UICorner", ToggleBtn)
+toggleCorner.CornerRadius = UDim.new(1, 0)
+
+local toggleStroke = Instance.new("UIStroke", ToggleBtn)
+toggleStroke.Color = Colors.White
+toggleStroke.Thickness = 2.5
+toggleStroke.Transparency = 0.1
+
+local ToggleIcon = Instance.new("ImageLabel")
+ToggleIcon.Size = UDim2.new(0.7, 0, 0.7, 0)
+ToggleIcon.Position = UDim2.new(0.15, 0, 0.15, 0)
+ToggleIcon.BackgroundTransparency = 1
+ToggleIcon.Image = "rbxassetid://89626535870264"
+ToggleIcon.ScaleType = Enum.ScaleType.Fit
+ToggleIcon.ZIndex = 101
+ToggleIcon.Parent = ToggleBtn
+
+local function Dragify(frame, dragHandle)
+    dragHandle = dragHandle or frame
+    local dragging = false
+    local dragInput, dragStart, startPos
+
+    dragHandle.InputBegan:Connect(function(input)
+        if frame == MainFrame and not isUIDraggable then return end 
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragInput = input
+            dragStart = input.Position
+            startPos = frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+
+    dragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 48)
+Header.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Header.BackgroundTransparency = 0.15
+Header.ZIndex = 5
+Header.Parent = MainFrame
+Header.Active = true
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 18)
+
+local HeaderCover = Instance.new("Frame", Header)
+HeaderCover.Size = UDim2.new(1, 0, 0, 10)
+HeaderCover.Position = UDim2.new(0, 0, 1, -10)
+HeaderCover.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+HeaderCover.BackgroundTransparency = 0.15
+HeaderCover.BorderSizePixel = 0
+HeaderCover.ZIndex = 5
+
+local BottomDragBar = Instance.new("Frame", MainFrame)
+BottomDragBar.Size = UDim2.new(1, 0, 0, 20)
+BottomDragBar.Position = UDim2.new(0, 0, 1, -20)
+BottomDragBar.BackgroundTransparency = 1
+BottomDragBar.ZIndex = 5
+BottomDragBar.Active = true
+
+local DragPill = Instance.new("Frame", BottomDragBar)
+DragPill.Size = UDim2.new(0, 45, 0, 4)
+DragPill.Position = UDim2.new(0.5, -22.5, 0.5, -2)
+DragPill.BackgroundColor3 = Colors.Primary
+DragPill.BackgroundTransparency = 0.3
+Instance.new("UICorner", DragPill).CornerRadius = UDim.new(1, 0)
+
+Dragify(MainFrame, Header)
+Dragify(MainFrame, BottomDragBar)
+Dragify(MainFrame, MainFrame)
+Dragify(ToggleBtn, ToggleBtn)
+
+local toggleClickStart
+ToggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        toggleClickStart = input.Position
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 58, 0, 58)
+        }):Play()
+    end
+end)
+
+ToggleBtn.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 72, 0, 72)
+        }):Play()
+
+        if toggleClickStart and (input.Position - toggleClickStart).Magnitude < 15 then
+            MainFrame.Visible = true
+            ToggleBtn.Visible = false
+            Blur.Enabled = true
+        end
+    end
+end)
+
+local LogoIcon = Instance.new("ImageLabel")
+LogoIcon.Size = UDim2.new(0, 24, 0, 24)
+LogoIcon.Position = UDim2.new(0, 14, 0.5, -12)
+LogoIcon.BackgroundTransparency = 1
+LogoIcon.Image = "rbxassetid://132015987320368"
+LogoIcon.ScaleType = Enum.ScaleType.Stretch
+LogoIcon.ZIndex = 6
+LogoIcon.Parent = Header
+
+local Logo = Instance.new("TextLabel")
+Logo.Size = UDim2.new(0, 130, 0, 48)
+Logo.Position = UDim2.new(0, 44, 0, 0)
+Logo.BackgroundTransparency = 1
+Logo.Text = "by Lezin>.<"
+Logo.TextColor3 = Colors.Primary
+Logo.TextSize = 16
+Logo.Font = Enum.Font.GothamBold
+Logo.TextXAlignment = Enum.TextXAlignment.Left
+Logo.ZIndex = 6
+Logo.Parent = Header
+
+local SearchFrame = Instance.new("Frame")
+SearchFrame.Size = UDim2.new(0, 165, 0, 30)
+SearchFrame.Position = UDim2.new(0, 175, 0.5, -15)
+SearchFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SearchFrame.BackgroundTransparency = 0.2
+SearchFrame.ZIndex = 6
+SearchFrame.Parent = Header
+Instance.new("UICorner", SearchFrame).CornerRadius = UDim.new(1, 0)
+local searchStroke = Instance.new("UIStroke", SearchFrame)
+searchStroke.Color = Colors.Border
+searchStroke.Transparency = 0.3
+
+local SearchBox = Instance.new("TextBox")
+SearchBox.Size = UDim2.new(1, -56, 1, 0)
+SearchBox.Position = UDim2.new(0, 10, 0, 0)
+SearchBox.BackgroundTransparency = 1
+SearchBox.PlaceholderText = T("SearchPlaceholder")
+SearchBox.PlaceholderColor3 = Colors.SubText
+SearchBox.TextColor3 = Colors.Text
+SearchBox.TextSize = 11
+SearchBox.Font = Enum.Font.Gotham
+SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+SearchBox.ClearTextOnFocus = false
+SearchBox.Text = ""
+SearchBox.ZIndex = 6
+SearchBox.Parent = SearchFrame
+
+local ClearBtn = Instance.new("TextButton")
+ClearBtn.Size = UDim2.new(0, 24, 1, 0)
+ClearBtn.Position = UDim2.new(1, -52, 0, 0)
+ClearBtn.BackgroundTransparency = 1
+ClearBtn.Text = "✕"
+ClearBtn.TextColor3 = Colors.SubText
+ClearBtn.TextSize = 12
+ClearBtn.Font = Enum.Font.GothamBold
+ClearBtn.ZIndex = 6
+ClearBtn.Parent = SearchFrame
+ClearBtn.MouseButton1Click:Connect(function() SearchBox.Text = "" end)
+
+local SearchBtn = Instance.new("TextButton")
+SearchBtn.Size = UDim2.new(0, 26, 0, 26)
+SearchBtn.Position = UDim2.new(1, -28, 0.5, -13)
+SearchBtn.BackgroundColor3 = Colors.Primary
+SearchBtn.Text = "→"
+SearchBtn.TextColor3 = Colors.White
+SearchBtn.TextSize = 14
+SearchBtn.Font = Enum.Font.GothamBold
+SearchBtn.ZIndex = 6
+SearchBtn.Parent = SearchFrame
+Instance.new("UICorner", SearchBtn).CornerRadius = UDim.new(1, 0)
+
+local searchGrad = Instance.new("UIGradient", SearchBtn)
+searchGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Colors.PrimaryGradientStart),
+    ColorSequenceKeypoint.new(1, Colors.PrimaryGradientEnd)
+})
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+CloseBtn.Position = UDim2.new(1, -34, 0.5, -13)
+CloseBtn.BackgroundColor3 = Colors.Primary
+CloseBtn.BackgroundTransparency = 0.05
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Colors.White
+CloseBtn.TextSize = 16
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.ZIndex = 6
+CloseBtn.Parent = Header
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(1, 0)
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 26, 0, 26)
+MinBtn.Position = UDim2.new(1, -66, 0.5, -13)
+MinBtn.BackgroundColor3 = Colors.Yellow
+MinBtn.BackgroundTransparency = 0.05
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Colors.Text
+MinBtn.TextSize = 18
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.ZIndex = 6
+MinBtn.Parent = Header
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(1, 0)
+
+local LangBtn = Instance.new("TextButton")
+LangBtn.Size = UDim2.new(0, 26, 0, 26)
+LangBtn.Position = UDim2.new(1, -98, 0.5, -13)
+LangBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+LangBtn.Text = "🇧🇷"
+LangBtn.TextColor3 = Colors.Text
+LangBtn.TextSize = 12
+LangBtn.Font = Enum.Font.Gotham
+LangBtn.ZIndex = 6
+LangBtn.Parent = Header
+Instance.new("UICorner", LangBtn).CornerRadius = UDim.new(1, 0)
+
+local LockBtn = Instance.new("TextButton")
+LockBtn.Size = UDim2.new(0, 26, 0, 26)
+LockBtn.Position = UDim2.new(1, -130, 0.5, -13)
+LockBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+LockBtn.Text = "🔓"
+LockBtn.TextColor3 = Colors.Text
+LockBtn.TextSize = 13
+LockBtn.Font = Enum.Font.Gotham
+LockBtn.ZIndex = 6
+LockBtn.Parent = Header
+Instance.new("UICorner", LockBtn).CornerRadius = UDim.new(1, 0)
+
+local MusicBtn = Instance.new("TextButton")
+MusicBtn.Size = UDim2.new(0, 26, 0, 26)
+MusicBtn.Position = UDim2.new(1, -162, 0.5, -13)
+MusicBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+MusicBtn.Text = "🎵"
+MusicBtn.TextColor3 = Colors.Text
+MusicBtn.TextSize = 13
+MusicBtn.Font = Enum.Font.Gotham
+MusicBtn.ZIndex = 6
+MusicBtn.Parent = Header
+Instance.new("UICorner", MusicBtn).CornerRadius = UDim.new(1, 0)
+
+MusicBtn.MouseButton1Click:Connect(function()
+    musicPlaying = not musicPlaying
+    bgm.Volume = musicPlaying and 0.18 or 0
+    MusicBtn.Text = musicPlaying and "🎵" or "🔇"
+end)
+
+LockBtn.MouseButton1Click:Connect(function() 
+    isUIDraggable = not isUIDraggable
+    LockBtn.Text = isUIDraggable and "🔓" or "🔒"
+end)
+
+MinBtn.MouseButton1Click:Connect(function() 
+    MainFrame.Visible = false
+    ToggleBtn.Visible = true 
+    Blur.Enabled = false
+end)
+
+-- Overlays de Confirmação (mesmo estilo)
+local ConfirmOverlay = Instance.new("Frame")
+ConfirmOverlay.Size = UDim2.new(1, 0, 1, 0)
+ConfirmOverlay.BackgroundColor3 = Color3.new(0,0,0)
+ConfirmOverlay.BackgroundTransparency = 0.6
+ConfirmOverlay.Visible = false
+ConfirmOverlay.ZIndex = 80
+ConfirmOverlay.Parent = MainFrame
+ConfirmOverlay.Active = true
+
+local ConfirmBox = Instance.new("Frame")
+ConfirmBox.Size = UDim2.new(0, 300, 0, 140)
+ConfirmBox.Position = UDim2.new(0.5, -150, 0.5, -70)
+ConfirmBox.BackgroundColor3 = Colors.White
+ConfirmBox.ZIndex = 81
+ConfirmBox.Parent = ConfirmOverlay
+Instance.new("UICorner", ConfirmBox).CornerRadius = UDim.new(0, 14)
+local confStroke = Instance.new("UIStroke", ConfirmBox)
+confStroke.Color = Colors.Primary
+confStroke.Thickness = 2
+
+local ConfirmText = Instance.new("TextLabel")
+ConfirmText.Size = UDim2.new(1, -24, 0, 65)
+ConfirmText.Position = UDim2.new(0, 12, 0, 15)
+ConfirmText.BackgroundTransparency = 1
+ConfirmText.Text = T("ConfirmUI")
+ConfirmText.TextColor3 = Colors.Text
+ConfirmText.TextSize = 13
+ConfirmText.Font = Enum.Font.GothamBold
+ConfirmText.TextWrapped = true
+ConfirmText.ZIndex = 82
+ConfirmText.Parent = ConfirmBox
+
+local ConfirmYes = Instance.new("TextButton")
+ConfirmYes.Size = UDim2.new(0, 120, 0, 36)
+ConfirmYes.Position = UDim2.new(0.5, -130, 1, -50)
+ConfirmYes.BackgroundColor3 = Colors.Primary
+ConfirmYes.Text = T("Yes")
+ConfirmYes.TextColor3 = Colors.White
+ConfirmYes.Font = Enum.Font.GothamBold
+ConfirmYes.ZIndex = 82
+ConfirmYes.Parent = ConfirmBox
+Instance.new("UICorner", ConfirmYes).CornerRadius = UDim.new(1, 0)
+
+local ConfirmCancel = Instance.new("TextButton")
+ConfirmCancel.Size = UDim2.new(0, 120, 0, 36)
+ConfirmCancel.Position = UDim2.new(0.5, 10, 1, -50)
+ConfirmCancel.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
+ConfirmCancel.Text = T("Cancel")
+ConfirmCancel.TextColor3 = Colors.Text
+ConfirmCancel.Font = Enum.Font.GothamBold
+ConfirmCancel.ZIndex = 82
+ConfirmCancel.Parent = ConfirmBox
+Instance.new("UICorner", ConfirmCancel).CornerRadius = UDim.new(1, 0)
+
+ConfirmYes.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+ConfirmCancel.MouseButton1Click:Connect(function() ConfirmOverlay.Visible = false end)
+CloseBtn.MouseButton1Click:Connect(function() ConfirmOverlay.Visible = true end)
+
+local ExecConfirmOverlay = Instance.new("Frame")
+ExecConfirmOverlay.Size = UDim2.new(1, 0, 1, 0)
+ExecConfirmOverlay.BackgroundColor3 = Color3.new(0,0,0)
+ExecConfirmOverlay.BackgroundTransparency = 0.6
+ExecConfirmOverlay.Visible = false
+ExecConfirmOverlay.ZIndex = 90
+ExecConfirmOverlay.Parent = MainFrame
+ExecConfirmOverlay.Active = true
+
+local ExecConfirmBox = Instance.new("Frame")
+ExecConfirmBox.Size = UDim2.new(0, 300, 0, 150)
+ExecConfirmBox.Position = UDim2.new(0.5, -150, 0.5, -75)
+ExecConfirmBox.BackgroundColor3 = Colors.White
+ExecConfirmBox.ZIndex = 91
+ExecConfirmBox.Parent = ExecConfirmOverlay
+Instance.new("UICorner", ExecConfirmBox).CornerRadius = UDim.new(0, 14)
+local execStroke = Instance.new("UIStroke", ExecConfirmBox)
+execStroke.Color = Colors.Primary
+execStroke.Thickness = 2
+
+local ExecConfirmText = Instance.new("TextLabel")
+ExecConfirmText.Size = UDim2.new(1, -24, 0, 70)
+ExecConfirmText.Position = UDim2.new(0, 12, 0, 15)
+ExecConfirmText.BackgroundTransparency = 1
+ExecConfirmText.Text = T("ConfirmExec")
+ExecConfirmText.TextColor3 = Colors.Text
+ExecConfirmText.TextSize = 13
+ExecConfirmText.Font = Enum.Font.GothamBold
+ExecConfirmText.TextWrapped = true
+ExecConfirmText.ZIndex = 92
+ExecConfirmText.Parent = ExecConfirmBox
+
+local ExecConfirmYes = Instance.new("TextButton")
+ExecConfirmYes.Size = UDim2.new(0, 120, 0, 36)
+ExecConfirmYes.Position = UDim2.new(0.5, -130, 1, -50)
+ExecConfirmYes.BackgroundColor3 = Colors.Primary
+ExecConfirmYes.Text = T("Yes")
+ExecConfirmYes.TextColor3 = Colors.White
+ExecConfirmYes.Font = Enum.Font.GothamBold
+ExecConfirmYes.ZIndex = 92
+ExecConfirmYes.Parent = ExecConfirmBox
+Instance.new("UICorner", ExecConfirmYes).CornerRadius = UDim.new(1, 0)
+
+local ExecConfirmCancel = Instance.new("TextButton")
+ExecConfirmCancel.Size = UDim2.new(0, 120, 0, 36)
+ExecConfirmCancel.Position = UDim2.new(0.5, 10, 1, -50)
+ExecConfirmCancel.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
+ExecConfirmCancel.Text = T("Cancel")
+ExecConfirmCancel.TextColor3 = Colors.Text
+ExecConfirmCancel.Font = Enum.Font.GothamBold
+ExecConfirmCancel.ZIndex = 92
+ExecConfirmCancel.Parent = ExecConfirmBox
+Instance.new("UICorner", ExecConfirmCancel).CornerRadius = UDim.new(1, 0)
+
+local CurrentExecCallback = nil
+ExecConfirmYes.MouseButton1Click:Connect(function()
+    ExecConfirmOverlay.Visible = false
+    if CurrentExecCallback then CurrentExecCallback(true); CurrentExecCallback = nil end
+end)
+ExecConfirmCancel.MouseButton1Click:Connect(function()
+    ExecConfirmOverlay.Visible = false
+    if CurrentExecCallback then CurrentExecCallback(false); CurrentExecCallback = nil end
+end)
+
+local function PromptExecute(scriptTitle, callback)
+    local limitedTitle = scriptTitle
+    if #limitedTitle > 38 then limitedTitle = limitedTitle:sub(1,35).."..." end
+    ExecConfirmText.Text = T("ConfirmExec") .. '\n"'..limitedTitle..'"?'
+    CurrentExecCallback = callback
+    ExecConfirmOverlay.Visible = true
+end
+
+-- Barra de Abas
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 36)
+TabBar.Position = UDim2.new(0, 0, 0, 48)
+TabBar.BackgroundColor3 = Color3.fromRGB(250, 250, 250)
+TabBar.BackgroundTransparency = 0.2
+TabBar.ZIndex = 4
+TabBar.Parent = MainFrame
+
+local TL = Instance.new("UIListLayout", TabBar)
+TL.FillDirection = Enum.FillDirection.Horizontal
+TL.Padding = UDim.new(0, 6)
+TL.VerticalAlignment = Enum.VerticalAlignment.Center
+Instance.new("UIPadding", TabBar).PaddingLeft = UDim.new(0, 8)
+
+local function MakeTab(txt, col, par)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, #txt * 7 + 20, 0, 24)
+    b.BackgroundColor3 = col
+    b.BackgroundTransparency = 0.1
+    b.Text = txt
+    b.TextColor3 = Colors.White
+    b.TextSize = 10
+    b.Font = Enum.Font.GothamBold
+    b.ZIndex = 4
+    b.Parent = par
+    Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
+    return b
+end
+
+local FreeTab = MakeTab(T("TabAll"), Colors.Primary, TabBar)
+local ThisGameTab = MakeTab(T("TabThisGame"), Colors.Primary, TabBar)
+local SavedTab = MakeTab(T("TabSaved"), Colors.Primary, TabBar)
+local RefreshTab = MakeTab(T("TabRefresh"), Color3.fromRGB(100, 100, 100), TabBar)
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(0, 130, 0, 24)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = ""
+StatusLabel.TextColor3 = Colors.SubText
+StatusLabel.TextSize = 10
+StatusLabel.Font = Enum.Font.GothamMedium
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.ZIndex = 4
+StatusLabel.Parent = TabBar
+
+local GameInfoBar = Instance.new("Frame")
+GameInfoBar.Size = UDim2.new(1, 0, 0, 24)
+GameInfoBar.Position = UDim2.new(0, 0, 0, 84)
+GameInfoBar.BackgroundColor3 = Colors.Primary
+GameInfoBar.BackgroundTransparency = 0.85
+GameInfoBar.ZIndex = 4
+GameInfoBar.Parent = MainFrame
+
+local GameInfoLabel = Instance.new("TextLabel")
+GameInfoLabel.Size = UDim2.new(1, -16, 1, 0)
+GameInfoLabel.Position = UDim2.new(0, 10, 0, 0)
+GameInfoLabel.BackgroundTransparency = 1
+GameInfoLabel.Text = "🎮 Loading..."
+GameInfoLabel.TextColor3 = Colors.Primary
+GameInfoLabel.TextSize = 10
+GameInfoLabel.Font = Enum.Font.GothamMedium
+GameInfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+GameInfoLabel.TextTruncate = Enum.TextTruncate.AtEnd
+GameInfoLabel.ZIndex = 4
+GameInfoLabel.Parent = GameInfoBar
+
+local CopyIdBtn = Instance.new("TextButton")
+CopyIdBtn.Size = UDim2.new(0, 60, 0, 18)
+CopyIdBtn.Position = UDim2.new(1, -125, 0, 3)
+CopyIdBtn.BackgroundColor3 = Colors.Primary
+CopyIdBtn.BackgroundTransparency = 0.15
+CopyIdBtn.Text = "📋 ID"
+CopyIdBtn.TextColor3 = Colors.White
+CopyIdBtn.TextSize = 9
+CopyIdBtn.Font = Enum.Font.GothamBold
+CopyIdBtn.Visible = false
+CopyIdBtn.ZIndex = 4
+CopyIdBtn.Parent = GameInfoBar
+Instance.new("UICorner", CopyIdBtn).CornerRadius = UDim.new(1, 0)
+
+local CopyNameBtn = Instance.new("TextButton")
+CopyNameBtn.Size = UDim2.new(0, 60, 0, 18)
+CopyNameBtn.Position = UDim2.new(1, -61, 0, 3)
+CopyNameBtn.BackgroundColor3 = Colors.Yellow
+CopyNameBtn.BackgroundTransparency = 0.1
+CopyNameBtn.Text = "📋 Name"
+CopyNameBtn.TextColor3 = Colors.Text
+CopyNameBtn.TextSize = 9
+CopyNameBtn.Font = Enum.Font.GothamBold
+CopyNameBtn.Visible = false
+CopyNameBtn.ZIndex = 4
+CopyNameBtn.Parent = GameInfoBar
+Instance.new("UICorner", CopyNameBtn).CornerRadius = UDim.new(1, 0)
+
+task.spawn(function() 
+    CurrentGameId, CurrentGameNameEN, CurrentGameNamePT = GetCurrentGameInfo()
+    CurrentGameName = currentLang == "PT" and CurrentGameNamePT or CurrentGameNameEN
+end)
+
+CopyIdBtn.MouseButton1Click:Connect(function() 
+    CopyToClipboard(tostring(CurrentGameId))
+    CopyIdBtn.Text = "✓ Done"
+    task.delay(1, function() CopyIdBtn.Text = "📋 ID" end) 
+end)
+
+CopyNameBtn.MouseButton1Click:Connect(function() 
+    local nameToCopy = currentLang == "PT" and CurrentGameNamePT or CurrentGameNameEN
+    CopyToClipboard(nameToCopy)
+    CopyNameBtn.Text = "✓ Done"
+    task.delay(1, function() CopyNameBtn.Text = "📋 Name" end) 
+end)
+
+local function SetCopyVisible(v)
+    CopyIdBtn.Visible = v
+    CopyNameBtn.Visible = v
+    GameInfoLabel.Size = v and UDim2.new(1, -135, 1, 0) or UDim2.new(1, -16, 1, 0)
+end
+
+-- Containers de Scripts
+local Containers = {}
+for _, tab in ipairs({"Free", "ThisGame", "Saved", "Search"}) do
+    local sf = Instance.new("ScrollingFrame")
+    sf.Name = "Container_" .. tab
+    sf.Size = UDim2.new(1, -16, 1, -114)
+    sf.Position = UDim2.new(0, 8, 0, 110)
+    sf.BackgroundTransparency = 1
+    sf.ScrollBarThickness = 5
+    sf.ScrollBarImageColor3 = Colors.Primary
+    sf.CanvasSize = UDim2.new(0, 0, 0, 0)
+    sf.ZIndex = 3
+    sf.Parent = MainFrame
+    sf.Visible = false
+    sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+    local grid = Instance.new("UIGridLayout", sf)
+    grid.CellSize = UDim2.new(0, 163, 0, 185)
+    grid.CellPadding = UDim2.new(0, 8, 0, 8)
+    grid.SortOrder = Enum.SortOrder.LayoutOrder
+    Containers[tab] = sf
+end
+
+local LoadingFrame = Instance.new("Frame")
+LoadingFrame.Size = UDim2.new(1, 0, 1, 0)
+LoadingFrame.BackgroundColor3 = Colors.White
+LoadingFrame.BackgroundTransparency = 0.35
+LoadingFrame.Visible = false
+LoadingFrame.ZIndex = 50
+LoadingFrame.Parent = MainFrame
+
+local LoadingText = Instance.new("TextLabel")
+LoadingText.Size = UDim2.new(1, 0, 1, 0)
+LoadingText.BackgroundTransparency = 1
+LoadingText.Text = T("LoadingScripts")
+LoadingText.TextColor3 = Colors.Primary
+LoadingText.TextSize = 16
+LoadingText.Font = Enum.Font.GothamBold
+LoadingText.ZIndex = 51
+LoadingText.Parent = LoadingFrame
+
+-- Modal Viewer (mantive a estrutura, só ajustei cores)
+local ModalOverlay = Instance.new("Frame")
+ModalOverlay.Size = UDim2.new(1, 0, 1, 0)
+ModalOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
+ModalOverlay.BackgroundTransparency = 0.6
+ModalOverlay.Visible = false
+ModalOverlay.ZIndex = 60
+ModalOverlay.Parent = MainFrame
+ModalOverlay.Active = true 
+
+local Modal = Instance.new("Frame")
+Modal.Size = UDim2.new(0, 500, 0, 390)
+Modal.Position = UDim2.new(0.5, -250, 0.5, -195)
+Modal.BackgroundColor3 = Colors.White
+Modal.BackgroundTransparency = 0.05
+Modal.ZIndex = 61
+Modal.Parent = ModalOverlay
+Instance.new("UICorner", Modal).CornerRadius = UDim.new(0, 18)
+local modalStroke = Instance.new("UIStroke", Modal)
+modalStroke.Color = Colors.Primary
+modalStroke.Thickness = 2
+
+local MH = Instance.new("Frame")
+MH.Size = UDim2.new(1, 0, 0, 38)
+MH.BackgroundColor3 = Color3.fromRGB(250, 250, 250)
+MH.BackgroundTransparency = 0.1
+MH.ZIndex = 62
+MH.Parent = Modal
+Instance.new("UICorner", MH).CornerRadius = UDim.new(0, 18)
+
+local MHCover = Instance.new("Frame", MH)
+MHCover.Size = UDim2.new(1, 0, 0, 10)
+MHCover.Position = UDim2.new(0, 0, 1, -10)
+MHCover.BackgroundColor3 = Color3.fromRGB(250, 250, 250)
+MHCover.BackgroundTransparency = 0.1
+MHCover.BorderSizePixel = 0
+
+local MT = Instance.new("TextLabel")
+MT.Size = UDim2.new(1, -50, 1, 0)
+MT.Position = UDim2.new(0, 14, 0, 0)
+MT.BackgroundTransparency = 1
+MT.Text = "📜 Script Viewer"
+MT.TextColor3 = Colors.Primary
+MT.TextSize = 13
+MT.Font = Enum.Font.GothamBold
+MT.TextXAlignment = Enum.TextXAlignment.Left
+MT.TextTruncate = Enum.TextTruncate.AtEnd
+MT.ZIndex = 62
+MT.Parent = MH
+
+local MC = Instance.new("TextButton")
+MC.Size = UDim2.new(0, 26, 0, 26)
+MC.Position = UDim2.new(1, -32, 0.5, -13)
+MC.BackgroundColor3 = Colors.Primary
+MC.BackgroundTransparency = 0.1
+MC.Text = "×"
+MC.TextColor3 = Colors.White
+MC.TextSize = 15
+MC.Font = Enum.Font.GothamBold
+MC.ZIndex = 63
+MC.Parent = MH
+Instance.new("UICorner", MC).CornerRadius = UDim.new(1, 0)
+MC.MouseButton1Click:Connect(function() ModalOverlay.Visible = false end)
+
+local ModalTabBar = Instance.new("Frame")
+ModalTabBar.Size = UDim2.new(1, 0, 0, 32)
+ModalTabBar.Position = UDim2.new(0, 0, 0, 38)
+ModalTabBar.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+ModalTabBar.BackgroundTransparency = 0.2
+ModalTabBar.ZIndex = 62
+ModalTabBar.Parent = Modal
+
+local DescTabBtn = Instance.new("TextButton")
+DescTabBtn.Size = UDim2.new(0.33, 0, 1, 0)
+DescTabBtn.Position = UDim2.new(0, 0, 0, 0)
+DescTabBtn.BackgroundTransparency = 1
+DescTabBtn.Text = T("Desc")
+DescTabBtn.TextColor3 = Colors.Primary
+DescTabBtn.Font = Enum.Font.GothamBold
+DescTabBtn.TextSize = 11
+DescTabBtn.ZIndex = 63
+DescTabBtn.Parent = ModalTabBar
+
+local CodeTabBtn = Instance.new("TextButton")
+CodeTabBtn.Size = UDim2.new(0.34, 0, 1, 0)
+CodeTabBtn.Position = UDim2.new(0.33, 0, 0, 0)
+CodeTabBtn.BackgroundTransparency = 1
+CodeTabBtn.Text = T("Code")
+CodeTabBtn.TextColor3 = Colors.SubText
+CodeTabBtn.Font = Enum.Font.GothamBold
+CodeTabBtn.TextSize = 11
+CodeTabBtn.ZIndex = 63
+CodeTabBtn.Parent = ModalTabBar
+
+local CommentsTabBtn = Instance.new("TextButton")
+CommentsTabBtn.Size = UDim2.new(0.33, 0, 1, 0)
+CommentsTabBtn.Position = UDim2.new(0.67, 0, 0, 0)
+CommentsTabBtn.BackgroundTransparency = 1
+CommentsTabBtn.Text = string.format(T("Comments"), 0)
+CommentsTabBtn.TextColor3 = Colors.SubText
+CommentsTabBtn.Font = Enum.Font.GothamBold
+CommentsTabBtn.TextSize = 11
+CommentsTabBtn.ZIndex = 63
+CommentsTabBtn.Parent = ModalTabBar
+
+local MI = Instance.new("Frame")
+MI.Size = UDim2.new(1, -16, 0, 22)
+MI.Position = UDim2.new(0, 8, 0, 74)
+MI.BackgroundTransparency = 1
+MI.ZIndex = 62
+MI.Parent = Modal
+
+local GB = Instance.new("TextLabel")
+GB.Size = UDim2.new(0, 130, 0, 18)
+GB.BackgroundColor3 = Colors.Primary
+GB.BackgroundTransparency = 0.75
+GB.Text = "🎮 Game"
+GB.TextColor3 = Colors.Primary
+GB.TextSize = 10
+GB.Font = Enum.Font.GothamBold
+GB.TextTruncate = Enum.TextTruncate.AtEnd
+GB.ZIndex = 62
+GB.Parent = MI
+Instance.new("UICorner", GB).CornerRadius = UDim.new(1, 0)
+
+local SB = Instance.new("TextLabel")
+SB.Size = UDim2.new(0, 75, 0, 18)
+SB.Position = UDim2.new(0, 136, 0, 0)
+SB.BackgroundColor3 = Colors.Green
+SB.Text = T("Working")
+SB.TextColor3 = Colors.White
+SB.TextSize = 8
+SB.Font = Enum.Font.GothamBold
+SB.ZIndex = 62
+SB.Parent = MI
+Instance.new("UICorner", SB).CornerRadius = UDim.new(1, 0)
+
+local ML = Instance.new("TextLabel")
+ML.Size = UDim2.new(0, 140, 0, 18)
+ML.Position = UDim2.new(0, 218, 0, 0)
+ML.BackgroundTransparency = 1
+ML.Text = "❤️ 0 | 👎 0"
+ML.TextColor3 = Colors.SubText
+ML.TextSize = 10
+ML.Font = Enum.Font.GothamMedium
+ML.TextXAlignment = Enum.TextXAlignment.Left
+ML.ZIndex = 62
+ML.Parent = MI
+
+local DS = Instance.new("ScrollingFrame")
+DS.Size = UDim2.new(1, -16, 1, -140)
+DS.Position = UDim2.new(0, 8, 0, 100)
+DS.BackgroundColor3 = Color3.fromRGB(250, 250, 250)
+DS.BackgroundTransparency = 0.3
+DS.ScrollBarThickness = 4
+DS.ScrollBarImageColor3 = Colors.Primary
+DS.Visible = true 
+DS.ZIndex = 62
+DS.Parent = Modal
+Instance.new("UICorner", DS).CornerRadius = UDim.new(0, 12)
+
+local dsLayout = Instance.new("UIListLayout", DS)
+dsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+dsLayout.Padding = UDim.new(0, 6) 
+local dsPad = Instance.new("UIPadding", DS)
+dsPad.PaddingTop = UDim.new(0, 10)
+dsPad.PaddingLeft = UDim.new(0, 10)
+dsPad.PaddingRight = UDim.new(0, 12)
+
+dsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    DS.CanvasSize = UDim2.new(0, 0, 0, dsLayout.AbsoluteContentSize.Y + 20)
+end)
+
+local DescAuthor = Instance.new("TextLabel", DS)
+DescAuthor.Name = "DescAuthor"
+DescAuthor.Size = UDim2.new(1, 0, 0, 22)
+DescAuthor.BackgroundTransparency = 1
+DescAuthor.Text = T("By") .. "Loading..."
+DescAuthor.TextColor3 = Colors.Primary
+DescAuthor.TextSize = 12
+DescAuthor.Font = Enum.Font.GothamBold
+DescAuthor.TextXAlignment = Enum.TextXAlignment.Left
+
+local SS = Instance.new("ScrollingFrame")
+SS.Size = UDim2.new(1, -16, 1, -140)
+SS.Position = UDim2.new(0, 8, 0, 100)
+SS.BackgroundColor3 = Color3.fromRGB(250, 250, 250)
+SS.BackgroundTransparency = 0.3
+SS.ScrollBarThickness = 4
+SS.ScrollBarImageColor3 = Colors.Primary
+SS.Visible = false
+SS.ZIndex = 62
+SS.Parent = Modal
+Instance.new("UICorner", SS).CornerRadius = UDim.new(0, 12)
+
+local ssLayout = Instance.new("UIListLayout", SS)
+ssLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    SS.CanvasSize = UDim2.new(0, 0, 0, ssLayout.AbsoluteContentSize.Y + 20)
+end)
+
+local SC = Instance.new("TextLabel")
+SC.Size = UDim2.new(1, -10, 0, 0)
+SC.Position = UDim2.new(0, 5, 0, 5)
+SC.BackgroundTransparency = 1
+SC.Text = ""
+SC.TextColor3 = Colors.Primary
+SC.TextSize = 11
+SC.Font = Enum.Font.Code
+SC.TextXAlignment = Enum.TextXAlignment.Left
+SC.TextYAlignment = Enum.TextYAlignment.Top
+SC.TextWrapped = true
+SC.AutomaticSize = Enum.AutomaticSize.Y
+SC.ZIndex = 62
+SC.Parent = SS
+
+local CS = Instance.new("ScrollingFrame")
+CS.Size = UDim2.new(1, -16, 1, -100)
+CS.Position = UDim2.new(0, 8, 0, 100)
+CS.BackgroundColor3 = Color3.fromRGB(250, 250, 250)
+CS.BackgroundTransparency = 0.3
+CS.ScrollBarThickness = 4
+CS.ScrollBarImageColor3 = Colors.Primary
+CS.CanvasSize = UDim2.new(0, 0, 0, 0)
+CS.AutomaticCanvasSize = Enum.AutomaticSize.Y
+CS.Visible = false
+CS.ZIndex = 62
+CS.Parent = Modal
+Instance.new("UICorner", CS).CornerRadius = UDim.new(0, 12)
+
+-- Botões Inferiores do Modal
+local MBF = Instance.new("Frame")
+MBF.Size = UDim2.new(1, -16, 0, 38)
+MBF.Position = UDim2.new(0, 8, 1, -46)
+MBF.BackgroundTransparency = 1
+MBF.ZIndex = 62
+MBF.Parent = Modal
+
+local CopyScriptBtn = Instance.new("TextButton")
+CopyScriptBtn.Size = UDim2.new(0.31, 0, 1, 0)
+CopyScriptBtn.Position = UDim2.new(0, 0, 0, 0)
+CopyScriptBtn.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
+CopyScriptBtn.Text = T("CopyScript")
+CopyScriptBtn.TextColor3 = Colors.Text
+CopyScriptBtn.TextSize = 11
+CopyScriptBtn.Font = Enum.Font.GothamBold
+CopyScriptBtn.ZIndex = 63
+CopyScriptBtn.Parent = MBF
+Instance.new("UICorner", CopyScriptBtn).CornerRadius = UDim.new(1, 0)
+
+local CopyUrlBtn = Instance.new("TextButton")
+CopyUrlBtn.Size = UDim2.new(0.31, 0, 1, 0)
+CopyUrlBtn.Position = UDim2.new(0.34, 0, 0, 0)
+CopyUrlBtn.BackgroundColor3 = Colors.Primary
+CopyUrlBtn.BackgroundTransparency = 0.1
+CopyUrlBtn.Text = T("CopyUrl")
+CopyUrlBtn.TextColor3 = Colors.White
+CopyUrlBtn.TextSize = 11
+CopyUrlBtn.Font = Enum.Font.GothamBold
+CopyUrlBtn.ZIndex = 63
+CopyUrlBtn.Parent = MBF
+Instance.new("UICorner", CopyUrlBtn).CornerRadius = UDim.new(1, 0)
+
+local SaveScriptBtn = Instance.new("TextButton")
+SaveScriptBtn.Size = UDim2.new(0.32, 0, 1, 0)
+SaveScriptBtn.Position = UDim2.new(0.68, 0, 0, 0)
+SaveScriptBtn.BackgroundColor3 = Colors.Yellow
+SaveScriptBtn.Text = T("SaveScript")
+SaveScriptBtn.TextColor3 = Colors.Text
+SaveScriptBtn.TextSize = 11
+SaveScriptBtn.Font = Enum.Font.GothamBold
+SaveScriptBtn.ZIndex = 63
+SaveScriptBtn.Parent = MBF
+Instance.new("UICorner", SaveScriptBtn).CornerRadius = UDim.new(1, 0)
+
+local function IsScriptSaved(data)
+    if not data then return false end
+    local id = data._id or data.slug or data.title
+    for _, s in ipairs(SavedScriptsList) do
+        local sid = s._id or s.slug or s.title
+        if sid == id then return true end
+    end
+    return false
+end
+
+SaveScriptBtn.MouseButton1Click:Connect(function()
+    if currentScriptData then
+        if not IsScriptSaved(currentScriptData) then
+            table.insert(SavedScriptsList, 1, currentScriptData)
+            SaveScriptsToFile()
+            SaveScriptBtn.Text = T("Saved")
+            task.delay(1.5, function() SaveScriptBtn.Text = T("AlreadySaved") end)
+        else
+            SaveScriptBtn.Text = T("AlreadySaved")
+        end
+    end
+end)
+
+CopyScriptBtn.MouseButton1Click:Connect(function() 
+    CopyToClipboard(currentScriptForView)
+    CopyScriptBtn.Text = "✓ Copied!"
+    task.delay(1.5, function() CopyScriptBtn.Text = T("CopyScript") end) 
+end)
+
+CopyUrlBtn.MouseButton1Click:Connect(function() 
+    if currentUrlForView and currentUrlForView \~= "" then 
+        CopyToClipboard(currentUrlForView)
+        CopyUrlBtn.Text = "✓ Copied!"
+        task.delay(1.5, function() CopyUrlBtn.Text = T("CopyUrl") end) 
+    end 
+end)
+
+local function SwitchModalTab(tabName)
+    DescTabBtn.TextColor3 = (tabName == "Desc") and Colors.Primary or Colors.SubText
+    CodeTabBtn.TextColor3 = (tabName == "Code") and Colors.Primary or Colors.SubText
+    CommentsTabBtn.TextColor3 = (tabName == "Comments") and Colors.Primary or Colors.SubText
+
+    DS.Visible = (tabName == "Desc")
+    SS.Visible = (tabName == "Code")
+    CS.Visible = (tabName == "Comments")
+    MBF.Visible = (tabName \~= "Comments")
+end
+
+DescTabBtn.MouseButton1Click:Connect(function() SwitchModalTab("Desc") end)
+CodeTabBtn.MouseButton1Click:Connect(function() SwitchModalTab("Code") end)
+CommentsTabBtn.MouseButton1Click:Connect(function() SwitchModalTab("Comments") end)
+
+local function FetchScriptDetails(slug)
+    DescAuthor.Text = T("By") .. "Loading..."
+    for _, child in pairs(DS:GetChildren()) do
+        if child:IsA("TextLabel") and child.Name == "DescLine" then child:Destroy() end
+    end
+
+    local loadingLbl = Instance.new("TextLabel", DS)
+    loadingLbl.Name = "DescLine"
+    loadingLbl.Size = UDim2.new(1, 0, 0, 24)
+    loadingLbl.BackgroundTransparency = 1
+    loadingLbl.Text = "Loading full description..."
+    loadingLbl.TextColor3 = Colors.Text
+    loadingLbl.TextSize = 11
+    loadingLbl.Font = Enum.Font.Gotham
+    loadingLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    task.spawn(function()
+        local url = "https://scriptblox.com/api/script/" .. tostring(slug)
+        local res = HttpRequest(url)
+        if loadingLbl then loadingLbl:Destroy() end
+
+        if res and res.script then
+            local scriptData = res.script
+            local authorName = "Unknown"
+            if scriptData.owner and scriptData.owner.username then
+                authorName = scriptData.owner.username
+            elseif scriptData.user and scriptData.user.username then
+                authorName = scriptData.user.username
+            end
+            DescAuthor.Text = T("By") .. authorName
+
+            local rawDesc = scriptData.features or scriptData.description or "No description provided."
+            rawDesc = rawDesc:gsub("\r", "")
+            local lines = SplitString(rawDesc, "\n")
+            for _, lineText in ipairs(lines) do
+                local lineLbl = Instance.new("TextLabel", DS)
+                lineLbl.Name = "DescLine"
+                lineLbl.Size = UDim2.new(1, 0, 0, lineText == "" and 12 or 0)
+                lineLbl.AutomaticSize = lineText == "" and Enum.AutomaticSize.None or Enum.AutomaticSize.Y
+                lineLbl.BackgroundTransparency = 1
+                lineLbl.Text = lineText
+                lineLbl.TextColor3 = Colors.Text
+                lineLbl.TextSize = 11 
+                lineLbl.Font = Enum.Font.Gotham
+                lineLbl.TextXAlignment = Enum.TextXAlignment.Left
+                lineLbl.TextYAlignment = Enum.TextYAlignment.Top
+                lineLbl.TextWrapped = true
+            end
+        end
+    end)
+end
+
+local function CreateCommentUI(comment, parent, isReply)
+    local userObj = comment.commentBy or comment.replyBy or comment.user or comment.author or comment.by or {}
+    local uName = userObj.username or userObj.name or "Unknown"
+    local pPic = userObj.profilePicture or userObj.avatar or ""
+    local txt = comment.text or comment.body or ""
+    local tAgo = FormatTimeAgo(comment.createdAt)
+
+    local function countVotes(val)
+        if type(val) == "number" then return val end
+        if type(val) == "table" then return #val end
+        return 0
+    end
+    local cLikes = comment.likeCount or countVotes(comment.likes) or countVotes(comment.upvotes) or 0
+    local cDislikes = comment.dislikeCount or countVotes(comment.dislikes) or countVotes(comment.downvotes) or 0
+
+    txt = txt:gsub("<", "&lt;"):gsub(">", "&gt;")
+    txt = txt:gsub("(@[%w_]+)", '<font color="#c81428">%1</font>')
+
+    local cFrame = Instance.new("Frame", parent)
+    cFrame.Size = UDim2.new(1, 0, 0, 0)
+    cFrame.BackgroundTransparency = 1
+    cFrame.AutomaticSize = Enum.AutomaticSize.Y
+    
+    local padding = Instance.new("UIPadding", cFrame)
+    padding.PaddingLeft = UDim.new(0, isReply and 45 or 5)
+
+    local avatar = Instance.new("ImageLabel", cFrame)
+    avatar.Size = UDim2.new(0, 32, 0, 32)
+    avatar.Position = UDim2.new(0, 0, 0, 0)
+    avatar.BackgroundTransparency = 1
+    avatar.Image = "rbxassetid://10023616654" 
+    avatar.ScaleType = Enum.ScaleType.Crop
+    Instance.new("UICorner", avatar).CornerRadius = UDim.new(1, 0)
+    
+    task.spawn(function()
+        if pPic \~= "" then
+            local fullUrl = pPic:match("^http") and pPic or "https://scriptblox.com" .. (pPic:sub(1,1) == "/" and "" or "/") .. pPic
+            local img = GetTempImageAsset(fullUrl)
+            if img then pcall(function() avatar.Image = img end) end
+        end
+    end)
+
+    local contentBox = Instance.new("Frame", cFrame)
+    contentBox.Size = UDim2.new(1, -44, 0, 0)
+    contentBox.Position = UDim2.new(0, 44, 0, 0)
+    contentBox.BackgroundTransparency = 1
+    contentBox.AutomaticSize = Enum.AutomaticSize.Y
+    
+    local cLayout = Instance.new("UIListLayout", contentBox)
+    cLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    cLayout.Padding = UDim.new(0, 5)
+
+    local topRow = Instance.new("Frame", contentBox)
+    topRow.Size = UDim2.new(1, 0, 0, 18)
+    topRow.BackgroundTransparency = 1
+    
+    local hLayout = Instance.new("UIListLayout", topRow)
+    hLayout.FillDirection = Enum.FillDirection.Horizontal
+    hLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    hLayout.Padding = UDim.new(0, 8)
+
+    local userLbl = Instance.new("TextLabel", topRow)
+    userLbl.AutomaticSize = Enum.AutomaticSize.XY
+    userLbl.BackgroundTransparency = 1
+    userLbl.Text = uName
+    userLbl.TextColor3 = Colors.Text
+    userLbl.Font = Enum.Font.GothamBold 
+    userLbl.TextSize = 11
+
+    local timeLbl = Instance.new("TextLabel", topRow)
+    timeLbl.AutomaticSize = Enum.AutomaticSize.XY
+    timeLbl.BackgroundTransparency = 1
+    timeLbl.Text = tAgo
+    timeLbl.TextColor3 = Colors.SubText
+    timeLbl.Font = Enum.Font.Gotham
+    timeLbl.TextSize = 10
+
+    local bodyLbl = Instance.new("TextLabel", contentBox)
+    bodyLbl.Size = UDim2.new(1, 0, 0, 0)
+    bodyLbl.AutomaticSize = Enum.AutomaticSize.Y
+    bodyLbl.BackgroundTransparency = 1
+    bodyLbl.TextWrapped = true
+    bodyLbl.RichText = true
+    bodyLbl.TextColor3 = Colors.Text
+    bodyLbl.Font = Enum.Font.Gotham
+    bodyLbl.TextSize = 11
+    bodyLbl.TextXAlignment = Enum.TextXAlignment.Left
+    bodyLbl.Text = txt
+
+    local actionRow = Instance.new("Frame", contentBox)
+    actionRow.Size = UDim2.new(1, 0, 0, 18)
+    actionRow.BackgroundTransparency = 1
+    
+    local actLayout = Instance.new("UIListLayout", actionRow)
+    actLayout.FillDirection = Enum.FillDirection.Horizontal
+    actLayout.Padding = UDim.new(0, 16)
+
+    local function createAct(txtIcon)
+        local l = Instance.new("TextLabel", actionRow)
+        l.AutomaticSize = Enum.AutomaticSize.XY
+        l.BackgroundTransparency = 1
+        l.Text = txtIcon
+        l.TextColor3 = Colors.SubText
+        l.Font = Enum.Font.GothamMedium 
+        l.TextSize = 10
+    end
+    createAct("👍 " .. FormatNumber(cLikes))
+    createAct("👎 " .. FormatNumber(cDislikes))
+end
+
+local function FetchAndRenderComments(scriptId)
+    for _, c in pairs(CS:GetChildren()) do if c:IsA("Frame") or c:IsA("TextLabel") then c:Destroy() end end
+
+    local layout = CS:FindFirstChildOfClass("UIListLayout")
+    if not layout then
+        layout = Instance.new("UIListLayout", CS)
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = UDim.new(0, 16)
+    end
+
+    local loadingLbl = Instance.new("TextLabel", CS)
+    loadingLbl.Size = UDim2.new(1, 0, 0, 35)
+    loadingLbl.BackgroundTransparency = 1
+    loadingLbl.Text = "🔄 Fetching All Comments..."
+    loadingLbl.TextColor3 = Colors.Primary
+    loadingLbl.Font = Enum.Font.GothamBold
+    loadingLbl.TextSize = 12
+
+    task.spawn(function()
+        local allComments = {}
+        local fetchPage = 1
+        local maxPages = 1
+        local totalCommentsCount = 0
+
+        repeat
+            local url = "https://scriptblox.com/api/comment/" .. tostring(scriptId) .. "?page="..tostring(fetchPage).."&max=100"
+            local res = HttpRequest(url)
+            local fetchedComments = {}
+            if res then
+                local dataSource = res.result or res.data or res
+                if type(dataSource.comments) == "table" then fetchedComments = dataSource.comments end
+                maxPages = dataSource.totalPages or 1
+                totalCommentsCount = dataSource.total or totalCommentsCount
+            end
+
+            for _, c in ipairs(fetchedComments) do table.insert(allComments, c) end
+            if #fetchedComments == 0 then break end
+            fetchPage = fetchPage + 1
+            if fetchPage > 50 then break end 
+        until fetchPage > maxPages
+        
+        if loadingLbl then loadingLbl:Destroy() end
+        CommentsTabBtn.Text = string.format(T("Comments"), totalCommentsCount > 0 and totalCommentsCount or #allComments)
+
+        if #allComments == 0 then
+            local noneLbl = Instance.new("TextLabel", CS)
+            noneLbl.Size = UDim2.new(1, 0, 0, 35)
+            noneLbl.BackgroundTransparency = 1
+            noneLbl.Text = "No comments yet."
+            noneLbl.TextColor3 = Colors.SubText
+            noneLbl.Font = Enum.Font.Gotham
+            noneLbl.TextSize = 11
+        else
+            for _, c in ipairs(allComments) do
+                CreateCommentUI(c, CS, false)
+                if c.replies and type(c.replies) == "table" and #c.replies > 0 then
+                    for _, r in ipairs(c.replies) do CreateCommentUI(r, CS, true) end
+                end
+            end
+        end
+    end)
+end
+
+local function UpdateUIState()
+    local state = TabData[CurrentTab]
+    for k, v in pairs(Containers) do v.Visible = (k == CurrentTab) end
+    
+    if CurrentTab == "ThisGame" then
+        SetCopyVisible(true)
+        CurrentGameName = currentLang == "PT" and CurrentGameNamePT or CurrentGameNameEN
+        GameInfoLabel.Text = string.format(T("GameInfo"), CurrentGameName, tostring(CurrentGameId))
+    elseif CurrentTab == "Search" then
+        SetCopyVisible(false)
+        GameInfoLabel.Text = T("SearchRes")
+    elseif CurrentTab == "Saved" then
+        SetCopyVisible(false)
+        GameInfoLabel.Text = T("SavedTabTitle")
+    else
+        SetCopyVisible(false)
+        GameInfoLabel.Text = T("AllScripts")
+    end
+
+    if state.totalLoaded > 0 then StatusLabel.Text = string.format(T("ScriptCount"), state.totalLoaded)
+    elseif not state.isLoading then StatusLabel.Text = T("NoScripts")
+    else StatusLabel.Text = "🔄 Loading..." end
+end
+
+local function ClearContent(tabName)
+    if Containers[tabName] then 
+        for _, c in pairs(Containers[tabName]:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end 
+        Containers[tabName].CanvasPosition = Vector2.new(0, 0)
+    end
+end
+
+local function CreateCard(data, index, tabName)
+    local state = TabData[tabName]
+    local id = data._id or data.slug or tostring(index)..tostring(tick())
+    if state.seen[id] then return false end
+    state.seen[id] = true
+    state.totalLoaded = state.totalLoaded + 1
+
+    local hasKey = data.key or data.keySystem or data.hasKey or false
+    local likes = data.likes or data.likeCount or 0
+    local dislikes = data.dislikes or data.dislikeCount or 0
+    local views = data.views or 0
+
+    local gid, gname = nil, "Universal"
+    if data.game then
+        gid = data.game.gameId or data.game.placeId or data.game.id
+        gname = data.game.name or "Unknown"
+    end
+
+    local ut = FormatTimeAgo(data.createdAt or data.updatedAt)
+    local isCur = gid and tonumber(gid) == tonumber(CurrentGameId)
+
+    local imgUrl = nil
+    if data.image and data.image \~= "" then
+        imgUrl = data.image:match("^http") and data.image or ("https://scriptblox.com" .. (data.image:sub(1,1) == "/" and "" or "/") .. data.image)
+    elseif data.game and data.game.imageUrl and data.game.imageUrl \~= "" then
+        imgUrl = data.game.imageUrl:match("^http") and data.game.imageUrl or ("https://scriptblox.com" .. (data.game.imageUrl:sub(1,1) == "/" and "" or "/") .. data.game.imageUrl)
+    end
+
+    local card = Instance.new("Frame")
+    card.Name = "C"..state.totalLoaded
+    card.BackgroundColor3 = Colors.White
+    card.BackgroundTransparency = 0.08
+    card.LayoutOrder = state.totalLoaded
+    card.Parent = Containers[tabName]
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 14)
+    local cs = Instance.new("UIStroke", card)
+    cs.Color = isCur and Colors.Yellow or Colors.Border
+    cs.Transparency = 0.2
+    cs.Thickness = isCur and 2 or 1.5
+
+    local ia = Instance.new("Frame")
+    ia.Size = UDim2.new(1, 0, 0, 78)
+    ia.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    ia.ClipsDescendants = true
+    ia.Parent = card
+    Instance.new("UICorner", ia).CornerRadius = UDim.new(0, 14)
+
+    local gi = Instance.new("ImageLabel")
+    gi.Size = UDim2.new(1, 0, 1, 0)
+    gi.BackgroundTransparency = 1
+    gi.ScaleType = Enum.ScaleType.Crop
+    gi.Parent = ia
+
+    local fb = Instance.new("TextLabel")
+    fb.Size = UDim2.new(1, 0, 1, 0)
+    fb.BackgroundTransparency = 1
+    fb.Text = "🎮"
+    fb.TextSize = 22
+    fb.Parent = ia
+    
+    task.spawn(function()
+        local loadedImg = false
+        if imgUrl then
+            local asset = GetTempImageAsset(imgUrl)
+            if asset then pcall(function() gi.Image = asset; fb.Visible = false; loadedImg = true end) end
+        end
+        if not loadedImg and gid then
+            pcall(function() 
+                gi.Image = "rbxthumb://type=GameIcon&id="..tostring(gid).."&w=150&h=150"
+                task.wait(0.2)
+                if gi.IsLoaded or gi.Image \~= "" then fb.Visible = false end 
+            end)
+        end
+    end)
+
+    local st = Instance.new("TextLabel")
+    st.Size = UDim2.new(0, 56, 0, 14)
+    st.Position = UDim2.new(0, 4, 0, 4)
+    st.BackgroundColor3 = data.isPatched and Colors.Red or Colors.Primary
+    st.BackgroundTransparency = 0.1
+    st.Text = data.isPatched and T("Patched") or T("Working")
+    st.TextColor3 = Colors.White
+    st.TextSize = 7
+    st.Font = Enum.Font.GothamBold
+    st.ZIndex = 2
+    st.Parent = ia
+    Instance.new("UICorner", st).CornerRadius = UDim.new(1, 0)
+
+    local kb = Instance.new("TextLabel")
+    kb.Size = UDim2.new(0, 42, 0, 14)
+    kb.Position = UDim2.new(1, -46, 0, 4)
+    kb.BackgroundColor3 = Colors.Yellow
+    kb.BackgroundTransparency = 0.1
+    kb.Text = hasKey and T("Key") or T("Free")
+    kb.TextColor3 = Colors.Text
+    kb.TextSize = 7
+    kb.Font = Enum.Font.GothamBold
+    kb.ZIndex = 2
+    kb.Parent = ia
+    Instance.new("UICorner", kb).CornerRadius = UDim.new(1, 0)
+
+    if isCur and tabName == "ThisGame" then
+        local tb = Instance.new("TextLabel")
+        tb.Size = UDim2.new(0, 54, 0, 14)
+        tb.Position = UDim2.new(0, 4, 1, -16)
+        tb.BackgroundColor3 = Colors.Yellow
+        tb.BackgroundTransparency = 0.1
+        tb.Text = T("Match")
+        tb.TextColor3 = Colors.Text
+        tb.TextSize = 7
+        tb.Font = Enum.Font.GothamBold
+        tb.ZIndex = 2
+        tb.Parent = ia
+        Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
+    end
+
+    local tl = Instance.new("TextLabel")
+    tl.Size = UDim2.new(1, -8, 0, 15)
+    tl.Position = UDim2.new(0, 4, 0, 82)
+    tl.BackgroundTransparency = 1
+    tl.Text = data.title or "Unknown"
+    tl.TextColor3 = Colors.Text
+    tl.TextSize = 10
+    tl.Font = Enum.Font.GothamBold
+    tl.TextXAlignment = Enum.TextXAlignment.Left
+    tl.TextTruncate = Enum.TextTruncate.AtEnd
+    tl.Parent = card
+
+    local gl = Instance.new("TextLabel")
+    gl.Size = UDim2.new(1, -8, 0, 12)
+    gl.Position = UDim2.new(0, 4, 0, 97)
+    gl.BackgroundTransparency = 1
+    gl.Text = "🎮 "..gname
+    gl.TextColor3 = isCur and Colors.Primary or Colors.SubText
+    gl.TextSize = 8
+    gl.Font = Enum.Font.Gotham
+    gl.TextXAlignment = Enum.TextXAlignment.Left
+    gl.TextTruncate = Enum.TextTruncate.AtEnd
+    gl.Parent = card
+
+    local sr = Instance.new("Frame")
+    sr.Size = UDim2.new(1, -8, 0, 15)
+    sr.Position = UDim2.new(0, 4, 0, 110)
+    sr.BackgroundTransparency = 1
+    sr.Parent = card
+
+    local lt = Instance.new("TextLabel")
+    lt.Size = UDim2.new(1, 0, 1, 0)
+    lt.BackgroundTransparency = 1
+    lt.Text = string.format("❤️%s  👎%s  👁%s", FormatNumber(likes), FormatNumber(dislikes), FormatNumber(views))
+    lt.TextColor3 = Colors.SubText
+    lt.TextSize = 8
+    lt.Font = Enum.Font.Gotham
+    lt.TextXAlignment = Enum.TextXAlignment.Left
+    lt.Parent = sr
+
+    local tml = Instance.new("TextLabel")
+    tml.Size = UDim2.new(1, -8, 0, 13)
+    tml.Position = UDim2.new(0, 4, 0, 128)
+    tml.BackgroundTransparency = 1
+    tml.Text = "🕐 "..ut
+    tml.TextColor3 = Colors.Primary
+    tml.TextSize = 8
+    tml.Font = Enum.Font.Gotham
+    tml.TextXAlignment = Enum.TextXAlignment.Left
+    tml.Parent = card
+
+    -- Botões
+    local isSavedTab = (tabName == "Saved")
+    local btnWidth = isSavedTab and 0.31 or 0.48
+
+    local vb = Instance.new("TextButton")
+    vb.Size = UDim2.new(btnWidth, -2, 0, 22)
+    vb.Position = UDim2.new(0, 4, 0, 148)
+    vb.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
+    vb.Text = T("View")
+    vb.TextColor3 = Colors.Text
+    vb.TextSize = 9
+    vb.Font = Enum.Font.GothamMedium
+    vb.Parent = card
+    Instance.new("UICorner", vb).CornerRadius = UDim.new(1, 0)
+
+    local rb = Instance.new("TextButton")
+    rb.Size = UDim2.new(btnWidth, -2, 0, 22)
+    rb.Position = UDim2.new(isSavedTab and 0.33 or 0.52, 0, 0, 148)
+    rb.BackgroundColor3 = Colors.Primary
+    rb.Text = T("Execute")
+    rb.TextColor3 = Colors.White
+    rb.TextSize = 9
+    rb.Font = Enum.Font.GothamBold
+    rb.Parent = card
+    Instance.new("UICorner", rb).CornerRadius = UDim.new(1, 0)
+
+    -- Botão Teleportar
+    local tpBtn = Instance.new("TextButton")
+    tpBtn.Size = UDim2.new(0.22, -2, 0, 22)
+    tpBtn.Position = UDim2.new(0.76, 0, 0, 148)
+    tpBtn.BackgroundColor3 = Color3.fromRGB(40, 140, 220)
+    tpBtn.Text = T("Teleport")
+    tpBtn.TextColor3 = Colors.White
+    tpBtn.TextSize = 8
+    tpBtn.Font = Enum.Font.GothamBold
+    tpBtn.Visible = gid \~= nil
+    tpBtn.Parent = card
+    Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(1, 0)
+
+    -- Botão Remover (só na aba Salvos)
+    local removeBtn = nil
+    if isSavedTab then
+        removeBtn = Instance.new("TextButton")
+        removeBtn.Size = UDim2.new(0.22, -2, 0, 22)
+        removeBtn.Position = UDim2.new(0.54, 0, 0, 148)
+        removeBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 40)
+        removeBtn.Text = T("Remove")
+        removeBtn.TextColor3 = Colors.White
+        removeBtn.TextSize = 8
+        removeBtn.Font = Enum.Font.GothamBold
+        removeBtn.Parent = card
+        Instance.new("UICorner", removeBtn).CornerRadius = UDim.new(1, 0)
+        
+        removeBtn.MouseButton1Click:Connect(function()
+            local idToRemove = data._id or data.slug or data.title
+            for i = #SavedScriptsList, 1, -1 do
+                local s = SavedScriptsList[i]
+                local sid = s._id or s.slug or s.title
+                if sid == idToRemove then
+                    table.remove(SavedScriptsList, i)
+                    break
+                end
+            end
+            SaveScriptsToFile()
+            card:Destroy()
+            state.totalLoaded = math.max(0, state.totalLoaded - 1)
+            UpdateUIState()
+        end)
+    end
+
+    card.MouseEnter:Connect(function() TweenService:Create(cs, TweenInfo.new(0.15), {Color = Colors.Primary}):Play() end)
+    card.MouseLeave:Connect(function() TweenService:Create(cs, TweenInfo.new(0.15), {Color = isCur and Colors.Yellow or Colors.Border}):Play() end)
+
+    vb.MouseButton1Click:Connect(function()
+        currentScriptData = data
+        currentScriptForView = data.script or "-- No script provided"
+        currentUrlForView = GetScriptUrl(data)
+        
+        MT.Text = "📜 "..(data.title or "Script")
+        GB.Text = "🎮 "..gname
+        SB.Text = data.isPatched and T("Patched") or T("Working")
+        SB.BackgroundColor3 = data.isPatched and Colors.Red or Colors.Primary
+        
+        ML.Text = string.format("❤️ %s | 👎 %s", FormatNumber(likes), FormatNumber(dislikes))
+        SC.Text = currentScriptForView
+
+        SaveScriptBtn.Text = IsScriptSaved(data) and T("AlreadySaved") or T("SaveScript")
+
+        CommentsTabBtn.Text = string.format(T("Comments"), 0)
+        SwitchModalTab("Desc")
+        ModalOverlay.Visible = true
+
+        if data.slug then FetchScriptDetails(data.slug) end
+        if data._id then FetchAndRenderComments(data._id) end
+    end)
+
+    rb.MouseButton1Click:Connect(function()
+        local s = data.script or ""
+        if s \~= "" then
+            PromptExecute(data.title or "Script", function(confirmed)
+                if confirmed then
+                    rb.Text = "⏳..."
+                    task.spawn(function()
+                        local ok = pcall(function() loadstring(s)() end)
+                        rb.Text = ok and "✓ Executed" or "✕ Error"
+                        task.delay(1, function() rb.Text = T("Execute") end)
+                    end)
+                end
+            end)
+        end
+    end)
+
+    tpBtn.MouseButton1Click:Connect(function()
+        if gid then
+            tpBtn.Text = "⏳..."
+            pcall(function()
+                TeleportService:Teleport(tonumber(gid), LocalPlayer)
+            end)
+            task.delay(1.5, function() tpBtn.Text = T("Teleport") end)
+        end
+    end)
+
+    return true
+end
+
+local function LoadSavedScriptsTab()
+    ClearContent("Saved")
+    TabData.Saved = { page = 1, hasMore = false, isLoading = false, totalLoaded = 0, totalApi = 0, query = nil, seen = {} }
+    
+    if #SavedScriptsList > 0 then
+        for idx, item in ipairs(SavedScriptsList) do
+            CreateCard(item, idx, "Saved")
+        end
+    else
+        local empty = Instance.new("TextLabel")
+        empty.Size = UDim2.new(1, 0, 0, 40)
+        empty.BackgroundTransparency = 1
+        empty.Text = T("NoSaved")
+        empty.TextColor3 = Colors.SubText
+        empty.TextSize = 13
+        empty.Font = Enum.Font.Gotham
+        empty.Parent = Containers.Saved
+    end
+    UpdateUIState()
+end
+
+local function LoadPage(tabName)
+    if tabName == "Saved" then
+        LoadSavedScriptsTab()
+        return
+    end
+
+    local state = TabData[tabName]
+    if state.isLoading or not state.hasMore then return end
+    
+    state.isLoading = true
+    if CurrentTab == tabName then LoadingFrame.Visible = true end
+
+    task.spawn(function()
+        local url
+        if state.query and state.query \~= "" then 
+            url = string.format("https://scriptblox.com/api/script/search?q=%s&page=%d&max=%d", HttpService:UrlEncode(state.query), state.page, maxPerPage)
+        else 
+            url = string.format("https://scriptblox.com/api/script/fetch?page=%d&max=%d", state.page, maxPerPage) 
+        end
+
+        local result = HttpRequest(url)
+        if CurrentTab == tabName then LoadingFrame.Visible = false end
+
+        if result and result.result then
+            local scripts = result.result.scripts or {}
+            local totalPages = result.result.totalPages or 1
+            state.totalApi = result.result.total or state.totalApi
+
+            if #scripts > 0 then
+                for _, d in ipairs(scripts) do CreateCard(d, state.totalLoaded + 1, tabName) end
+                state.page = state.page + 1
+                state.hasMore = state.page <= totalPages
+            else 
+                state.hasMore = false 
+            end
+        else 
+            state.hasMore = false 
+        end
+
+        state.isLoading = false
+        if CurrentTab == tabName then 
+            UpdateUIState()
+            task.defer(function()
+                if Containers[tabName] then
+                    local grid = Containers[tabName]:FindFirstChildOfClass("UIGridLayout")
+                    if grid then 
+                        Containers[tabName].CanvasSize = UDim2.new(0, 0, 0, grid.AbsoluteContentSize.Y + 20) 
+                    end
+                end
+            end) 
+        end
+    end)
+end
+
+local function TriggerSearch(query)
+    CurrentTab = "Search"
+    TabData.Search = { page = 1, hasMore = true, isLoading = false, totalLoaded = 0, totalApi = 0, query = query, seen = {} }
+    ClearContent("Search")
+    UpdateUIState()
+    LoadPage("Search")
+end
+
+local function UpdateLanguage()
+    SearchBox.PlaceholderText = T("SearchPlaceholder")
+    FreeTab.Text = T("TabAll")
+    ThisGameTab.Text = T("TabThisGame")
+    SavedTab.Text = T("TabSaved")
+    RefreshTab.Text = T("TabRefresh")
+    ConfirmText.Text = T("ConfirmUI")
+    ConfirmYes.Text = T("Yes")
+    ConfirmCancel.Text = T("Cancel")
+    ExecConfirmText.Text = T("ConfirmExec")
+    ExecConfirmYes.Text = T("Yes")
+    ExecConfirmCancel.Text = T("Cancel")
+    DescTabBtn.Text = T("Desc")
+    CodeTabBtn.Text = T("Code")
+    CopyScriptBtn.Text = T("CopyScript")
+    CopyUrlBtn.Text = T("CopyUrl")
+    SaveScriptBtn.Text = T("SaveScript")
+    
+    if currentLang == "PT" then
+        LangBtn.Text = "🇧🇷"
+    else
+        LangBtn.Text = "🇺🇸"
+    end
+    
+    UpdateUIState()
+end
+
+local function SwitchToFree()
+    CurrentTab = "Free"
+    UpdateUIState()
+    if TabData.Free.totalLoaded == 0 then LoadPage("Free") end
+end
+
+local function SwitchToThisGame()
+    CurrentTab = "ThisGame"
+    UpdateUIState()
+    
+    local queryId = tostring(CurrentGameId)
+    
+    if TabData.ThisGame.query \~= queryId or TabData.ThisGame.totalLoaded == 0 then
+        TabData.ThisGame = { page = 1, hasMore = true, isLoading = false, totalLoaded = 0, totalApi = 0, query = queryId, seen = {} }
+        ClearContent("ThisGame")
+        LoadPage("ThisGame")
+    end
+end
+
+LangBtn.MouseButton1Click:Connect(function()
+    if currentLang == "PT" then
+        currentLang = "EN"
+    else
+        currentLang = "PT"
+    end
+    UpdateLanguage()
+    
+    if CurrentTab == "ThisGame" then
+        SwitchToThisGame()
+    end
+end)
+
+local function SwitchToSaved()
+    CurrentTab = "Saved"
+    LoadSavedScriptsTab()
+end
+
+local function RefreshCurrentTab()
+    local tab = CurrentTab
+    local q = TabData[tab].query
+    ClearContent(tab)
+    if tab == "Saved" then
+        LoadSavedScriptsTab()
+    else
+        if tab == "ThisGame" then
+            q = tostring(CurrentGameId)
+        end
+        TabData[tab] = { page = 1, hasMore = true, isLoading = false, totalLoaded = 0, totalApi = 0, query = q, seen = {} }
+        UpdateUIState()
+        LoadPage(tab)
+    end
+end
+
+task.spawn(function()
+    while ScreenGui.Parent do
+        task.wait(0.25)
+        if not MainFrame.Visible or ModalOverlay.Visible or ConfirmOverlay.Visible or ExecConfirmOverlay.Visible then continue end
+        local activeContainer = Containers[CurrentTab]
+        local state = TabData[CurrentTab]
+        if not activeContainer or state.isLoading or not state.hasMore or CurrentTab == "Saved" then continue end
+        local scrollPos = activeContainer.CanvasPosition.Y
+        local canvasH = activeContainer.CanvasSize.Y.Offset
+        local frameH = activeContainer.AbsoluteSize.Y
+        if canvasH <= frameH + 50 or (canvasH - scrollPos - frameH < 400) then LoadPage(CurrentTab) end
+    end
+end)
+
+for _, sf in pairs(Containers) do
+    sf:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+        if sf.Visible and CurrentTab \~= "Saved" then
+            local state = TabData[CurrentTab]
+            if state.isLoading or not state.hasMore then return end
+            if sf.CanvasSize.Y.Offset - sf.CanvasPosition.Y - sf.AbsoluteSize.Y < 300 then 
+                task.defer(function() LoadPage(CurrentTab) end) 
+            end
+        end
+    end)
+end
+
+SearchBtn.MouseButton1Click:Connect(function() 
+    local t = SearchBox.Text
+    if t and t \~= "" then TriggerSearch(t) end 
+end)
+
+SearchBox.FocusLost:Connect(function(e) 
+    if e then 
+        local t = SearchBox.Text
+        if t and t \~= "" then TriggerSearch(t) end 
+    end 
+end)
+
+FreeTab.MouseButton1Click:Connect(function() SwitchToFree() end)
+ThisGameTab.MouseButton1Click:Connect(function() SwitchToThisGame() end)
+SavedTab.MouseButton1Click:Connect(function() SwitchToSaved() end)
+RefreshTab.MouseButton1Click:Connect(function() RefreshCurrentTab() end)
+
+task.spawn(function() SwitchToFree() end)
