@@ -1,0 +1,2937 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local SoundService = game:GetService("SoundService")
+local Lighting = game:GetService("Lighting")
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+local playerGui = player:WaitForChild("PlayerGui")
+
+for _, v in ipairs(playerGui:GetChildren()) do
+    if v.Name == "LZN_TelekinesisIntro" or v.Name == "LZN_LanguagePopup" then
+        v:Destroy()
+    end
+end
+
+for _, v in ipairs(Lighting:GetChildren()) do
+    if v.Name == "LZN_Blur" then
+        v:Destroy()
+    end
+end
+
+local selectedLang = "pt"
+
+local function playCustomSound(id, vol)
+    pcall(function()
+        local s = Instance.new("Sound")
+        s.SoundId = "rbxassetid://" .. tostring(id)
+        s.Volume = vol or 0.5
+        s.Parent = SoundService
+        s:Play()
+        task.delay(3, function() s:Destroy() end)
+    end)
+end
+
+local blur = Instance.new("BlurEffect")
+blur.Name = "LZN_Blur"
+blur.Size = 0
+blur.Parent = Lighting
+
+playCustomSound("129084748747846", 0.6)
+
+local langGui = Instance.new("ScreenGui")
+langGui.Name = "LZN_LanguagePopup"
+langGui.IgnoreGuiInset = true
+langGui.ResetOnSpawn = false
+langGui.DisplayOrder = 1000000
+langGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+langGui.Parent = playerGui
+
+local langBg = Instance.new("Frame")
+langBg.Size = UDim2.fromScale(1, 1)
+langBg.BackgroundColor3 = Color3.fromRGB(5, 10, 20)
+langBg.BackgroundTransparency = 1
+langBg.BorderSizePixel = 0
+langBg.Parent = langGui
+
+for i = 1, 40 do
+    local snow = Instance.new("Frame")
+    snow.Size = UDim2.fromOffset(math.random(3, 6), math.random(3, 6))
+    snow.Position = UDim2.fromScale(math.random(), math.random(-0.2, 0))
+    snow.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    snow.BackgroundTransparency = 1
+    snow.BorderSizePixel = 0
+    snow.Parent = langBg
+    local sc = Instance.new("UICorner") sc.CornerRadius = UDim.new(1, 0) sc.Parent = snow
+    task.spawn(function()
+        while langGui.Parent and snow.Parent do
+            local speed = math.random(4, 10)
+            local tw = TweenService:Create(snow, TweenInfo.new(speed, Enum.EasingStyle.Linear), {
+                Position = UDim2.fromScale(snow.Position.X.Scale + math.random(-10, 10)/100, 1.1)
+            })
+            tw:Play()
+            tw.Completed:Wait()
+            if snow.Parent then
+                snow.Position = UDim2.fromScale(math.random(), -0.1)
+            end
+        end
+    end)
+end
+
+local titlePt = Instance.new("TextLabel")
+titlePt.Size = UDim2.new(1, 0, 0, 40)
+titlePt.Position = UDim2.new(0, 0, 0.3, -60)
+titlePt.BackgroundTransparency = 1
+titlePt.Font = Enum.Font.GothamBold
+titlePt.Text = "🇧🇷 Qual sua linguagem?"
+titlePt.TextColor3 = Color3.fromRGB(240, 248, 255)
+titlePt.TextSize = 22
+titlePt.TextTransparency = 1
+titlePt.Parent = langBg
+
+local titleEn = Instance.new("TextLabel")
+titleEn.Size = UDim2.new(1, 0, 0, 40)
+titleEn.Position = UDim2.new(0, 0, 0.3, -20)
+titleEn.BackgroundTransparency = 1
+titleEn.Font = Enum.Font.GothamBold
+titleEn.Text = "🇺🇸 What is your language?"
+titleEn.TextColor3 = Color3.fromRGB(200, 220, 255)
+titleEn.TextSize = 20
+titleEn.TextTransparency = 1
+titleEn.Parent = langBg
+
+local btnPt = Instance.new("TextButton")
+btnPt.Size = UDim2.new(0, 220, 0, 50)
+btnPt.Position = UDim2.new(0.5, -115, 0.5, -10)
+btnPt.BackgroundColor3 = Color3.fromRGB(15, 30, 60)
+btnPt.BackgroundTransparency = 1
+btnPt.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnPt.TextSize = 16
+btnPt.Font = Enum.Font.GothamBold
+btnPt.Text = "🇧🇷 Português"
+btnPt.TextTransparency = 1
+btnPt.Parent = langBg
+local bpC = Instance.new("UICorner") bpC.CornerRadius = UDim.new(0, 10) bpC.Parent = btnPt
+local bpS = Instance.new("UIStroke") bpS.Color = Color3.fromRGB(0, 150, 255) bpS.Thickness = 1.5 bpS.Transparency = 1 bpS.Parent = btnPt
+
+local btnEn = Instance.new("TextButton")
+btnEn.Size = UDim2.new(0, 220, 0, 50)
+btnEn.Position = UDim2.new(0.5, -115, 0.5, 55)
+btnEn.BackgroundColor3 = Color3.fromRGB(15, 30, 60)
+btnEn.BackgroundTransparency = 1
+btnEn.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnEn.TextSize = 16
+btnEn.Font = Enum.Font.GothamBold
+btnEn.Text = "🇺🇸 English"
+btnEn.TextTransparency = 1
+btnEn.Parent = langBg
+local beC = Instance.new("UICorner") beC.CornerRadius = UDim.new(0, 10) beC.Parent = btnEn
+local beS = Instance.new("UIStroke") beS.Color = Color3.fromRGB(0, 150, 255) beS.Thickness = 1.5 beS.Transparency = 1 beS.Parent = btnEn
+
+local fadeInInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+TweenService:Create(langBg, fadeInInfo, {BackgroundTransparency = 0.2}):Play()
+TweenService:Create(blur, fadeInInfo, {Size = 24}):Play()
+TweenService:Create(titlePt, fadeInInfo, {TextTransparency = 0}):Play()
+TweenService:Create(titleEn, fadeInInfo, {TextTransparency = 0}):Play()
+TweenService:Create(btnPt, fadeInInfo, {BackgroundTransparency = 0.2, TextTransparency = 0}):Play()
+TweenService:Create(bpS, fadeInInfo, {Transparency = 0}):Play()
+TweenService:Create(btnEn, fadeInInfo, {BackgroundTransparency = 0.2, TextTransparency = 0}):Play()
+TweenService:Create(beS, fadeInInfo, {Transparency = 0}):Play()
+for _, d in ipairs(langBg:GetChildren()) do
+    if d:IsA("Frame") and d ~= btnPt and d ~= btnEn then
+        TweenService:Create(d, fadeInInfo, {BackgroundTransparency = 0.3}):Play()
+    end
+end
+
+local langChosen = false
+
+local function closePopup()
+    if not langGui or not langGui.Parent then
+        if blur and blur.Parent then
+            blur:Destroy()
+        end
+        return
+    end
+
+    local fadeOutInfo = TweenInfo.new(
+        0.55,
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.In
+    )
+
+    local tweens = {}
+
+    local function addTween(object, properties)
+        if object and object.Parent then
+            local tween = TweenService:Create(
+                object,
+                fadeOutInfo,
+                properties
+            )
+
+            table.insert(tweens, tween)
+            tween:Play()
+        end
+    end
+
+    for _, object in ipairs(langGui:GetDescendants()) do
+        if object:IsA("TextButton") then
+            addTween(object, {
+                BackgroundTransparency = 1,
+                TextTransparency = 1,
+                TextStrokeTransparency = 1
+            })
+
+        elseif object:IsA("TextLabel") then
+            addTween(object, {
+                BackgroundTransparency = 1,
+                TextTransparency = 1,
+                TextStrokeTransparency = 1
+            })
+
+        elseif object:IsA("ImageLabel") or object:IsA("ImageButton") then
+            addTween(object, {
+                BackgroundTransparency = 1,
+                ImageTransparency = 1
+            })
+
+        elseif object:IsA("Frame") then
+            addTween(object, {
+                BackgroundTransparency = 1
+            })
+
+        elseif object:IsA("UIStroke") then
+            addTween(object, {
+                Transparency = 1
+            })
+        end
+    end
+
+    if blur and blur.Parent then
+        addTween(blur, {
+            Size = 0
+        })
+    end
+
+    task.wait(0.6)
+
+    if langGui and langGui.Parent then
+        langGui:Destroy()
+    end
+
+    if blur and blur.Parent then
+        blur:Destroy()
+    end
+end
+
+btnPt.MouseButton1Click:Connect(function()
+    if langChosen then return end
+    langChosen = true
+    selectedLang = "pt"
+    playCustomSound("113198246776989", 0.6)
+    closePopup()
+end)
+
+btnEn.MouseButton1Click:Connect(function()
+    if langChosen then return end
+    langChosen = true
+    selectedLang = "en"
+    playCustomSound("134085140066247", 0.6)
+    closePopup()
+end)
+
+repeat task.wait(0.1) until langChosen
+
+local T = {
+    pt = {
+        welcome = "Oii, muito obrigado(a) por usar meu script!\nSeu fofinho(a)^•^",
+        init = "INICIALIZANDO...",
+        loading = "CARREGANDO INTERFACE...",
+        effects = "APLICANDO EFEITOS...",
+        sync = "SINCRONIZANDO MÓDULOS...",
+        final = "FINALIZANDO...",
+        welcomeHub = "BEM-VINDO AO LZN",
+        connDone = "INICIALIZAÇÃO CONCLUÍDA",
+        tabMain = "Principal",
+        tabMove = "Move",
+        tabConfig = "Config",
+        grab = "Grab",
+        selectObj = "Selecionar Objeto",
+        drop = "Drop",
+        freeze = "Freeze",
+        dropAll = "Drop All",
+        showPart = "Mostrar Parte",
+        throw = "Jogar",
+        throwForce = "Força do Arremesso (Ex: 100)",
+        bring = "Trazer de Volta",
+        spinCont = "Giro Contínuo",
+        spin3D = "Giro 3D Completo",
+        spinSpd = "Velocidade do Giro",
+        returnOne = "Voltar ao Lugar",
+        returnAll = "Voltar TUDO ao Lugar",
+        forward = "Ir para Frente (+)",
+        backward = "Ir para Trás (-)",
+        moveSpdText = "Velocidade Distância / Movimento",
+        turnLeft = "Girar Esquerda",
+        turnRight = "Girar Direita",
+        turnUp = "Girar Cima",
+        turnDown = "Girar Baixo",
+        turnSideL = "Girar Lado Esq",
+        turnSideR = "Girar Lado Dir",
+        crosshair = "Crosshair (Mira)",
+        multiSel = "Selecionar Coisa (Multi)",
+        crossUp = "Mira Cima",
+        crossDown = "Mira Baixo",
+        crossLeft = "Mira Esquerda",
+        crossRight = "Mira Direita",
+        resetCross = "Resetar Mira",
+        destroyHub = "Destruir Hub",
+        statusHudTitle = "LZN STATUS HUD",
+        selectedCount = "Selecionados: ",
+        grabStatus = "Grab: ",
+        spinStatus = "Giro: ",
+        speedMoveLbl = "Velocidade Move:",
+        forceThrowLbl = "Força Jogar:",
+        statusToggle = "Status HUD",
+        creditsTitle = "Créditos",
+        creditsDesc = "eu (Lezin) que criei esse script KK😉sim essa sou eu...😖",
+        updatesTitle = "Atualizações (17/10/2026)",
+        updatesDesc = "• Layout da aba Config corrigido\n• Fade in e fade out do popup de idioma ajustados\n• Mensagens dinâmicas no botão flutuante\n• Correções gerais de estabilidade",
+        active = "Ativo",
+        inactive = "Inativo",
+        notifGrabOn = "Grab desativado (Solto): ",
+        notifGrabApp = "Grab aplicado em: ",
+        notifGrabbed = "Agarrado: [",
+        notifNoObj = "Nenhum objeto encontrado!",
+        notifSelected = "Selecionado: [",
+        notifAlreadySel = "Já selecionado: [",
+        notifNoAim = "Nenhum item sob a mira!",
+        notifDroppedMulti = "Soltos (Multi): ",
+        notifUnfrozen = "Descongelado: [",
+        notifDropped = "Solto: ",
+        notifFrozenMulti = "Congelados (Multi): ",
+        notifAltFreeze = "Alternado congelamento: ",
+        notifFrozen = "Congelado: [",
+        notifNoValid = "Nenhum item válido!",
+        notifDropAll = "Drop All: Tudo foi solto e descongelado!",
+        notifShowPart = "Mostrar parte: ",
+        notifThrownMulti = "Jogados (Multi): ",
+        notifThrown = "Jogado com força ",
+        notifNoHeldThrow = "Nenhum objeto segurado para jogar!",
+        notifBringMulti = "Trazidos de volta: ",
+        notifBringOne = "Trazido de volta: ",
+        notifSpinCont = "Giro Contínuo: ",
+        notifSpin3D = "Giro 3D Completo: ",
+        notifSpinSpdVal = "Velocidade do giro: ",
+        notifReturnMulti = "Retornados ao lugar: ",
+        notifReturnOne = "Retornado ao lugar: ",
+        notifNoOriginal = "Nenhum local original salvo!",
+        notifAllReturned = "Tudo (%d itens) retornado ao lugar!",
+        notifSpeedUpd = "Velocidade atualizada: ",
+        notifCrossOn = "Crosshair: ",
+        notifMultiOn = "Multi-seleção: ",
+        notifCrossReset = "Posição da mira resetada!",
+        btnCreated = "Botão móvel criado: ",
+        btnHoldCreated = "Botão móvel de segurar criado: ",
+        btnRemoved = "External button removed: ",
+        itemRemoved = "Item removed: ["
+    },
+    en = {
+        welcome = "Hey, thank you so much for using my script!\nYou cutie^•^",
+        init = "INITIALIZING...",
+        loading = "LOADING INTERFACE...",
+        effects = "APPLYING EFFECTS...",
+        sync = "SYNCHRONIZING MODULES...",
+        final = "FINALIZING...",
+        welcomeHub = "WELCOME TO LZN",
+        connDone = "INITIALIZATION COMPLETE",
+        tabMain = "Main",
+        tabMove = "Move",
+        tabConfig = "Config",
+        grab = "Grab",
+        selectObj = "Select Object",
+        drop = "Drop",
+        freeze = "Freeze",
+        dropAll = "Drop All",
+        showPart = "Show Part",
+        throw = "Throw",
+        throwForce = "Throw Force (Ex: 100)",
+        bring = "Bring Back",
+        spinCont = "Continuous Spin",
+        spin3D = "Full 3D Spin",
+        spinSpd = "Spin Speed",
+        returnOne = "Return to Place",
+        returnAll = "Return ALL to Place",
+        forward = "Move Forward (+)",
+        backward = "Move Backward (-)",
+        moveSpdText = "Distance / Movement Speed",
+        turnLeft = "Turn Left",
+        turnRight = "Turn Right",
+        turnUp = "Turn Up",
+        turnDown = "Turn Down",
+        turnSideL = "Turn Side L",
+        turnSideR = "Turn Side R",
+        crosshair = "Crosshair",
+        multiSel = "Multi-Select",
+        crossUp = "Cross Up",
+        crossDown = "Cross Down",
+        crossLeft = "Cross Left",
+        crossRight = "Cross Right",
+        resetCross = "Reset Crosshair",
+        destroyHub = "Destroy Hub",
+        statusHudTitle = "LZN STATUS HUD",
+        selectedCount = "Selected: ",
+        grabStatus = "Grab: ",
+        spinStatus = "Spin: ",
+        speedMoveLbl = "Move Speed:",
+        forceThrowLbl = "Throw Force:",
+        statusToggle = "Status HUD",
+        creditsTitle = "Credits",
+        creditsDesc = "me (Lezin) created this script LOL😉 yes that's me...😖",
+        updatesTitle = "Updates (10/17/2026)",
+        updatesDesc = "• Config tab layout fixed\n• Language popup fade in/out adjusted\n• Floating button dynamic messages\n• General stability fixes",
+        active = "Active",
+        inactive = "Inactive",
+        notifGrabOn = "Grab disabled (Dropped): ",
+        notifGrabApp = "Grab applied to: ",
+        notifGrabbed = "Grabbed: [",
+        notifNoObj = "No object found!",
+        notifSelected = "Selected: [",
+        notifAlreadySel = "Already selected: [",
+        notifNoAim = "No item under crosshair!",
+        notifDroppedMulti = "Dropped (Multi): ",
+        notifUnfrozen = "Unfrozen: [",
+        notifDropped = "Dropped: ",
+        notifFrozenMulti = "Frozen (Multi): ",
+        notifAltFreeze = "Toggled freeze: ",
+        notifFrozen = "Frozen: [",
+        notifNoValid = "No valid item!",
+        notifDropAll = "Drop All: Everything dropped and unfrozen!",
+        notifShowPart = "Show part: ",
+        notifThrownMulti = "Thrown (Multi): ",
+        notifThrown = "Thrown with force ",
+        notifNoHeldThrow = "No held object to throw!",
+        notifBringMulti = "Brought back: ",
+        notifBringOne = "Brought back: ",
+        notifSpinCont = "Continuous Spin: ",
+        notifSpin3D = "Full 3D Spin: ",
+        notifSpinSpdVal = "Spin speed: ",
+        notifReturnMulti = "Returned to place: ",
+        notifReturnOne = "Returned to place: ",
+        notifNoOriginal = "No original position saved!",
+        notifAllReturned = "All (%d items) returned to place!",
+        notifSpeedUpd = "Speed updated: ",
+        notifCrossOn = "Crosshair: ",
+        notifMultiOn = "Multi-select: ",
+        notifCrossReset = "Crosshair position reset!",
+        btnCreated = "Mobile button created: ",
+        btnHoldCreated = "Mobile hold button created: ",
+        btnRemoved = "External button removed: ",
+        itemRemoved = "Item removed: ["
+    }
+}
+local L = T[selectedLang]
+
+local introGui = Instance.new("ScreenGui")
+introGui.Name = "LZN_TelekinesisIntro"
+introGui.IgnoreGuiInset = true
+introGui.ResetOnSpawn = false
+introGui.DisplayOrder = 999999
+introGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+introGui.Parent = playerGui
+
+local background = Instance.new("Frame")
+background.Name = "Background"
+background.Size = UDim2.fromScale(1, 1)
+background.BackgroundColor3 = Color3.fromRGB(2, 7, 17)
+background.BorderSizePixel = 0
+background.Parent = introGui
+
+local bgGradient = Instance.new("UIGradient")
+bgGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(1, 4, 12)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(3, 20, 48)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(1, 4, 12))
+})
+bgGradient.Rotation = 35
+bgGradient.Parent = background
+
+local grid = Instance.new("Frame")
+grid.Name = "TechGrid"
+grid.Size = UDim2.fromScale(1, 1)
+grid.BackgroundTransparency = 1
+grid.BorderSizePixel = 0
+grid.Parent = background
+
+for x = 0, 10 do
+    local line = Instance.new("Frame")
+    line.Name = "VerticalGrid"
+    line.Position = UDim2.fromScale(x / 10, 0)
+    line.Size = UDim2.new(0, 1, 1, 0)
+    line.BackgroundColor3 = Color3.fromRGB(14, 91, 164)
+    line.BackgroundTransparency = 0.88
+    line.BorderSizePixel = 0
+    line.Parent = grid
+end
+
+for y = 0, 7 do
+    local line = Instance.new("Frame")
+    line.Name = "HorizontalGrid"
+    line.Position = UDim2.fromScale(0, y / 7)
+    line.Size = UDim2.new(1, 0, 0, 1)
+    line.BackgroundColor3 = Color3.fromRGB(14, 91, 164)
+    line.BackgroundTransparency = 0.9
+    line.BorderSizePixel = 0
+    line.Parent = grid
+end
+
+local function makeLabel(name, text, size, position, font, color)
+    local label = Instance.new("TextLabel")
+    label.Name = name
+    label.BackgroundTransparency = 1
+    label.Size = size
+    label.Position = position
+    label.Font = font
+    label.Text = text
+    label.TextColor3 = color
+    label.TextScaled = true
+    label.TextWrapped = true
+    label.Parent = background
+    return label
+end
+
+local topLogo = makeLabel("SmallLogo", "LZN", UDim2.fromScale(0.16, 0.055), UDim2.fromScale(0.055, 0.045), Enum.Font.GothamBlack, Color3.fromRGB(0, 145, 255))
+topLogo.TextXAlignment = Enum.TextXAlignment.Left
+topLogo.TextStrokeTransparency = 0.55
+topLogo.TextStrokeColor3 = Color3.fromRGB(0, 110, 255)
+
+local topLine = Instance.new("Frame")
+topLine.Position = UDim2.fromScale(0.19, 0.045)
+topLine.Size = UDim2.new(0, 2, 0.065, 0)
+topLine.BackgroundColor3 = Color3.fromRGB(40, 194, 255)
+topLine.BorderSizePixel = 0
+topLine.Parent = background
+
+local welcome = makeLabel("WelcomeText", L.welcome, UDim2.fromScale(0.66, 0.075), UDim2.fromScale(0.22, 0.04), Enum.Font.GothamMedium, Color3.fromRGB(207, 232, 255))
+welcome.TextXAlignment = Enum.TextXAlignment.Left
+welcome.TextYAlignment = Enum.TextYAlignment.Center
+welcome.TextSize = 16
+
+local version = makeLabel("Version", "LZN TELEKINESIS V7", UDim2.fromScale(0.6, 0.035), UDim2.fromScale(0.2, 0.19), Enum.Font.GothamBold, Color3.fromRGB(97, 205, 255))
+version.TextSize = 15
+version.TextStrokeTransparency = 0.8
+
+local crown = makeLabel("Crown", "♛", UDim2.fromScale(0.12, 0.075), UDim2.fromScale(0.44, 0.265), Enum.Font.GothamBold, Color3.fromRGB(72, 215, 255))
+crown.TextStrokeTransparency = 0.4
+crown.TextStrokeColor3 = Color3.fromRGB(0, 115, 255)
+
+local logo = makeLabel("MainLogo", "LZN", UDim2.fromScale(0.76, 0.25), UDim2.fromScale(0.12, 0.345), Enum.Font.GothamBlack, Color3.fromRGB(25, 151, 255))
+logo.TextStrokeColor3 = Color3.fromRGB(0, 191, 255)
+logo.TextStrokeTransparency = 0.15
+logo.TextScaled = true
+
+local logoGradient = Instance.new("UIGradient")
+logoGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 252, 255)),
+    ColorSequenceKeypoint.new(0.35, Color3.fromRGB(62, 193, 255)),
+    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(0, 93, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(153, 240, 255))
+})
+logoGradient.Rotation = 90
+logoGradient.Parent = logo
+
+local statusIntro = makeLabel("Status", L.init, UDim2.fromScale(0.7, 0.04), UDim2.fromScale(0.15, 0.66), Enum.Font.GothamBold, Color3.fromRGB(232, 247, 255))
+statusIntro.TextSize = 14
+statusIntro.TextStrokeTransparency = 0.8
+
+local barOuter = Instance.new("Frame")
+barOuter.Name = "ProgressBar"
+barOuter.AnchorPoint = Vector2.new(0.5, 0)
+barOuter.Position = UDim2.fromScale(0.5, 0.72)
+barOuter.Size = UDim2.fromScale(0.58, 0.012)
+barOuter.BackgroundColor3 = Color3.fromRGB(0, 20, 47)
+barOuter.BorderSizePixel = 0
+barOuter.ClipsDescendants = true
+barOuter.Parent = background
+
+local barCorner = Instance.new("UICorner") barCorner.CornerRadius = UDim.new(1, 0) barCorner.Parent = barOuter
+local barStroke = Instance.new("UIStroke") barStroke.Color = Color3.fromRGB(0, 140, 255) barStroke.Thickness = 1 barStroke.Transparency = 0.15 barStroke.Parent = barOuter
+
+local barFill = Instance.new("Frame")
+barFill.Name = "Fill"
+barFill.Size = UDim2.fromScale(0, 1)
+barFill.BackgroundColor3 = Color3.fromRGB(29, 172, 255)
+barFill.BorderSizePixel = 0
+barFill.Parent = barOuter
+
+local fillCorner = Instance.new("UICorner") fillCorner.CornerRadius = UDim.new(1, 0) fillCorner.Parent = barFill
+local fillGradient = Instance.new("UIGradient")
+fillGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 92, 255)),
+    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(53, 223, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(235, 255, 255))
+})
+fillGradient.Parent = barFill
+
+local percent = makeLabel("Percent", "0%", UDim2.fromScale(0.18, 0.04), UDim2.fromScale(0.41, 0.755), Enum.Font.GothamBold, Color3.fromRGB(66, 208, 255))
+percent.TextSize = 14
+
+local bottomStatus = makeLabel("BottomStatus", "CONECTANDO...  •  AGUARDE UM MOMENTO", UDim2.fromScale(0.72, 0.035), UDim2.fromScale(0.06, 0.92), Enum.Font.GothamMedium, Color3.fromRGB(163, 203, 230))
+bottomStatus.TextXAlignment = Enum.TextXAlignment.Left
+bottomStatus.TextSize = 10
+
+local signature = makeLabel("Signature", "by LZN", UDim2.fromScale(0.2, 0.055), UDim2.fromScale(0.75, 0.91), Enum.Font.GothamBold, Color3.fromRGB(0, 145, 255))
+signature.TextXAlignment = Enum.TextXAlignment.Right
+signature.TextSize = 17
+
+for i = 1, 32 do
+    local dot = Instance.new("Frame")
+    dot.Name = "Particle"
+    dot.AnchorPoint = Vector2.new(0.5, 0.5)
+    dot.Position = UDim2.fromScale(math.random(), math.random())
+    dot.Size = UDim2.fromOffset(math.random(2, 4), math.random(2, 4))
+    dot.BackgroundColor3 = (i % 3 == 0) and Color3.fromRGB(79, 229, 255) or Color3.fromRGB(0, 123, 255)
+    dot.BackgroundTransparency = math.random(15, 55) / 100
+    dot.BorderSizePixel = 0
+    dot.Parent = background
+    local round = Instance.new("UICorner") round.CornerRadius = UDim.new(1, 0) round.Parent = dot
+    task.spawn(function()
+        while introGui.Parent and dot.Parent do
+            local nextX = math.clamp(dot.Position.X.Scale + (math.random(-18, 18) / 100), 0, 1)
+            local nextY = math.clamp(dot.Position.Y.Scale - (math.random(5, 20) / 100), 0, 1)
+            local tween = TweenService:Create(dot, TweenInfo.new(math.random(12, 24) / 10, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Position = UDim2.fromScale(nextX, nextY),
+                BackgroundTransparency = math.random(20, 75) / 100
+            })
+            tween:Play()
+            tween.Completed:Wait()
+            if dot.Parent then
+                dot.Position = UDim2.fromScale(math.random(), 1.05)
+            end
+        end
+    end)
+end
+
+TweenService:Create(logo, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+    TextStrokeTransparency = 0.55
+}):Play()
+
+local startTime = os.clock()
+local duration = 4
+local lastStage = ""
+
+while introGui.Parent do
+    local elapsed = os.clock() - startTime
+    local alpha = math.clamp(elapsed / duration, 0, 1)
+    local smooth = 1 - ((1 - alpha) ^ 1.6)
+    barFill.Size = UDim2.fromScale(smooth, 1)
+    percent.Text = tostring(math.floor(smooth * 100)) .. "%"
+
+    local newStage
+    if alpha < 0.28 then
+        newStage = L.loading
+    elseif alpha < 0.56 then
+        newStage = L.effects
+    elseif alpha < 0.82 then
+        newStage = L.sync
+    else
+        newStage = L.final
+    end
+
+    if newStage ~= lastStage then
+        statusIntro.Text = newStage
+        lastStage = newStage
+    end
+
+    if alpha >= 1 then
+        break
+    end
+    task.wait(0.03)
+end
+
+if introGui.Parent then
+    statusIntro.Text = L.welcomeHub
+    bottomStatus.Text = L.connDone
+    playCustomSound("118235447189969", 0.7)
+    task.wait(0.18)
+
+    local fadeInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    for _, item in ipairs(introGui:GetDescendants()) do
+        if item:IsA("TextLabel") then
+            TweenService:Create(item, fadeInfo, {TextTransparency = 1, TextStrokeTransparency = 1}):Play()
+        elseif item:IsA("Frame") then
+            TweenService:Create(item, fadeInfo, {BackgroundTransparency = 1}):Play()
+        elseif item:IsA("UIStroke") then
+            TweenService:Create(item, fadeInfo, {Transparency = 1}):Play()
+        end
+    end
+    task.wait(0.5)
+    introGui:Destroy()
+end
+
+local bgSound = Instance.new("Sound")
+bgSound.SoundId = "rbxassetid://140256481202851"
+bgSound.Volume = 0.2
+bgSound.Looped = true
+bgSound.Parent = SoundService
+bgSound:Play()
+
+local activeTweens = {}
+local function flashButton(btn)
+    if not btn or not btn:IsA("GuiButton") then return end
+    if activeTweens[btn] then
+        pcall(function() activeTweens[btn]:Cancel() end)
+    end
+    local origBg = btn:GetAttribute("OrigBg")
+    local origTrans = btn:GetAttribute("OrigTrans")
+    if not origBg then
+        origBg = btn.BackgroundColor3
+        origTrans = btn.BackgroundTransparency
+        btn:SetAttribute("OrigBg", origBg)
+        btn:SetAttribute("OrigTrans", origTrans)
+    end
+    btn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    btn.BackgroundTransparency = 0.05
+    local tw = TweenService:Create(btn, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        BackgroundColor3 = origBg,
+        BackgroundTransparency = origTrans
+    })
+    activeTweens[btn] = tw
+    tw:Play()
+    tw.Completed:Connect(function()
+        if activeTweens[btn] == tw then
+            activeTweens[btn] = nil
+        end
+    end)
+end
+
+local function playClickSfx()
+    local sfx = Instance.new("Sound")
+    sfx.SoundId = "rbxassetid://131390520971848"
+    sfx.Volume = 0.4
+    sfx.Parent = SoundService
+    sfx:Play()
+    task.delay(2, function() sfx:Destroy() end)
+end
+
+local totalUsageTime = 0
+pcall(function()
+    if getgenv() then
+        if not getgenv().LZN_Hub_SavedTime then
+            getgenv().LZN_Hub_SavedTime = 0
+        end
+        totalUsageTime = tonumber(getgenv().LZN_Hub_SavedTime) or 0
+    end
+end)
+
+local function getRoleTag()
+    local name = player.Name
+    if name == "LZN_alice" then
+        return "owner✓"
+    elseif totalUsageTime >= 72000 then
+        return "fã^•^"
+    else
+        return "tester"
+    end
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LZN_Painel_Telekinesis"
+screenGui.ResetOnSpawn = false
+pcall(function() screenGui.Parent = CoreGui end)
+if not screenGui.Parent then
+    screenGui.Parent = player:WaitForChild("PlayerGui")
+end
+
+local notifContainer = Instance.new("Frame")
+notifContainer.Size = UDim2.new(0, 260, 1, -20)
+notifContainer.Position = UDim2.new(1, -270, 0, 10)
+notifContainer.BackgroundTransparency = 1
+notifContainer.Parent = screenGui
+
+local notifLayout = Instance.new("UIListLayout")
+notifLayout.SortOrder = Enum.SortOrder.LayoutOrder
+notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+notifLayout.Padding = UDim.new(0, 8)
+notifLayout.Parent = notifContainer
+
+local function notify(text)
+    local notif = Instance.new("Frame")
+    notif.Size = UDim2.new(1, 0, 0, 48)
+    notif.BackgroundColor3 = Color3.fromRGB(15, 18, 28)
+    notif.BorderSizePixel = 0
+    notif.BackgroundTransparency = 1
+    notif.Parent = notifContainer
+    
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 10) corner.Parent = notif
+    local stroke = Instance.new("UIStroke") stroke.Color = Color3.fromRGB(0, 200, 255) stroke.Transparency = 1 stroke.Thickness = 1.8 stroke.Parent = notif
+    
+    local grad = Instance.new("UIGradient")
+    grad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 30, 50)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 14, 22))
+    })
+    grad.Rotation = 45
+    grad.Parent = notif
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -16, 1, 0)
+    label.Position = UDim2.new(0, 12, 0, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(240, 248, 255)
+    label.TextSize = 12
+    label.Font = Enum.Font.GothamBold
+    label.Text = text
+    label.TextTransparency = 1
+    label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = notif
+    
+    TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundTransparency = 0.1}):Play()
+    TweenService:Create(stroke, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Transparency = 0.2}):Play()
+    TweenService:Create(label, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+    
+    task.delay(3, function()
+        TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(stroke, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Transparency = 1}):Play()
+        local t = TweenService:Create(label, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {TextTransparency = 1})
+        t:Play()
+        t.Completed:Connect(function() notif:Destroy() end)
+    end)
+end
+
+local crosshairPosOffset = Vector2.new(0, -35)
+local crosshairGui = Instance.new("ImageLabel")
+crosshairGui.Size = UDim2.new(0, 28, 0, 28)
+crosshairGui.Position = UDim2.new(0.5, -14 + crosshairPosOffset.X, 0.5, -14 + crosshairPosOffset.Y)
+crosshairGui.BackgroundTransparency = 1
+crosshairGui.Image = "rbxassetid://13413667409"
+crosshairGui.Visible = false
+crosshairGui.Parent = screenGui
+
+local function updateCrosshairPos()
+    crosshairGui.Position = UDim2.new(0.5, -14 + crosshairPosOffset.X, 0.5, -14 + crosshairPosOffset.Y)
+end
+
+local floatBtn = Instance.new("ImageButton")
+floatBtn.Size = UDim2.new(0, 56, 0, 56)
+floatBtn.Position = UDim2.new(0, 20, 0.4, 0)
+floatBtn.BackgroundColor3 = Color3.fromRGB(15, 18, 28)
+floatBtn.BackgroundTransparency = 0.15
+floatBtn.BorderSizePixel = 0
+floatBtn.Image = "rbxassetid://13084098893"
+floatBtn.ScaleType = Enum.ScaleType.Stretch
+floatBtn.Parent = screenGui
+
+local floatCorner = Instance.new("UICorner") floatCorner.CornerRadius = UDim.new(1, 0) floatCorner.Parent = floatBtn
+
+floatBtn.MouseButton1Click:Connect(function()
+    flashButton(floatBtn)
+end)
+
+local floatTextLabel = Instance.new("TextLabel")
+floatTextLabel.Size = UDim2.new(0, 220, 0, 50)
+floatTextLabel.Position = UDim2.new(0, -82, 0, -55)
+floatTextLabel.BackgroundTransparency = 1
+floatTextLabel.TextColor3 = Color3.fromRGB(0, 180, 255)
+floatTextLabel.TextSize = 11
+floatTextLabel.Font = Enum.Font.GothamBold
+floatTextLabel.TextWrapped = true
+floatTextLabel.TextTransparency = 1
+floatTextLabel.Parent = floatBtn
+
+local motivationalMessages = selectedLang == "en" and {
+    "hey cutie:3",
+    "how are you doing^~^?",
+    "you are amazing♥",
+    "my script may not be perfect, but I worked hard on it:D",
+    "remember: you can do amazing things✨",
+    "you are amazing♥ never forget that!",
+    "I hope you're having a wonderful day :D",
+    "thank you for trying my Hub, it means a lot to me(⁠⁠•⁠ᴗ⁠•⁠)⁠!"
+} or {
+    "oi, lindo(a):3",
+    "tudo bem^~^?",
+    "você é incrível♥",
+    "talvez meu script não seja perfeito, mas me esforcei muito para fazê-lo:D",
+    "lembre-se: você é capaz de coisas incríveis✨",
+    "você é incrível♥ nunca se esqueça disso!",
+    "espero que seu dia esteja sendo maravilhoso :D",
+    "obrigado(a) por testar meu Hub, significa muito para mim(⁠⁠•⁠ᴗ⁠•⁠)⁠!"
+}
+
+task.spawn(function()
+    local idx = 1
+    while screenGui.Parent do
+        local msg = motivationalMessages[idx]
+        floatTextLabel.Text = msg
+        TweenService:Create(floatTextLabel, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
+        task.wait(16)
+        if not screenGui.Parent then break end
+        TweenService:Create(floatTextLabel, TweenInfo.new(0.6), {TextTransparency = 1}):Play()
+        task.wait(0.8)
+        idx = idx + 1
+        if idx > #motivationalMessages then
+            idx = 1
+        end
+        task.wait(2)
+    end
+end)
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 460, 0, 420)
+mainFrame.Position = UDim2.new(0.5, -230, 0.5, -210)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12, 14, 22)
+mainFrame.BackgroundTransparency = 1
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local mainBgImage = Instance.new("ImageLabel")
+mainBgImage.Size = UDim2.new(1, 0, 1, 0)
+mainBgImage.Position = UDim2.new(0, 0, 0, 0)
+mainBgImage.BackgroundTransparency = 1
+mainBgImage.BorderSizePixel = 0
+mainBgImage.Image = "rbxassetid://107029983152126"
+mainBgImage.ScaleType = Enum.ScaleType.Stretch
+mainBgImage.ImageTransparency = 1
+mainBgImage.Parent = mainFrame
+
+local mainCorner = Instance.new("UICorner") mainCorner.CornerRadius = UDim.new(0, 14) mainCorner.Parent = mainFrame
+local mainStroke = Instance.new("UIStroke") mainStroke.Color = Color3.fromRGB(0, 200, 255) mainStroke.Transparency = 1 mainStroke.Thickness = 2.5 mainStroke.Parent = mainFrame
+
+local topHeader = Instance.new("Frame")
+topHeader.Size = UDim2.new(1, -20, 0, 50)
+topHeader.Position = UDim2.new(0, 10, 0, 8)
+topHeader.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+topHeader.BackgroundTransparency = 0.4
+topHeader.BorderSizePixel = 0
+topHeader.Parent = mainFrame
+
+local thCorner = Instance.new("UICorner") thCorner.CornerRadius = UDim.new(0, 10) thCorner.Parent = topHeader
+local thStroke = Instance.new("UIStroke") thStroke.Color = Color3.fromRGB(0, 160, 240) thStroke.Transparency = 0.6 thStroke.Parent = topHeader
+
+local profileImg = Instance.new("ImageLabel")
+profileImg.Size = UDim2.new(0, 38, 0, 38)
+profileImg.Position = UDim2.new(0, 6, 0, 6)
+profileImg.BackgroundTransparency = 1
+profileImg.BorderSizePixel = 0
+profileImg.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+profileImg.Parent = topHeader
+
+local pImgCorner = Instance.new("UICorner") pImgCorner.CornerRadius = UDim.new(1, 0) pImgCorner.Parent = profileImg
+
+local nameDisplay = Instance.new("TextLabel")
+nameDisplay.Size = UDim2.new(0, 180, 0, 18)
+nameDisplay.Position = UDim2.new(0, 50, 0, 6)
+nameDisplay.BackgroundTransparency = 1
+nameDisplay.TextColor3 = Color3.fromRGB(240, 245, 255)
+nameDisplay.TextSize = 12
+nameDisplay.Font = Enum.Font.GothamBold
+nameDisplay.TextXAlignment = Enum.TextXAlignment.Left
+nameDisplay.Text = player.DisplayName
+nameDisplay.Parent = topHeader
+
+local roleTag = Instance.new("TextLabel")
+roleTag.Size = UDim2.new(0, 70, 0, 16)
+roleTag.Position = UDim2.new(0, nameDisplay.TextBounds.X + 56, 0, 7)
+roleTag.BackgroundColor3 = Color3.fromRGB(0, 150, 230)
+roleTag.BackgroundTransparency = 0.3
+roleTag.TextColor3 = Color3.fromRGB(255, 255, 255)
+roleTag.TextSize = 10
+roleTag.Font = Enum.Font.GothamBold
+roleTag.Text = getRoleTag()
+roleTag.Parent = topHeader
+
+local rtCorner = Instance.new("UICorner") rtCorner.CornerRadius = UDim.new(0, 6) rtCorner.Parent = roleTag
+
+local userDisplay = Instance.new("TextLabel")
+userDisplay.Size = UDim2.new(0, 180, 0, 16)
+userDisplay.Position = UDim2.new(0, 50, 0, 26)
+userDisplay.BackgroundTransparency = 1
+userDisplay.TextColor3 = Color3.fromRGB(150, 170, 200)
+userDisplay.TextSize = 11
+userDisplay.Font = Enum.Font.GothamMedium
+userDisplay.TextXAlignment = Enum.TextXAlignment.Left
+userDisplay.Text = "@" .. player.Name
+userDisplay.Parent = topHeader
+
+local statsFrame = Instance.new("Frame")
+statsFrame.Size = UDim2.new(0, 140, 1, -10)
+statsFrame.Position = UDim2.new(1, -145, 0, 5)
+statsFrame.BackgroundTransparency = 1
+statsFrame.Parent = topHeader
+
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(1, 0, 0, 18)
+fpsLabel.Position = UDim2.new(0, 0, 0, 4)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.TextColor3 = Color3.fromRGB(0, 220, 255)
+fpsLabel.TextSize = 11
+fpsLabel.Font = Enum.Font.GothamBold
+fpsLabel.TextXAlignment = Enum.TextXAlignment.Right
+fpsLabel.Text = "FPS: 60"
+fpsLabel.Parent = statsFrame
+
+local timeLabel = Instance.new("TextLabel")
+timeLabel.Size = UDim2.new(1, 0, 0, 18)
+timeLabel.Position = UDim2.new(0, 0, 0, 22)
+timeLabel.BackgroundTransparency = 1
+timeLabel.TextColor3 = Color3.fromRGB(180, 210, 245)
+timeLabel.TextSize = 10
+timeLabel.Font = Enum.Font.GothamMedium
+timeLabel.TextXAlignment = Enum.TextXAlignment.Right
+timeLabel.Text = "Tempo: 00:00:00"
+timeLabel.Parent = statsFrame
+
+local tabContainer = Instance.new("Frame")
+tabContainer.Size = UDim2.new(1, -24, 0, 32)
+tabContainer.Position = UDim2.new(0, 12, 0, 64)
+tabContainer.BackgroundTransparency = 1
+tabContainer.Parent = mainFrame
+
+local function createTabButton(name, pos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.32, 0, 1, 0)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
+    btn.BackgroundTransparency = 0.2
+    btn.TextColor3 = Color3.fromRGB(200, 215, 235)
+    btn.TextSize = 12
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = name
+    btn.Parent = tabContainer
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 8) c.Parent = btn
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 150, 220) s.Transparency = 0.7 s.Parent = btn
+    btn.MouseButton1Click:Connect(function()
+        flashButton(btn)
+        playClickSfx()
+    end)
+    return btn
+end
+
+local btnMainTab = createTabButton(L.tabMain, UDim2.new(0, 0, 0, 0))
+local btnMoveTab = createTabButton(L.tabMove, UDim2.new(0.34, 0, 0, 0))
+local btnConfigTab = createTabButton(L.tabConfig, UDim2.new(0.68, 0, 0, 0))
+
+local contentArea = Instance.new("Frame")
+contentArea.Size = UDim2.new(1, -24, 1, -108)
+contentArea.Position = UDim2.new(0, 12, 0, 102)
+contentArea.BackgroundTransparency = 1
+contentArea.Parent = mainFrame
+
+local function createTabFrame()
+    local f = Instance.new("ScrollingFrame")
+    f.Size = UDim2.new(1, 0, 1, 0)
+    f.BackgroundTransparency = 1
+    f.Visible = false
+    f.ScrollBarThickness = 4
+    f.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 255)
+    f.CanvasSize = UDim2.new(0, 0, 0, 650)
+    f.Parent = contentArea
+    return f
+end
+
+local tabMain = createTabFrame()
+tabMain.Visible = true
+local tabMove = createTabFrame()
+local tabConfig = createTabFrame()
+
+local function switchTab(activeTab)
+    tabMain.Visible = (activeTab == tabMain)
+    tabMove.Visible = (activeTab == tabMove)
+    tabConfig.Visible = (activeTab == tabConfig)
+end
+
+btnMainTab.MouseButton1Click:Connect(function() switchTab(tabMain) end)
+btnMoveTab.MouseButton1Click:Connect(function() switchTab(tabMove) end)
+btnConfigTab.MouseButton1Click:Connect(function() switchTab(tabConfig) end)
+
+local isHubOpen = false
+local isAnimating = false
+
+local function toggleHub()
+    if isAnimating then return end
+    isAnimating = true
+    playClickSfx()
+    
+    if not isHubOpen then
+        mainFrame.Visible = true
+        local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        TweenService:Create(mainFrame, tweenInfo, {BackgroundTransparency = 0.1}):Play()
+        TweenService:Create(mainBgImage, tweenInfo, {ImageTransparency = 0}):Play()
+        TweenService:Create(mainStroke, tweenInfo, {Transparency = 0.4}):Play()
+        
+        for _, child in ipairs(mainFrame:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                TweenService:Create(child, tweenInfo, {TextTransparency = 0}):Play()
+            end
+            if child:IsA("ImageLabel") and child ~= mainBgImage then
+                TweenService:Create(child, tweenInfo, {ImageTransparency = 0}):Play()
+            end
+        end
+        task.wait(0.4)
+        isHubOpen = true
+    else
+        local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+        TweenService:Create(mainFrame, tweenInfo, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(mainBgImage, tweenInfo, {ImageTransparency = 1}):Play()
+        TweenService:Create(mainStroke, tweenInfo, {Transparency = 1}):Play()
+        
+        for _, child in ipairs(mainFrame:GetDescendants()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                TweenService:Create(child, tweenInfo, {TextTransparency = 1}):Play()
+            end
+            if child:IsA("ImageLabel") and child ~= mainBgImage then
+                TweenService:Create(child, tweenInfo, {ImageTransparency = 1}):Play()
+            end
+        end
+        task.wait(0.35)
+        mainFrame.Visible = false
+        isHubOpen = false
+    end
+    isAnimating = false
+end
+
+floatBtn.MouseButton1Click:Connect(toggleHub)
+
+local function spawnFloatTrail(screenPosition, color)
+    local dot = Instance.new("Frame")
+    dot.Name = "LZN_FloatTrail"
+    dot.AnchorPoint = Vector2.new(0.5, 0.5)
+    dot.Position = UDim2.fromOffset(screenPosition.X, screenPosition.Y)
+    dot.Size = UDim2.fromOffset(math.random(7, 12), math.random(7, 12))
+    dot.BackgroundColor3 = color or Color3.fromRGB(35, 135, 255)
+    dot.BackgroundTransparency = 0.15
+    dot.BorderSizePixel = 0
+    dot.ZIndex = math.max(floatBtn.ZIndex - 1, 1)
+    dot.Parent = screenGui
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = dot
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(105, 220, 255)
+    stroke.Thickness = 1.2
+    stroke.Transparency = 0.15
+    stroke.Parent = dot
+    TweenService:Create(dot, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.fromOffset(1, 1), BackgroundTransparency = 1
+    }):Play()
+    TweenService:Create(stroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Transparency = 1}):Play()
+    task.delay(0.42, function()
+        if dot.Parent then dot:Destroy() end
+    end)
+end
+
+local activeDragInput = nil
+local draggingFloat = false
+local dragStartFloat, startPosFloat
+local draggingMain = false
+local dragStartMain, startPosMain
+
+floatBtn.InputBegan:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not activeDragInput then
+        draggingFloat = true
+        activeDragInput = input
+        dragStartFloat = input.Position
+        startPosFloat = floatBtn.Position
+    end
+end)
+
+topHeader.InputBegan:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not activeDragInput then
+        draggingMain = true
+        activeDragInput = input
+        dragStartMain = input.Position
+        startPosMain = mainFrame.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == activeDragInput then
+        if draggingFloat then
+            local delta = input.Position - dragStartFloat
+            floatBtn.Position = UDim2.new(startPosFloat.X.Scale, startPosFloat.X.Offset + delta.X, startPosFloat.Y.Scale, startPosFloat.Y.Offset + delta.Y)
+            spawnFloatTrail(Vector2.new(input.Position.X, input.Position.Y))
+        elseif draggingMain then
+            local delta = input.Position - dragStartMain
+            mainFrame.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset + delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset + delta.Y)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input == activeDragInput then
+        draggingFloat = false
+        draggingMain = false
+        activeDragInput = nil
+    end
+end)
+
+local heldObjects = {}
+local heldDistance = 10
+local realisticLineToggle = false
+local realisticSpringStates = {}
+local frozenObjects = {}
+local showPartToggle = false
+local spinToggle = false
+local spinFullToggle = false
+local spinSpeed = 5
+local distanceSpeed = 1
+local moveSpeed = 3
+local crosshairToggle = false
+local multiSelectToggle = false
+local selectedObjects = {}
+local highlights = {}
+local heartGuis = {}
+local relativeCFrames = {}
+local currentHoveredPart = nil
+local currentHoverHighlight = nil
+
+local rotationOffset = CFrame.new()
+local originalCFrames = {}
+
+local telekinesisBeams = {}
+local beamRootAttachment = nil
+local function clearTelekinesisBeams()
+    for obj, data in pairs(telekinesisBeams) do
+        if data.beam then data.beam:Destroy() end
+        if data.targetAttachment then data.targetAttachment:Destroy() end
+        telekinesisBeams[obj] = nil
+    end
+    if beamRootAttachment then beamRootAttachment:Destroy() beamRootAttachment = nil end
+end
+
+local function getObjectBasePart(obj)
+    if not obj or not obj.Parent then return nil end
+    if obj:IsA("BasePart") then return obj end
+    if obj:IsA("Model") then return obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true) end
+    return nil
+end
+
+local function ensureTelekinesisBeam(obj)
+    if telekinesisBeams[obj] then return end
+    local targetPart = getObjectBasePart(obj)
+    local character = player.Character
+    local root = character and (character:FindFirstChild("Head") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso"))
+    if not targetPart or not root then return end
+
+    if not beamRootAttachment or beamRootAttachment.Parent ~= root then
+        if beamRootAttachment then beamRootAttachment:Destroy() end
+        beamRootAttachment = Instance.new("Attachment")
+        beamRootAttachment.Name = "LZN_TelekinesisOrigin"
+        beamRootAttachment.Position = root.Name == "Head" and Vector3.new(0, -0.05, -0.65) or Vector3.new(0, 0.35, -0.15)
+        beamRootAttachment.Parent = root
+    end
+
+    local targetAttachment = Instance.new("Attachment")
+    targetAttachment.Name = "LZN_TelekinesisTarget"
+    targetAttachment.Parent = targetPart
+
+    local beam = Instance.new("Beam")
+    beam.Name = "LZN_TelekinesisBeam"
+    beam.Attachment0 = beamRootAttachment
+    beam.Attachment1 = targetAttachment
+    beam.FaceCamera = true
+    beam.Width0 = 0.075
+    beam.Width1 = 0.035
+    beam.Segments = 18
+    beam.CurveSize0 = 2.4
+    beam.CurveSize1 = -1.8
+    beam.Color = ColorSequence.new(Color3.fromRGB(35, 125, 255), Color3.fromRGB(95, 205, 255))
+    beam.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.08), NumberSequenceKeypoint.new(1, 0.28)})
+    beam.LightEmission = 0.9
+    beam.LightInfluence = 0
+    beam.Parent = workspace
+    telekinesisBeams[obj] = {beam = beam, targetAttachment = targetAttachment}
+end
+
+RunService.RenderStepped:Connect(function()
+    local active = next(heldObjects) ~= nil
+    if not active then
+        if next(telekinesisBeams) or beamRootAttachment then clearTelekinesisBeams() end
+        return
+    end
+    for obj in pairs(heldObjects) do
+        if obj and obj.Parent then ensureTelekinesisBeam(obj) end
+    end
+    for obj, data in pairs(telekinesisBeams) do
+        if not heldObjects[obj] or not obj or not obj.Parent then
+            if data.beam then data.beam:Destroy() end
+            if data.targetAttachment then data.targetAttachment:Destroy() end
+            telekinesisBeams[obj] = nil
+        end
+    end
+end)
+
+local statusWidget = Instance.new("Frame")
+statusWidget.Size = UDim2.new(0, 220, 0, 130)
+statusWidget.Position = UDim2.new(0, 20, 0, 120)
+statusWidget.BackgroundColor3 = Color3.fromRGB(12, 14, 22)
+statusWidget.BackgroundTransparency = 0.25
+statusWidget.BorderSizePixel = 0
+statusWidget.Visible = false
+statusWidget.Parent = screenGui
+
+local swCorner = Instance.new("UICorner") swCorner.CornerRadius = UDim.new(0, 10) swCorner.Parent = statusWidget
+local swStroke = Instance.new("UIStroke") swStroke.Color = Color3.fromRGB(0, 200, 255) swStroke.Transparency = 0.4 swStroke.Parent = statusWidget
+
+local swTitle = Instance.new("TextLabel")
+swTitle.Size = UDim2.new(1, 0, 0, 22)
+swTitle.Position = UDim2.new(0, 0, 0, 2)
+swTitle.BackgroundTransparency = 1
+swTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+swTitle.TextSize = 12
+swTitle.Font = Enum.Font.GothamBold
+swTitle.Text = L.statusHudTitle
+swTitle.Parent = statusWidget
+
+local swSelectedLabel = Instance.new("TextLabel")
+swSelectedLabel.Size = UDim2.new(1, -12, 0, 16)
+swSelectedLabel.Position = UDim2.new(0, 6, 0, 24)
+swSelectedLabel.BackgroundTransparency = 1
+swSelectedLabel.TextColor3 = Color3.fromRGB(240, 245, 255)
+swSelectedLabel.TextSize = 11
+swSelectedLabel.Font = Enum.Font.GothamMedium
+swSelectedLabel.TextXAlignment = Enum.TextXAlignment.Left
+swSelectedLabel.Text = L.selectedCount .. "0"
+swSelectedLabel.Parent = statusWidget
+
+local swGrabLabel = Instance.new("TextLabel")
+swGrabLabel.Size = UDim2.new(1, -12, 0, 16)
+swGrabLabel.Position = UDim2.new(0, 6, 0, 40)
+swGrabLabel.BackgroundTransparency = 1
+swGrabLabel.TextColor3 = Color3.fromRGB(240, 245, 255)
+swGrabLabel.TextSize = 11
+swGrabLabel.Font = Enum.Font.GothamMedium
+swGrabLabel.TextXAlignment = Enum.TextXAlignment.Left
+swGrabLabel.Text = L.grabStatus .. L.inactive
+swGrabLabel.Parent = statusWidget
+
+local swSpinLabel = Instance.new("TextLabel")
+swSpinLabel.Size = UDim2.new(1, -12, 0, 16)
+swSpinLabel.Position = UDim2.new(0, 6, 0, 56)
+swSpinLabel.BackgroundTransparency = 1
+swSpinLabel.TextColor3 = Color3.fromRGB(240, 245, 255)
+swSpinLabel.TextSize = 11
+swSpinLabel.Font = Enum.Font.GothamMedium
+swSpinLabel.TextXAlignment = Enum.TextXAlignment.Left
+swSpinLabel.Text = L.spinStatus .. L.inactive
+swSpinLabel.Parent = statusWidget
+
+local swSpeedContainer = Instance.new("Frame")
+swSpeedContainer.Size = UDim2.new(1, -12, 0, 22)
+swSpeedContainer.Position = UDim2.new(0, 6, 0, 74)
+swSpeedContainer.BackgroundTransparency = 1
+swSpeedContainer.Parent = statusWidget
+
+local swSpeedText = Instance.new("TextLabel")
+swSpeedText.Size = UDim2.new(0.6, 0, 1, 0)
+swSpeedText.BackgroundTransparency = 1
+swSpeedText.TextColor3 = Color3.fromRGB(200, 215, 235)
+swSpeedText.TextSize = 10
+swSpeedText.Font = Enum.Font.GothamMedium
+swSpeedText.TextXAlignment = Enum.TextXAlignment.Left
+swSpeedText.Text = L.speedMoveLbl
+swSpeedText.Parent = swSpeedContainer
+
+local swSpeedBox = Instance.new("TextBox")
+swSpeedBox.Size = UDim2.new(0.4, 0, 1, 0)
+swSpeedBox.Position = UDim2.new(0.6, 0, 0, 0)
+swSpeedBox.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+swSpeedBox.BackgroundTransparency = 0.2
+swSpeedBox.TextColor3 = Color3.fromRGB(0, 200, 255)
+swSpeedBox.TextSize = 10
+swSpeedBox.Font = Enum.Font.GothamBold
+swSpeedBox.Text = "3"
+swSpeedBox.Parent = swSpeedContainer
+local swsbC = Instance.new("UICorner") swsbC.CornerRadius = UDim.new(0, 5) swsbC.Parent = swSpeedBox
+
+local swThrowContainer = Instance.new("Frame")
+swThrowContainer.Size = UDim2.new(1, -12, 0, 22)
+swThrowContainer.Position = UDim2.new(0, 6, 0, 100)
+swThrowContainer.BackgroundTransparency = 1
+swThrowContainer.Parent = statusWidget
+
+local swThrowText = Instance.new("TextLabel")
+swThrowText.Size = UDim2.new(0.6, 0, 1, 0)
+swThrowText.BackgroundTransparency = 1
+swThrowText.TextColor3 = Color3.fromRGB(200, 215, 235)
+swThrowText.TextSize = 10
+swThrowText.Font = Enum.Font.GothamMedium
+swThrowText.TextXAlignment = Enum.TextXAlignment.Left
+swThrowText.Text = L.forceThrowLbl
+swThrowText.Parent = swThrowContainer
+
+local swThrowBox = Instance.new("TextBox")
+swThrowBox.Size = UDim2.new(0.4, 0, 1, 0)
+swThrowBox.Position = UDim2.new(0.6, 0, 0, 0)
+swThrowBox.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+swThrowBox.BackgroundTransparency = 0.2
+swThrowBox.TextColor3 = Color3.fromRGB(0, 200, 255)
+swThrowBox.TextSize = 10
+swThrowBox.Font = Enum.Font.GothamBold
+swThrowBox.Text = "100"
+swThrowBox.Parent = swThrowContainer
+local swtbC = Instance.new("UICorner") swtbC.CornerRadius = UDim.new(0, 5) swtbC.Parent = swThrowBox
+
+local draggingWidget = false
+local widgetDragStart, widgetStartPos
+swTitle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWidget = true
+        widgetDragStart = input.Position
+        widgetStartPos = statusWidget.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingWidget and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - widgetDragStart
+        statusWidget.Position = UDim2.new(widgetStartPos.X.Scale, widgetStartPos.X.Offset + delta.X, widgetStartPos.Y.Scale, widgetStartPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingWidget = false
+    end
+end)
+
+local function isValidTarget(target)
+    if not target then return false end
+    if target:IsDescendantOf(player.Character) then return false end
+    return true
+end
+
+local function getTargetUnderCrosshairOrMouse()
+    local cam = workspace.CurrentCamera
+    if crosshairToggle then
+        local screenPos = Vector2.new(cam.ViewportSize.X / 2 + crosshairPosOffset.X, cam.ViewportSize.Y / 2 + crosshairPosOffset.Y)
+        local unitRay = cam:ScreenPointToRay(screenPos.X, screenPos.Y)
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {player.Character}
+        local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 500, params)
+        if result and result.Instance and isValidTarget(result.Instance) then
+            local target = result.Instance
+            if target.Parent:FindFirstChildOfClass("Humanoid") then
+                return target.Parent
+            end
+            return target
+        end
+    else
+        local target = mouse.Target
+        if target and isValidTarget(target) then
+            if target.Parent:FindFirstChildOfClass("Humanoid") then
+                return target.Parent
+            end
+            return target
+        end
+    end
+    return nil
+end
+
+local function updateHighlight(obj, enable)
+    if enable then
+        if not highlights[obj] then
+            local hl = Instance.new("Highlight")
+            hl.Adornee = obj
+            hl.FillColor = Color3.fromRGB(0, 180, 255)
+            hl.FillTransparency = 0.5
+            hl.OutlineColor = Color3.fromRGB(0, 230, 255)
+            hl.OutlineTransparency = 0.1
+            hl.Parent = screenGui
+            highlights[obj] = hl
+        end
+        if not heartGuis[obj] then
+            local bg = Instance.new("BillboardGui")
+            bg.Size = UDim2.new(0, 40, 0, 40)
+            bg.StudsOffset = Vector3.new(0, 3, 0)
+            bg.AlwaysOnTop = true
+            bg.Adornee = obj:IsA("BasePart") and obj or (obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")))
+            bg.Parent = screenGui
+            
+            local heartLabel = Instance.new("TextLabel")
+            heartLabel.Size = UDim2.new(1, 0, 1, 0)
+            heartLabel.BackgroundTransparency = 1
+            heartLabel.Text = "💙"
+            heartLabel.TextSize = 22
+            heartLabel.Font = Enum.Font.GothamBold
+            heartLabel.Parent = bg
+            
+            TweenService:Create(heartLabel, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = UDim2.new(0, 0, -0.3, 0)}):Play()
+            heartGuis[obj] = bg
+        end
+    else
+        if highlights[obj] then
+            highlights[obj]:Destroy()
+            highlights[obj] = nil
+        end
+        if heartGuis[obj] then
+            heartGuis[obj]:Destroy()
+            heartGuis[obj] = nil
+        end
+    end
+end
+
+local function stopGrab()
+    clearTelekinesisBeams()
+    if next(heldObjects) then
+        for obj, _ in pairs(heldObjects) do
+            if obj:IsA("BasePart") then obj.CanCollide = true
+            elseif obj:IsA("Model") then
+                for _, p in ipairs(obj:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+            end
+            if not showPartToggle then updateHighlight(obj, false) end
+        end
+        heldObjects = {}
+    end
+end
+
+local countLabel = Instance.new("TextLabel")
+countLabel.Size = UDim2.new(0, 195, 0, 20)
+countLabel.Position = UDim2.new(0, 0, 0, 5)
+countLabel.BackgroundTransparency = 1
+countLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
+countLabel.TextSize = 12
+countLabel.Font = Enum.Font.GothamBold
+countLabel.TextXAlignment = Enum.TextXAlignment.Left
+countLabel.Text = L.selectedCount .. "0"
+countLabel.Parent = tabMain
+
+local selectListFrame = Instance.new("ScrollingFrame")
+selectListFrame.Size = UDim2.new(0, 195, 0, 95)
+selectListFrame.Position = UDim2.new(0, 0, 0, 28)
+selectListFrame.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+selectListFrame.BackgroundTransparency = 0.2
+selectListFrame.BorderSizePixel = 0
+selectListFrame.ScrollBarThickness = 3
+selectListFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 255)
+selectListFrame.Parent = tabMain
+
+local slCorner = Instance.new("UICorner") slCorner.CornerRadius = UDim.new(0, 8) slCorner.Parent = selectListFrame
+local slStroke = Instance.new("UIStroke") slStroke.Color = Color3.fromRGB(0, 170, 255) slStroke.Transparency = 0.6 slStroke.Parent = selectListFrame
+
+local function updateSelectedListUI()
+    for _, child in ipairs(selectListFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    local y = 3
+    local totalCount = 0
+    for obj, _ in pairs(selectedObjects) do
+        if obj and obj.Parent then
+            totalCount = totalCount + 1
+            local itemBtn = Instance.new("TextButton")
+            itemBtn.Size = UDim2.new(1, -6, 0, 32)
+            itemBtn.Position = UDim2.new(0, 3, 0, y)
+            itemBtn.BackgroundColor3 = Color3.fromRGB(22, 28, 42)
+            itemBtn.BackgroundTransparency = 0.2
+            itemBtn.TextColor3 = Color3.fromRGB(240, 244, 255)
+            itemBtn.TextSize = 11
+            itemBtn.Font = Enum.Font.GothamBold
+            itemBtn.Text = "        " .. tostring(obj.Name)
+            itemBtn.Parent = selectListFrame
+            local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = itemBtn
+            local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 150, 220) s.Transparency = 0.7 s.Parent = itemBtn
+            
+            local vp = Instance.new("ViewportFrame")
+            vp.Size = UDim2.new(0, 28, 0, 28)
+            vp.Position = UDim2.new(0, 2, 0, 2)
+            vp.BackgroundTransparency = 1
+            vp.Parent = itemBtn
+            
+            pcall(function()
+                local clone = obj:Clone()
+                for _, desc in ipairs(clone:GetDescendants()) do
+                    if desc:IsA("Script") or desc:IsA("LocalScript") or desc:IsA("ModuleScript") then
+                        desc:Destroy()
+                    end
+                end
+                if clone:IsA("BasePart") then
+                    clone.Anchored = true
+                    clone.CFrame = CFrame.new(0, 0, 0)
+                    clone.Parent = vp
+                elseif clone:IsA("Model") then
+                    clone.Parent = vp
+                    if not clone.PrimaryPart then
+                        local p = clone:FindFirstChildOfClass("BasePart")
+                        if p then clone.PrimaryPart = p end
+                    end
+                    pcall(function() clone:PivotTo(CFrame.new(0,0,0)) end)
+                end
+                local cam = Instance.new("Camera")
+                vp.CurrentCamera = cam
+                cam.Parent = vp
+                local cf, size = clone:GetBoundingBox()
+                local maxDim = math.max(size.X, size.Y, size.Z)
+                local dist = math.clamp(maxDim * 2, 2, 50)
+                cam.CFrame = CFrame.new(Vector3.new(0, dist * 0.5, dist), Vector3.new(0, 0, 0))
+            end)
+            
+            itemBtn.MouseButton1Click:Connect(function()
+                flashButton(itemBtn)
+                playClickSfx()
+                local name = obj.Name
+                selectedObjects[obj] = nil
+                updateHighlight(obj, false)
+                updateSelectedListUI()
+                notify(L.itemRemoved .. name .. "]")
+            end)
+            y = y + 35
+        end
+    end
+    countLabel.Text = L.selectedCount .. totalCount
+    selectListFrame.CanvasSize = UDim2.new(0, 0, 0, y)
+end
+
+local function clearSelectionAndHighlights()
+    for obj, _ in pairs(selectedObjects) do
+        updateHighlight(obj, false)
+    end
+    selectedObjects = {}
+    updateSelectedListUI()
+end
+
+local function makeExternalButton(text, action, isToggle)
+    local extBtn = Instance.new("TextButton")
+    extBtn.Size = UDim2.new(0, 95, 0, 34)
+    extBtn.Position = UDim2.new(0.1, math.random(0, 180), 0.1, math.random(0, 180))
+    extBtn.BackgroundColor3 = Color3.fromRGB(18, 22, 34)
+    extBtn.BackgroundTransparency = 1
+    extBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
+    extBtn.TextTransparency = 1
+    extBtn.TextSize = 11
+    extBtn.Font = Enum.Font.GothamBold
+    extBtn.Text = text
+    extBtn.Parent = screenGui
+    
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 8) c.Parent = extBtn
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 180, 255) s.Transparency = 1 s.Parent = extBtn
+    
+    TweenService:Create(extBtn, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundTransparency = 0.15, TextTransparency = 0}):Play()
+    TweenService:Create(s, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Transparency = 0.4}):Play()
+
+    local dragging = false
+    local hasMoved = false
+    local dragStart, startPos
+    
+    extBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            hasMoved = false
+            dragStart = input.Position
+            startPos = extBtn.Position
+        end
+    end)
+    
+    extBtn.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            if delta.Magnitude > 6 then
+                hasMoved = true
+            end
+            extBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            spawnFloatTrail(Vector2.new(input.Position.X, input.Position.Y), Color3.fromRGB(0, 120, 255))
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch  then
+            if dragging then
+                dragging = false
+            end
+        end
+    end)
+    
+    local toggled = false
+    extBtn.MouseButton1Click:Connect(function()
+        if hasMoved then return end
+        flashButton(extBtn)
+        playClickSfx()
+        if isToggle then
+            toggled = not toggled
+            extBtn.Text = text .. (toggled and ": ON" or ": OFF")
+            action(toggled)
+        else
+            action()
+        end
+    end)
+    notify(L.btnCreated .. text)
+    return extBtn
+end
+
+local function makeExternalHoldButton(text, action)
+    local extBtn = Instance.new("TextButton")
+    extBtn.Size = UDim2.new(0, 95, 0, 34)
+    extBtn.Position = UDim2.new(0.1, math.random(0, 180), 0.1, math.random(0, 180))
+    extBtn.BackgroundColor3 = Color3.fromRGB(18, 22, 34)
+    extBtn.BackgroundTransparency = 1
+    extBtn.TextColor3 = Color3.fromRGB(0, 200, 255)
+    extBtn.TextTransparency = 1
+    extBtn.TextSize = 11
+    extBtn.Font = Enum.Font.GothamBold
+    extBtn.Text = text
+    extBtn.Parent = screenGui
+    
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 8) c.Parent = extBtn
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 180, 255) s.Transparency = 1 s.Parent = extBtn
+    
+    TweenService:Create(extBtn, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundTransparency = 0.15, TextTransparency = 0}):Play()
+    TweenService:Create(s, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Transparency = 0.4}):Play()
+
+    local dragging = false
+    local hasMoved = false
+    local dragStart, startPos
+    
+    extBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            hasMoved = false
+            dragStart = input.Position
+            startPos = extBtn.Position
+        end
+    end)
+    
+    extBtn.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            if delta.Magnitude > 6 then
+                hasMoved = true
+            end
+            extBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            spawnFloatTrail(Vector2.new(input.Position.X, input.Position.Y), Color3.fromRGB(0, 120, 255))
+        end
+    end)
+    
+    local holding = false
+    extBtn.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            if not hasMoved then
+                holding = true
+                flashButton(extBtn)
+                playClickSfx()
+                task.spawn(function()
+                    while holding do
+                        action()
+                        task.wait(0.05)
+                    end
+                end)
+            end
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            holding = false
+        end
+    end)
+    
+    notify(L.btnHoldCreated .. text)
+    return extBtn
+end
+
+local function createButtonWithMini(parent, text, pos, action, isToggle)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, 155, 0, 35)
+    b.Position = pos
+    b.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
+    b.BackgroundTransparency = 0.2
+    b.TextColor3 = Color3.fromRGB(240, 245, 255)
+    b.TextSize = 12
+    b.Font = Enum.Font.GothamBold
+    b.Text = text
+    b.Parent = parent
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 8) c.Parent = b
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 170, 255) s.Transparency = 0.6 s.Parent = b
+    
+    b.MouseButton1Click:Connect(function()
+        flashButton(b)
+        playClickSfx()
+        action()
+    end)
+    
+    local mini = Instance.new("TextButton")
+    mini.Size = UDim2.new(0, 35, 0, 35)
+    mini.Position = UDim2.new(1, 5, 0, 0)
+    mini.BackgroundColor3 = Color3.fromRGB(0, 130, 210)
+    mini.BackgroundTransparency = 0.2
+    mini.TextColor3 = Color3.fromRGB(240, 245, 255)
+    mini.TextSize = 14
+    mini.Font = Enum.Font.GothamBold
+    mini.Text = "+"
+    mini.Parent = b
+    local mc = Instance.new("UICorner") mc.CornerRadius = UDim.new(0, 8) mc.Parent = mini
+    local ms = Instance.new("UIStroke") ms.Color = Color3.fromRGB(0, 190, 255) ms.Transparency = 0.5 ms.Parent = mini
+    
+    local activeExtBtn = nil
+    mini.MouseButton1Click:Connect(function()
+        flashButton(mini)
+        playClickSfx()
+        if activeExtBtn and activeExtBtn.Parent then
+            TweenService:Create(activeExtBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
+            task.delay(0.3, function()
+                if activeExtBtn then
+                    activeExtBtn:Destroy()
+                    activeExtBtn = nil
+                    mini.Text = "+"
+                end
+            end)
+            notify(L.btnRemoved .. text)
+        else
+            activeExtBtn = makeExternalButton(text, action, isToggle)
+            mini.Text = "×"
+        end
+    end)
+    
+    return b
+end
+
+local function createHoldButtonWithMini(parent, text, pos, action)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, 155, 0, 35)
+    b.Position = pos
+    b.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
+    b.BackgroundTransparency = 0.2
+    b.TextColor3 = Color3.fromRGB(240, 245, 255)
+    b.TextSize = 12
+    b.Font = Enum.Font.GothamBold
+    b.Text = text
+    b.Parent = parent
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 8) c.Parent = b
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 170, 255) s.Transparency = 0.6 s.Parent = b
+    
+    local holding = false
+    b.MouseButton1Down:Connect(function()
+        holding = true
+        flashButton(b)
+        playClickSfx()
+        task.spawn(function()
+            while holding do
+                action()
+                task.wait(0.05)
+            end
+        end)
+    end)
+    b.MouseButton1Up:Connect(function() holding = false end)
+    b.MouseLeave:Connect(function() holding = false end)
+    
+    local mini = Instance.new("TextButton")
+    mini.Size = UDim2.new(0, 35, 0, 35)
+    mini.Position = UDim2.new(1, 5, 0, 0)
+    mini.BackgroundColor3 = Color3.fromRGB(0, 130, 210)
+    mini.BackgroundTransparency = 0.2
+    mini.TextColor3 = Color3.fromRGB(240, 245, 255)
+    mini.TextSize = 14
+    mini.Font = Enum.Font.GothamBold
+    mini.Text = "+"
+    mini.Parent = b
+    local mc = Instance.new("UICorner") mc.CornerRadius = UDim.new(0, 8) mc.Parent = mini
+    local ms = Instance.new("UIStroke") ms.Color = Color3.fromRGB(0, 190, 255) ms.Transparency = 0.5 ms.Parent = mini
+    
+    local activeExtBtn = nil
+    mini.MouseButton1Click:Connect(function()
+        flashButton(mini)
+        playClickSfx()
+        if activeExtBtn and activeExtBtn.Parent then
+            TweenService:Create(activeExtBtn, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
+            task.delay(0.3, function()
+                if activeExtBtn then
+                    activeExtBtn:Destroy()
+                    activeExtBtn = nil
+                    mini.Text = "+"
+                end
+            end)
+            notify(L.btnRemoved .. text)
+        else
+            activeExtBtn = makeExternalHoldButton(text, action)
+            mini.Text = "×"
+        end
+    end)
+    return b
+end
+
+local function createButton(parent, text, pos, size)
+    local b = Instance.new("TextButton")
+    b.Size = size or UDim2.new(0, 195, 0, 35)
+    b.Position = pos
+    b.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
+    b.BackgroundTransparency = 0.2
+    b.TextColor3 = Color3.fromRGB(240, 245, 255)
+    b.TextSize = 12
+    b.Font = Enum.Font.GothamBold
+    b.Text = text
+    b.Parent = parent
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 8) c.Parent = b
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 170, 255) s.Transparency = 0.6 s.Parent = b
+    b.MouseButton1Click:Connect(function()
+        flashButton(b)
+        playClickSfx()
+    end)
+    return b
+end
+
+local function createHoldButton(parent, text, pos, action)
+    local b = createButton(parent, text, pos)
+    local holding = false
+    b.MouseButton1Down:Connect(function()
+        holding = true
+        flashButton(b)
+        playClickSfx()
+        task.spawn(function()
+            while holding do
+                action()
+                task.wait(0.05)
+            end
+        end)
+    end)
+    b.MouseButton1Up:Connect(function() holding = false end)
+    b.MouseLeave:Connect(function() holding = false end)
+    return b
+end
+
+local function createToggle(parent, text, pos, callback)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, 195, 0, 35)
+    b.Position = pos
+    b.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
+    b.BackgroundTransparency = 0.2
+    b.TextColor3 = Color3.fromRGB(240, 245, 255)
+    b.TextSize = 12
+    b.Font = Enum.Font.GothamBold
+    b.Text = text .. ": OFF"
+    b.Parent = parent
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 8) c.Parent = b
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 170, 255) s.Transparency = 0.6 s.Parent = b
+    local state = false
+    b.MouseButton1Click:Connect(function()
+        flashButton(b)
+        playClickSfx()
+        state = not state
+        b.Text = text .. (state and ": ON" or ": OFF")
+        callback(state)
+    end)
+    return b
+end
+
+local function createTextBox(parent, placeholder, pos)
+    local tb = Instance.new("TextBox")
+    tb.Size = UDim2.new(0, 195, 0, 35)
+    tb.Position = pos
+    tb.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+    tb.BackgroundTransparency = 0.2
+    tb.TextColor3 = Color3.fromRGB(240, 245, 255)
+    tb.PlaceholderColor3 = Color3.fromRGB(120, 135, 165)
+    tb.PlaceholderText = placeholder
+    tb.Text = ""
+    tb.TextSize = 12
+    tb.Font = Enum.Font.GothamMedium
+    tb.Parent = parent
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 8) c.Parent = tb
+    local s = Instance.new("UIStroke") s.Color = Color3.fromRGB(0, 170, 255) s.Transparency = 0.6 s.Parent = tb
+    return tb
+end
+
+local function playTelekinesisEffect(obj, releasing)
+    if not obj or not obj.Parent then return end
+    local part
+    if obj:IsA("BasePart") then
+        part = obj
+    elseif obj:IsA("Model") then
+        part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+    end
+    if not part then return end
+
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "LZN_TelekinesisFX"
+    attachment.Parent = part
+
+    local particles = Instance.new("ParticleEmitter")
+    particles.Name = "LZN_EnergyBurst"
+    particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    particles.Color = ColorSequence.new(
+        releasing and Color3.fromRGB(255, 95, 125) or Color3.fromRGB(80, 220, 255),
+        Color3.fromRGB(190, 120, 255)
+    )
+    particles.LightEmission = 0.8
+    particles.Lifetime = NumberRange.new(0.35, 0.8)
+    particles.Speed = NumberRange.new(2, 5)
+    particles.SpreadAngle = Vector2.new(180, 180)
+    particles.Rate = 0
+    particles.Rotation = NumberRange.new(0, 360)
+    particles.RotSpeed = NumberRange.new(-100, 100)
+    particles.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.22),
+        NumberSequenceKeypoint.new(0.6, 0.12),
+        NumberSequenceKeypoint.new(1, 0)
+    })
+    particles.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.05),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    particles.Parent = attachment
+    particles:Emit(releasing and 14 or 24)
+
+    local glow = Instance.new("Highlight")
+    glow.Name = "LZN_TelekinesisGlow"
+    glow.Adornee = obj
+    glow.FillColor = releasing and Color3.fromRGB(255, 90, 125) or Color3.fromRGB(70, 210, 255)
+    glow.OutlineColor = Color3.fromRGB(200, 140, 255)
+    glow.FillTransparency = 0.35
+    glow.OutlineTransparency = 0.1
+    glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    glow.Parent = screenGui
+    TweenService:Create(glow, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        FillTransparency = 1,
+        OutlineTransparency = 1
+    }):Play()
+    task.delay(0.7, function()
+        if glow and glow.Parent then glow:Destroy() end
+        if attachment and attachment.Parent then attachment:Destroy() end
+    end)
+end
+
+local grabAction = function()
+    if next(heldObjects) then
+        local names = {}
+        for obj, _ in pairs(heldObjects) do
+            table.insert(names, obj.Name)
+            playTelekinesisEffect(obj, true)
+            if obj:IsA("BasePart") then obj.CanCollide = true
+            elseif obj:IsA("Model") then
+                for _, p in ipairs(obj:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+            end
+            if not showPartToggle then updateHighlight(obj, false) end
+        end
+        heldObjects = {}
+        notify(L.notifGrabOn .. table.concat(names, ", "))
+        return
+    end
+
+    heldObjects = {}
+    relativeCFrames = {}
+    
+    if currentHoverHighlight then
+        currentHoverHighlight:Destroy()
+        currentHoverHighlight = nil
+        currentHoveredPart = nil
+    end
+
+    if multiSelectToggle and next(selectedObjects) then
+        local centerPos = Vector3.new(0,0,0)
+        local count = 0
+        local namesList = {}
+        
+        for obj, _ in pairs(selectedObjects) do
+            heldObjects[obj] = true
+            playTelekinesisEffect(obj, false)
+            table.insert(namesList, obj.Name)
+            if not originalCFrames[obj] then
+                pcall(function() originalCFrames[obj] = obj:GetPivot() end)
+            end
+            if obj:IsA("BasePart") then obj.CanCollide = true
+            elseif obj:IsA("Model") then
+                for _, p in ipairs(obj:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+            end
+            local pos = obj:IsA("BasePart") and obj.Position or (obj:IsA("Model") and obj:GetPivot().Position)
+            if pos then centerPos = centerPos + pos count = count + 1 end
+        end
+        
+        if count > 0 then
+            centerPos = centerPos / count
+        end
+        
+        heldDistance = 10
+        
+        local refCFrame = CFrame.new(centerPos)
+        for obj, _ in pairs(heldObjects) do
+            local objCF = obj:IsA("BasePart") and obj.CFrame or (obj:IsA("Model") and obj:GetPivot())
+            if objCF then
+                relativeCFrames[obj] = refCFrame:Inverse() * objCF
+            end
+        end
+        
+        rotationOffset = CFrame.new()
+        notify(L.notifGrabApp .. table.concat(namesList, ", "))
+        clearSelectionAndHighlights()
+    else
+        local target = getTargetUnderCrosshairOrMouse()
+        if target then
+            heldObjects[target] = true
+            playTelekinesisEffect(target, false)
+            heldDistance = 10
+            
+            if not originalCFrames[target] then
+                pcall(function() originalCFrames[target] = target:GetPivot() end)
+            end
+            if target:IsA("BasePart") then
+                target.CanCollide = true
+            elseif target:IsA("Model") then
+                for _, p in ipairs(target:GetDescendants()) do
+                    if p:IsA("BasePart") then p.CanCollide = true end
+                end
+            end
+            relativeCFrames[target] = CFrame.new()
+            rotationOffset = CFrame.new()
+            notify(L.notifGrabbed .. target.Name .. "]")
+        else
+            notify(L.notifNoObj)
+        end
+    end
+end
+createButtonWithMini(tabMain, L.grab, UDim2.new(0, 210, 0, 10), grabAction, false)
+
+createToggle(tabMain, "Linha realista", UDim2.new(0, 210, 0, 55), function(state)
+    realisticLineToggle = state
+    if not state then
+        realisticSpringStates = {}
+    end
+    notify("Linha realista: " .. (state and "ON" or "OFF"))
+end)
+
+local selectObjAction = function()
+    local target = getTargetUnderCrosshairOrMouse()
+    if target then
+        if not selectedObjects[target] then
+            selectedObjects[target] = true
+            if not originalCFrames[target] then
+                pcall(function() originalCFrames[target] = target:GetPivot() end)
+            end
+            updateHighlight(target, true)
+            updateSelectedListUI()
+            notify(L.notifSelected .. target.Name .. "]")
+        else
+            notify(L.notifAlreadySel .. target.Name .. "]")
+        end
+    else
+        notify(L.notifNoAim)
+    end
+end
+createButtonWithMini(tabMain, L.selectObj, UDim2.new(0, 210, 0, 55), selectObjAction, false)
+
+local dropAction = function()
+    if multiSelectToggle and next(selectedObjects) then
+        local names = {}
+        for obj, _ in pairs(selectedObjects) do
+            table.insert(names, obj.Name)
+            if obj:IsA("BasePart") then obj.CanCollide = true
+            elseif obj:IsA("Model") then
+                for _, p in ipairs(obj:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+            end
+            updateHighlight(obj, false)
+        end
+        notify(L.notifDroppedMulti .. table.concat(names, ", "))
+        clearSelectionAndHighlights()
+    else
+        local target = getTargetUnderCrosshairOrMouse()
+        if crosshairToggle and target and frozenObjects[target] then
+            frozenObjects[target] = nil
+            if showPartToggle then updateHighlight(target, false) end
+            notify(L.notifUnfrozen .. target.Name .. "]")
+        elseif next(heldObjects) then
+            local names = {}
+            for obj, _ in pairs(heldObjects) do
+                table.insert(names, obj.Name)
+                if obj:IsA("BasePart") then obj.CanCollide = true
+                elseif obj:IsA("Model") then
+                    for _, p in ipairs(obj:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+                end
+                updateHighlight(obj, false)
+            end
+            heldObjects = {}
+            notify(L.notifDropped .. table.concat(names, ", "))
+        end
+    end
+end
+createButtonWithMini(tabMain, L.drop, UDim2.new(0, 210, 0, 100), dropAction, false)
+
+local freezeAction = function()
+    stopGrab()
+    if multiSelectToggle and next(selectedObjects) then
+        local names = {}
+        for obj, _ in pairs(selectedObjects) do
+            table.insert(names, obj.Name)
+            if not originalCFrames[obj] then
+                pcall(function() originalCFrames[obj] = obj:GetPivot() end)
+            end
+            frozenObjects[obj] = obj:IsA("BasePart") and obj.CFrame or (obj:IsA("Model") and obj:GetPivot())
+            updateHighlight(obj, true)
+        end
+        notify(L.notifFrozenMulti .. table.concat(names, ", "))
+        clearSelectionAndHighlights()
+    elseif next(heldObjects) then
+        local names = {}
+        for obj, _ in pairs(heldObjects) do
+            table.insert(names, obj.Name)
+            if not originalCFrames[obj] then
+                pcall(function() originalCFrames[obj] = obj:GetPivot() end)
+            end
+            if frozenObjects[obj] then
+                frozenObjects[obj] = nil
+                updateHighlight(obj, false)
+            else
+                frozenObjects[obj] = obj:IsA("BasePart") and obj.CFrame or (obj:IsA("Model") and obj:GetPivot())
+                updateHighlight(obj, true)
+            end
+        end
+        notify(L.notifAltFreeze .. table.concat(names, ", "))
+    else
+        local target = getTargetUnderCrosshairOrMouse()
+        if target then
+            if not originalCFrames[target] then
+                pcall(function() originalCFrames[target] = target:GetPivot() end)
+            end
+            if frozenObjects[target] then
+                frozenObjects[target] = nil
+                updateHighlight(target, false)
+                notify(L.notifUnfrozen .. target.Name .. "]")
+            else
+                frozenObjects[target] = target:IsA("BasePart") and target.CFrame or (target:IsA("Model") and target:GetPivot())
+                updateHighlight(target, true)
+                notify(L.notifFrozen .. target.Name .. "]")
+            end
+        else
+            notify(L.notifNoValid)
+        end
+    end
+end
+createButtonWithMini(tabMain, L.freeze, UDim2.new(0, 210, 0, 145), freezeAction, false)
+
+local dropAllAction = function()
+    for obj, _ in pairs(heldObjects) do
+        if obj:IsA("BasePart") then obj.CanCollide = true
+        elseif obj:IsA("Model") then
+            for _, p in ipairs(obj:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+        end
+        updateHighlight(obj, false)
+    end
+    heldObjects = {}
+    
+    for obj, _ in pairs(frozenObjects) do
+        if obj:IsA("BasePart") then obj.CanCollide = true
+        elseif obj:IsA("Model") then
+            for _, p in ipairs(obj:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+        end
+        updateHighlight(obj, false)
+    end
+    frozenObjects = {}
+    clearSelectionAndHighlights()
+    for _, hl in pairs(highlights) do hl:Destroy() end
+    highlights = {}
+    for _, hb in pairs(heartGuis) do hb:Destroy() end
+    heartGuis = {}
+    
+    notify(L.notifDropAll)
+end
+createButtonWithMini(tabMain, L.dropAll, UDim2.new(0, 210, 0, 190), dropAllAction, false)
+
+createToggle(tabMain, L.showPart, UDim2.new(0, 210, 0, 235), function(val)
+    showPartToggle = val
+    if not val then
+        if currentHoverHighlight then
+            currentHoverHighlight:Destroy()
+            currentHoverHighlight = nil
+        end
+        currentHoveredPart = nil
+    end
+    notify(L.notifShowPart .. tostring(val))
+end)
+
+local tbThrowForce = createTextBox(tabMain, L.throwForce, UDim2.new(0, 0, 0, 175))
+tbThrowForce.Text = "100"
+tbThrowForce:GetPropertyChangedSignal("Text"):Connect(function()
+    swThrowBox.Text = tbThrowForce.Text
+end)
+
+swThrowBox:GetPropertyChangedSignal("Text"):Connect(function()
+    tbThrowForce.Text = swThrowBox.Text
+    local f = tonumber(swThrowBox.Text)
+    if f then
+        notify(L.notifSpeedUpd .. tostring(f))
+    end
+end)
+
+local throwAction = function()
+    local force = tonumber(tbThrowForce.Text) or 100
+    local cam = workspace.CurrentCamera
+    local targets = {}
+    local fromHeld = next(heldObjects) ~= nil
+
+    if fromHeld then
+        for obj in pairs(heldObjects) do
+            targets[obj] = true
+        end
+    elseif multiSelectToggle and next(selectedObjects) then
+        for obj in pairs(selectedObjects) do
+            targets[obj] = true
+        end
+    end
+
+    if not next(targets) then
+        notify(L.notifNoHeldThrow)
+        return
+    end
+
+    local names = {}
+    for obj in pairs(targets) do
+        if obj and obj.Parent then
+            table.insert(names, obj.Name)
+            if obj:IsA("BasePart") then
+                obj.CanCollide = true
+                obj.AssemblyLinearVelocity = cam.CFrame.LookVector * force
+            elseif obj:IsA("Model") then
+                for _, part in ipairs(obj:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+                local rootPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                if rootPart then rootPart.AssemblyLinearVelocity = cam.CFrame.LookVector * force end
+            end
+            updateHighlight(obj, false)
+            playTelekinesisEffect(obj, true)
+        end
+    end
+
+    for obj in pairs(heldObjects) do
+        heldObjects[obj] = nil
+    end
+    relativeCFrames = {}
+    clearTelekinesisBeams()
+    if fromHeld then
+        notify(L.notifThrown .. force .. ": " .. table.concat(names, ", "))
+    else
+        notify(L.notifThrownMulti .. table.concat(names, ", "))
+        clearSelectionAndHighlights()
+    end
+end
+createButtonWithMini(tabMain, L.throw, UDim2.new(0, 0, 0, 130), throwAction, false)
+
+local btnBring = createButton(tabMain, L.bring, UDim2.new(0, 0, 0, 220))
+btnBring.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        if multiSelectToggle and next(selectedObjects) then
+            local names = {}
+            for obj, _ in pairs(selectedObjects) do
+                table.insert(names, obj.Name)
+                if obj:IsA("BasePart") then
+                    obj.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(0, 0, -5)
+                elseif obj:IsA("Model") then
+                    obj:PivotTo(char.HumanoidRootPart.CFrame + Vector3.new(0, 0, -5))
+                end
+            end
+            notify(L.notifBringMulti .. table.concat(names, ", "))
+            clearSelectionAndHighlights()
+        elseif next(heldObjects) then
+            local names = {}
+            for obj, _ in pairs(heldObjects) do
+                table.insert(names, obj.Name)
+                if obj:IsA("BasePart") then
+                    obj.CFrame = char.HumanoidRootPart.CFrame + Vector3.new(0, 0, -5)
+                elseif obj:IsA("Model") then
+                    obj:PivotTo(char.HumanoidRootPart.CFrame + Vector3.new(0, 0, -5))
+                end
+            end
+            notify(L.notifBringOne .. table.concat(names, ", "))
+        end
+    end
+end)
+
+local spinAction = function(state)
+    if state then stopGrab() end
+    spinToggle = state
+    notify(L.notifSpinCont .. tostring(state))
+end
+createButtonWithMini(tabMain, L.spinCont, UDim2.new(0, 0, 0, 265), function()
+    spinToggle = not spinToggle
+    spinAction(spinToggle)
+end, true)
+
+local spin3DAction = function(state)
+    if state then stopGrab() end
+    spinFullToggle = state
+    notify(L.notifSpin3D .. tostring(state))
+end
+createButtonWithMini(tabMain, L.spin3D, UDim2.new(0, 0, 0, 310), function()
+    spinFullToggle = not spinFullToggle
+    spin3DAction(spinFullToggle)
+end, true)
+
+local tbSpinSpeed = createTextBox(tabMain, L.spinSpd, UDim2.new(0, 210, 0, 280))
+tbSpinSpeed.FocusLost:Connect(function()
+    spinSpeed = tonumber(tbSpinSpeed.Text) or 5
+    notify(L.notifSpinSpdVal .. tostring(spinSpeed))
+end)
+
+local btnReturnOne = createButton(tabMain, L.returnOne, UDim2.new(0, 0, 0, 355))
+btnReturnOne.MouseButton1Click:Connect(function()
+    if multiSelectToggle and next(selectedObjects) then
+        local names = {}
+        for obj, _ in pairs(selectedObjects) do
+            if originalCFrames[obj] then
+                table.insert(names, obj.Name)
+                pcall(function()
+                    obj:PivotTo(originalCFrames[obj])
+                    if obj:IsA("BasePart") then
+                        obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        obj.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    elseif obj:IsA("Model") and obj.PrimaryPart then
+                        obj.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        obj.PrimaryPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    end
+                end)
+            end
+        end
+        notify(L.notifReturnMulti .. table.concat(names, ", "))
+        clearSelectionAndHighlights()
+    elseif next(heldObjects) then
+        local names = {}
+        for obj, _ in pairs(heldObjects) do
+            if originalCFrames[obj] then
+                table.insert(names, obj.Name)
+                pcall(function()
+                    obj:PivotTo(originalCFrames[obj])
+                    if obj:IsA("BasePart") then
+                        obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        obj.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    elseif obj:IsA("Model") and obj.PrimaryPart then
+                        obj.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        obj.PrimaryPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    end
+                end)
+            end
+        end
+        notify(L.notifReturnOne .. table.concat(names, ", "))
+    else
+        notify(L.notifNoOriginal)
+    end
+end)
+
+local btnReturnAll = createButton(tabMain, L.returnAll, UDim2.new(0, 0, 0, 400))
+btnReturnAll.BackgroundColor3 = Color3.fromRGB(150, 25, 40)
+btnReturnAll.MouseButton1Click:Connect(function()
+    local count = 0
+    for obj, cf in pairs(originalCFrames) do
+        if obj and obj.Parent then
+            pcall(function()
+                obj:PivotTo(cf)
+                if obj:IsA("BasePart") then
+                    obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    obj.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    obj.CanCollide = true
+                elseif obj:IsA("Model") and obj.PrimaryPart then
+                    obj.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    obj.PrimaryPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    for _, p in ipairs(obj:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+                end
+            end)
+            count = count + 1
+        end
+    end
+    heldObjects = {}
+    frozenObjects = {}
+    clearSelectionAndHighlights()
+    for _, hl in pairs(highlights) do hl:Destroy() end
+    highlights = {}
+    for _, hb in pairs(heartGuis) do hb:Destroy() end
+    heartGuis = {}
+    
+    notify(string.format(L.notifAllReturned, count))
+end)
+
+createHoldButtonWithMini(tabMove, L.forward, UDim2.new(0, 0, 0, 10), function()
+    heldDistance = heldDistance + (distanceSpeed * 0.1)
+end)
+
+createHoldButtonWithMini(tabMove, L.backward, UDim2.new(0, 210, 0, 10), function()
+    heldDistance = math.max(2, heldDistance - (distanceSpeed * 0.1))
+end)
+
+local tbDistSpeed = createTextBox(tabMove, L.moveSpdText, UDim2.new(0, 0, 0, 55))
+tbDistSpeed.Text = "3"
+tbDistSpeed:GetPropertyChangedSignal("Text"):Connect(function()
+    swSpeedBox.Text = tbDistSpeed.Text
+end)
+
+swSpeedBox:GetPropertyChangedSignal("Text"):Connect(function()
+    tbDistSpeed.Text = swSpeedBox.Text
+    local val = tonumber(swSpeedBox.Text)
+    if val then
+        distanceSpeed = val
+        moveSpeed = val
+        notify(L.notifSpeedUpd .. tostring(val))
+    end
+end)
+
+local function createHoldRotBtnWithMini(text, pos, rotDeltaVec)
+    return createHoldButtonWithMini(tabMove, text, pos, function()
+        rotationOffset = rotationOffset * CFrame.Angles(rotDeltaVec.X * moveSpeed * 0.1, rotDeltaVec.Y * moveSpeed * 0.1, rotDeltaVec.Z * moveSpeed * 0.1)
+    end)
+end
+
+createHoldRotBtnWithMini(L.turnLeft, UDim2.new(0, 0, 0, 100), Vector3.new(0, 1, 0))
+createHoldRotBtnWithMini(L.turnRight, UDim2.new(0, 210, 0, 100), Vector3.new(0, -1, 0))
+createHoldRotBtnWithMini(L.turnUp, UDim2.new(0, 0, 0, 145), Vector3.new(1, 0, 0))
+createHoldRotBtnWithMini(L.turnDown, UDim2.new(0, 210, 0, 145), Vector3.new(-1, 0, 0))
+createHoldRotBtnWithMini(L.turnSideL, UDim2.new(0, 0, 0, 190), Vector3.new(0, 0, 1))
+createHoldRotBtnWithMini(L.turnSideR, UDim2.new(0, 210, 0, 190), Vector3.new(0, 0, -1))
+
+createToggle(tabConfig, L.crosshair, UDim2.new(0, 0, 0, 10), function(val)
+    crosshairToggle = val
+    crosshairGui.Visible = val
+    notify(L.notifCrossOn .. tostring(val))
+end)
+
+createToggle(tabConfig, L.multiSel, UDim2.new(0, 210, 0, 10), function(val)
+    multiSelectToggle = val
+    notify(L.notifMultiOn .. tostring(val))
+end)
+
+createToggle(tabConfig, L.statusToggle, UDim2.new(0, 0, 0, 55), function(val)
+    statusWidget.Visible = val
+    notify(L.statusToggle .. ": " .. tostring(val))
+end)
+
+local btnResetCrosshair = createButton(tabConfig, L.resetCross, UDim2.new(0, 210, 0, 55))
+btnResetCrosshair.MouseButton1Click:Connect(function()
+    crosshairPosOffset = Vector2.new(0, -35)
+    updateCrosshairPos()
+    notify(L.notifCrossReset)
+end)
+
+createHoldButton(tabConfig, L.crossUp, UDim2.new(0, 0, 0, 100), function()
+    crosshairPosOffset = crosshairPosOffset + Vector2.new(0, -2)
+    updateCrosshairPos()
+end)
+
+createHoldButton(tabConfig, L.crossDown, UDim2.new(0, 210, 0, 100), function()
+    crosshairPosOffset = crosshairPosOffset + Vector2.new(0, 2)
+    updateCrosshairPos()
+end)
+
+createHoldButton(tabConfig, L.crossLeft, UDim2.new(0, 0, 0, 145), function()
+    crosshairPosOffset = crosshairPosOffset + Vector2.new(-2, 0)
+    updateCrosshairPos()
+end)
+
+createHoldButton(tabConfig, L.crossRight, UDim2.new(0, 210, 0, 145), function()
+    crosshairPosOffset = crosshairPosOffset + Vector2.new(2, 0)
+    updateCrosshairPos()
+end)
+
+local btnDestroy = createButton(tabConfig, L.destroyHub, UDim2.new(0, 0, 0, 190))
+btnDestroy.BackgroundColor3 = Color3.fromRGB(160, 30, 40)
+btnDestroy.MouseButton1Click:Connect(function()
+    pcall(function()
+        if getgenv() then
+            getgenv().LZN_Hub_SavedTime = totalUsageTime
+        end
+    end)
+
+    local goodbyeGui = Instance.new("ScreenGui")
+    goodbyeGui.Name = "LZN_Goodbye"
+    goodbyeGui.IgnoreGuiInset = true
+    goodbyeGui.ResetOnSpawn = false
+    goodbyeGui.DisplayOrder = 1000001
+    goodbyeGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    goodbyeGui.Parent = playerGui
+
+    local goodbyeBg = Instance.new("Frame")
+    goodbyeBg.Size = UDim2.fromScale(1, 1)
+    goodbyeBg.BackgroundColor3 = Color3.fromRGB(5, 8, 18)
+    goodbyeBg.BackgroundTransparency = 1
+    goodbyeBg.BorderSizePixel = 0
+    goodbyeBg.Parent = goodbyeGui
+
+    local goodbyeImage = Instance.new("ImageLabel")
+    goodbyeImage.Name = "GoodbyeImage"
+    goodbyeImage.AnchorPoint = Vector2.new(0.5, 0.5)
+    goodbyeImage.Position = UDim2.new(0.5, 0, 0.39, 0)
+    goodbyeImage.Size = UDim2.fromOffset(115, 115)
+    goodbyeImage.BackgroundTransparency = 1
+    goodbyeImage.Image = "rbxassetid://18318508222"
+    goodbyeImage.ImageTransparency = 1
+    goodbyeImage.ScaleType = Enum.ScaleType.Fit
+    goodbyeImage.Parent = goodbyeBg
+
+    local goodbyeImageCorner = Instance.new("UICorner")
+    goodbyeImageCorner.CornerRadius = UDim.new(0, 18)
+    goodbyeImageCorner.Parent = goodbyeImage
+
+    local goodbyeText = Instance.new("TextLabel")
+    goodbyeText.Name = "GoodbyeMessage"
+    goodbyeText.AnchorPoint = Vector2.new(0.5, 0.5)
+    goodbyeText.Position = UDim2.new(0.5, 0, 0.59, 0)
+    goodbyeText.Size = UDim2.new(0.88, 0, 0, 80)
+    goodbyeText.BackgroundTransparency = 1
+    goodbyeText.Font = Enum.Font.GothamBold
+    goodbyeText.Text = selectedLang == "en" and "Thank you for using my Hub. You are such a sweetheart! ❤️☺️" or "Obrigado(a) por ter usado meu Hub. Você é um amorzinho! ❤️☺️"
+    goodbyeText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    goodbyeText.TextScaled = true
+    goodbyeText.TextWrapped = true
+    goodbyeText.TextTransparency = 1
+    goodbyeText.Parent = goodbyeBg
+
+    local goodbyeSound = Instance.new("Sound")
+    goodbyeSound.Name = "LZN_GoodbyeSound"
+    goodbyeSound.SoundId = "rbxassetid://154157386"
+    goodbyeSound.Volume = 0.8
+    goodbyeSound.Parent = SoundService
+    goodbyeSound:Play()
+
+    local fadeIn = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(goodbyeBg, fadeIn, {BackgroundTransparency = 0.2}):Play()
+    TweenService:Create(goodbyeImage, fadeIn, {ImageTransparency = 0}):Play()
+    TweenService:Create(goodbyeImage, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.fromOffset(155, 155)
+    }):Play()
+    TweenService:Create(goodbyeText, fadeIn, {TextTransparency = 0}):Play()
+
+    clearTelekinesisBeams()
+    for obj, originalCF in pairs(originalCFrames) do
+        if obj and obj.Parent and originalCF then
+            pcall(function()
+                obj:PivotTo(originalCF)
+            end)
+        end
+    end
+    stopGrab()
+    for obj, _ in pairs(frozenObjects) do
+        if obj:IsA("BasePart") then obj.CanCollide = true
+        elseif obj:IsA("Model") then
+            for _, p in ipairs(obj:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = true end
+            end
+        end
+        updateHighlight(obj, false)
+    end
+    frozenObjects = {}
+    clearSelectionAndHighlights()
+    for _, hl in pairs(highlights) do hl:Destroy() end
+    highlights = {}
+    for _, hb in pairs(heartGuis) do hb:Destroy() end
+    heartGuis = {}
+    spinToggle = false
+    spinFullToggle = false
+    if bgSound then bgSound:Stop() bgSound:Destroy() end
+    screenGui:Destroy()
+
+    task.delay(2.1, function()
+        if not goodbyeGui.Parent then return end
+        local fadeOut = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        TweenService:Create(goodbyeBg, fadeOut, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(goodbyeImage, fadeOut, {ImageTransparency = 1}):Play()
+        TweenService:Create(goodbyeText, fadeOut, {TextTransparency = 1}):Play()
+        task.delay(0.75, function()
+            if goodbyeGui.Parent then goodbyeGui:Destroy() end
+        end)
+    end)
+    goodbyeSound.Ended:Connect(function()
+        if goodbyeSound.Parent then goodbyeSound:Destroy() end
+    end)
+    task.delay(12, function()
+        if goodbyeSound.Parent then goodbyeSound:Destroy() end
+    end)
+end)
+
+local creditsFrame = Instance.new("Frame")
+creditsFrame.Size = UDim2.new(0, 195, 0, 85)
+creditsFrame.Position = UDim2.new(0, 210, 0, 190)
+creditsFrame.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+creditsFrame.BackgroundTransparency = 0.2
+creditsFrame.BorderSizePixel = 0
+creditsFrame.Parent = tabConfig
+
+local cfC = Instance.new("UICorner") cfC.CornerRadius = UDim.new(0, 8) cfC.Parent = creditsFrame
+local cfS = Instance.new("UIStroke") cfS.Color = Color3.fromRGB(0, 170, 255) cfS.Transparency = 0.6 cfS.Parent = creditsFrame
+
+local cfTitle = Instance.new("TextLabel")
+cfTitle.Size = UDim2.new(1, -6, 0, 20)
+cfTitle.Position = UDim2.new(0, 3, 0, 2)
+cfTitle.BackgroundTransparency = 1
+cfTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+cfTitle.TextSize = 11
+cfTitle.Font = Enum.Font.GothamBold
+cfTitle.Text = L.creditsTitle
+cfTitle.Parent = creditsFrame
+
+local creditsImg = Instance.new("ImageLabel")
+creditsImg.Size = UDim2.new(0, 40, 0, 40)
+creditsImg.Position = UDim2.new(0, 6, 0, 26)
+creditsImg.BackgroundTransparency = 1
+creditsImg.Parent = creditsFrame
+local ciC = Instance.new("UICorner") ciC.CornerRadius = UDim.new(1, 0) ciC.Parent = creditsImg
+
+task.spawn(function()
+    pcall(function()
+        local imgUrl = "https://i.ibb.co/mr8cVTrD/file-000000006ab0820e814867610fa56fb4-2.jpg"
+        local req = (syn and syn.request) or request or (http and http.request)
+        if req then
+            local res = req({Url = imgUrl, Method = "GET"})
+            if res and res.Body then
+                local fileName = "LZN_Credits_Avatar.jpg"
+                writefile(fileName, res.Body)
+                creditsImg.Image = getcustomasset(fileName)
+            end
+        end
+    end)
+end)
+
+local arrowLbl = Instance.new("TextLabel")
+arrowLbl.Size = UDim2.new(0, 20, 0, 20)
+arrowLbl.Position = UDim2.new(0, 48, 0, 36)
+arrowLbl.BackgroundTransparency = 1
+arrowLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+arrowLbl.TextSize = 14
+arrowLbl.Font = Enum.Font.GothamBold
+arrowLbl.Text = "←"
+arrowLbl.Parent = creditsFrame
+
+local creditsDescLbl = Instance.new("TextLabel")
+creditsDescLbl.Size = UDim2.new(0, 120, 0, 55)
+creditsDescLbl.Position = UDim2.new(0, 70, 0, 24)
+creditsDescLbl.BackgroundTransparency = 1
+creditsDescLbl.TextColor3 = Color3.fromRGB(200, 220, 255)
+creditsDescLbl.TextSize = 8
+creditsDescLbl.Font = Enum.Font.GothamMedium
+creditsDescLbl.TextWrapped = true
+creditsDescLbl.TextXAlignment = Enum.TextXAlignment.Left
+creditsDescLbl.Text = L.creditsDesc
+creditsDescLbl.Parent = creditsFrame
+
+local updatesFrame = Instance.new("Frame")
+updatesFrame.Size = UDim2.new(0, 405, 0, 85)
+updatesFrame.Position = UDim2.new(0, 0, 0, 285)
+updatesFrame.BackgroundColor3 = Color3.fromRGB(16, 20, 30)
+updatesFrame.BackgroundTransparency = 0.2
+updatesFrame.BorderSizePixel = 0
+updatesFrame.Parent = tabConfig
+
+local ufC = Instance.new("UICorner") ufC.CornerRadius = UDim.new(0, 8) ufC.Parent = updatesFrame
+local ufS = Instance.new("UIStroke") ufS.Color = Color3.fromRGB(0, 170, 255) ufS.Transparency = 0.6 ufS.Parent = updatesFrame
+
+local ufTitle = Instance.new("TextLabel")
+ufTitle.Size = UDim2.new(1, -12, 0, 20)
+ufTitle.Position = UDim2.new(0, 6, 0, 4)
+ufTitle.BackgroundTransparency = 1
+ufTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+ufTitle.TextSize = 11
+ufTitle.Font = Enum.Font.GothamBold
+ufTitle.Text = L.updatesTitle
+ufTitle.TextXAlignment = Enum.TextXAlignment.Left
+ufTitle.Parent = updatesFrame
+
+local ufDesc = Instance.new("TextLabel")
+ufDesc.Size = UDim2.new(1, -12, 1, -24)
+ufDesc.Position = UDim2.new(0, 6, 0, 24)
+ufDesc.BackgroundTransparency = 1
+ufDesc.TextColor3 = Color3.fromRGB(200, 220, 255)
+ufDesc.TextSize = 9
+ufDesc.Font = Enum.Font.GothamMedium
+ufDesc.TextWrapped = true
+ufDesc.TextXAlignment = Enum.TextXAlignment.Left
+ufDesc.TextYAlignment = Enum.TextYAlignment.Top
+ufDesc.Text = L.updatesDesc
+ufDesc.Parent = updatesFrame
+
+local frameCount = 0
+local lastFpsUpdate = tick()
+
+RunService.RenderStepped:Connect(function(dt)
+    frameCount = frameCount + 1
+    totalUsageTime = totalUsageTime + dt
+    pcall(function()
+        if getgenv() then
+            getgenv().LZN_Hub_SavedTime = totalUsageTime
+        end
+    end)
+    
+    if tick() - lastFpsUpdate >= 0.5 then
+        local currentFps = math.floor(frameCount / (tick() - lastFpsUpdate))
+        fpsLabel.Text = "FPS: " .. tostring(currentFps)
+        frameCount = 0
+        lastFpsUpdate = tick()
+    end
+    
+    local hrs = math.floor(totalUsageTime / 3600)
+    local mins = math.floor((totalUsageTime % 3600) / 60)
+    local secs = math.floor(totalUsageTime % 60)
+    timeLabel.Text = string.format("Tempo: %02d:%02d:%02d", hrs, mins, secs)
+    roleTag.Text = getRoleTag()
+
+    local selCount = 0
+    for _ in pairs(selectedObjects) do selCount = selCount + 1 end
+    local grabActive = next(heldObjects) ~= nil
+    local spinActive = spinToggle or spinFullToggle
+
+    swSelectedLabel.Text = L.selectedCount .. selCount
+    swGrabLabel.Text = L.grabStatus .. (grabActive and L.active or L.inactive)
+    swSpinLabel.Text = L.spinStatus .. (spinActive and L.active or L.inactive)
+    
+    if showPartToggle and not next(heldObjects) then
+        local target = getTargetUnderCrosshairOrMouse()
+        if target ~= currentHoveredPart then
+            if currentHoverHighlight then
+                currentHoverHighlight:Destroy()
+                currentHoverHighlight = nil
+            end
+            currentHoveredPart = target
+            if currentHoveredPart and not highlights[currentHoveredPart] and not frozenObjects[currentHoveredPart] and not selectedObjects[currentHoveredPart] then
+                local hl = Instance.new("Highlight")
+                hl.Adornee = currentHoveredPart
+                hl.FillColor = Color3.fromRGB(0, 180, 255)
+                hl.FillTransparency = 0.5
+                hl.OutlineColor = Color3.fromRGB(0, 230, 255)
+                hl.OutlineTransparency = 0.1
+                hl.Parent = screenGui
+                currentHoverHighlight = hl
+            end
+        end
+    else
+        if currentHoverHighlight then
+            currentHoverHighlight:Destroy()
+            currentHoverHighlight = nil
+        end
+        currentHoveredPart = nil
+    end
+
+    local spinDeltaY = 0
+    local spinDeltaX = 0
+    if spinToggle then
+        spinDeltaY = math.rad(spinSpeed * dt * 60)
+    end
+    if spinFullToggle then
+        spinDeltaY = math.rad(spinSpeed * dt * 60)
+        spinDeltaX = math.rad(spinSpeed * dt * 60)
+    end
+    
+    if spinDeltaY ~= 0 or spinDeltaX ~= 0 then
+        rotationOffset = rotationOffset * CFrame.Angles(spinDeltaX, spinDeltaY, 0)
+    end
+
+    for obj, cf in pairs(frozenObjects) do
+        if obj and obj.Parent then
+            if spinDeltaY ~= 0 or spinDeltaX ~= 0 then
+                local currentCF = obj:IsA("BasePart") and obj.CFrame or (obj:IsA("Model") and obj:GetPivot())
+                if currentCF then
+                    local updatedCF = currentCF * CFrame.Angles(spinDeltaX, spinDeltaY, 0)
+                    frozenObjects[obj] = updatedCF
+                    if obj:IsA("BasePart") then
+                        obj.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                        obj.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                        obj.CFrame = updatedCF
+                    elseif obj:IsA("Model") then
+                        pcall(function()
+                            if obj.PrimaryPart then
+                                obj.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                                obj.PrimaryPart.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                            end
+                            obj:PivotTo(updatedCF)
+                        end)
+                    end
+                end
+            else
+                if obj:IsA("BasePart") then
+                    obj.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                    obj.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                    obj.CFrame = cf
+                elseif obj:IsA("Model") then
+                    pcall(function()
+                        if obj.PrimaryPart then
+                            obj.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                            obj.PrimaryPart.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                        end
+                        obj:PivotTo(cf)
+                    end)
+                end
+            end
+        else
+            frozenObjects[obj] = nil
+        end
+    end
+
+    if next(heldObjects) then
+        local cam = workspace.CurrentCamera
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local baseTargetCF = root and (CFrame.new(root.Position + cam.CFrame.LookVector * heldDistance) * rotationOffset) or (cam.CFrame * CFrame.new(0, 0, -heldDistance) * rotationOffset)
+        
+        local rayParams = RaycastParams.new()
+        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+        local filterList = {player.Character}
+        for obj, _ in pairs(heldObjects) do
+            table.insert(filterList, obj)
+            if obj:IsA("BasePart") then
+                obj.CanCollide = true
+            elseif obj:IsA("Model") then
+                for _, p in ipairs(obj:GetDescendants()) do
+                    if p:IsA("BasePart") then p.CanCollide = true end
+                end
+            end
+        end
+        rayParams.FilterDescendantsInstances = filterList
+        
+        local origin = cam.CFrame.Position
+        local desiredPos = baseTargetCF.Position
+        local rayResult = workspace:Raycast(origin, desiredPos - origin, rayParams)
+        
+        if rayResult then
+            baseTargetCF = CFrame.new(rayResult.Position - (desiredPos - origin).Unit * 1.5) * (baseTargetCF - baseTargetCF.Position)
+        end
+        
+        for obj, _ in pairs(heldObjects) do
+            if obj and obj.Parent and not frozenObjects[obj] then
+                local relCF = relativeCFrames[obj] or CFrame.new()
+                local targetCFrame = baseTargetCF * relCF
+                
+                if not originalCFrames[obj] then
+                    pcall(function() originalCFrames[obj] = obj:GetPivot() end)
+                end
+                
+                local currentCF = obj:IsA("BasePart") and obj.CFrame or obj:GetPivot()
+                local nextCF
+
+                if realisticLineToggle then
+                    local state = realisticSpringStates[obj]
+                    if not state then
+                        state = {
+                            position = currentCF.Position,
+                            velocity = Vector3.new(0, 0, 0)
+                        }
+                        realisticSpringStates[obj] = state
+                    end
+
+                    local step = math.min(dt, 1 / 30)
+                    local stiffness = 38
+                    local damping = 5.2
+                    local acceleration = (targetCFrame.Position - state.position) * stiffness - state.velocity * damping
+                    state.velocity = state.velocity + acceleration * step
+                    state.position = state.position + state.velocity * step
+                    nextCF = CFrame.new(state.position) * targetCFrame.Rotation
+                else
+                    realisticSpringStates[obj] = nil
+                    nextCF = currentCF:Lerp(targetCFrame, math.clamp(dt * 15, 0, 1))
+                end
+
+                if obj:IsA("BasePart") then
+                    obj.CanCollide = true
+                    if realisticLineToggle then
+                        obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        obj.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    else
+                        obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        obj.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    end
+                    obj.CFrame = nextCF
+                elseif obj:IsA("Model") then
+                    for _, p in ipairs(obj:GetDescendants()) do
+                        if p:IsA("BasePart") then p.CanCollide = true end
+                    end
+                    obj:PivotTo(nextCF)
+                end
+            end
+        end
+    end
+end)
