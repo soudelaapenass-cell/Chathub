@@ -19,33 +19,65 @@ local function MakeDraggable(gui)
     local dragInput = nil
     local dragStart = nil
     local startPos = nil
+    local inputChangedConnection = nil
 
     gui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = gui.Position
-            dragInput = input
+        if dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
 
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
+        dragging = true
+        dragStart = input.Position
+        startPos = gui.Position
+        dragInput = input
+
+        if inputChangedConnection then
+            inputChangedConnection:Disconnect()
+            inputChangedConnection = nil
+        end
+
+        inputChangedConnection = UserInputService.InputChanged:Connect(function(changedInput)
+            if not dragging or not dragInput or not dragStart or not startPos then return end
+
+            local isMouseMove = dragInput.UserInputType == Enum.UserInputType.MouseButton1
+                and changedInput.UserInputType == Enum.UserInputType.MouseMovement
+            local isSameTouch = dragInput.UserInputType == Enum.UserInputType.Touch
+                and changedInput == dragInput
+
+            if isMouseMove or isSameTouch then
+                local delta = changedInput.Position - dragStart
+                gui.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+
+        local endedConnection
+        endedConnection = UserInputService.InputEnded:Connect(function(endedInput)
+            local isSameMouse = dragInput and dragInput.UserInputType == Enum.UserInputType.MouseButton1
+                and endedInput.UserInputType == Enum.UserInputType.MouseButton1
+            local isSameTouch = dragInput and dragInput.UserInputType == Enum.UserInputType.Touch
+                and endedInput == dragInput
+
+            if isSameMouse or isSameTouch then
+                dragging = false
+                dragInput = nil
+                dragStart = nil
+                startPos = nil
+                if inputChangedConnection then
+                    inputChangedConnection:Disconnect()
+                    inputChangedConnection = nil
                 end
-            end)
-        end
-    end)
-
-    gui.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input == dragInput or input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStart and startPos then
-            local delta = input.Position - dragStart
-            gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
+                if endedConnection then
+                    endedConnection:Disconnect()
+                    endedConnection = nil
+                end
+            end
+        end)
     end)
 end
 
@@ -3511,6 +3543,7 @@ function LZNLib:CreateWindow(options)
         sBtn.BackgroundColor3 = Color3.fromRGB(14, 20, 32)
         sBtn.BackgroundTransparency = 0.22
         sBtn.Text = ""
+        sBtn.Visible = false
         sBtn.ZIndex = 7
         sBtn.Parent = HotbarFrame
         Instance.new("UICorner", sBtn).CornerRadius = UDim.new(0, 9)
@@ -3681,7 +3714,17 @@ function LZNLib:CreateWindow(options)
         end
 
         local anyItemAtAll = hasAnyHotbar or hasAnyBackpack
+        local lastHotbarIndex = 0
+        for i = 1, 10 do
+            if hotbarSlots[i] then
+                lastHotbarIndex = i
+            end
+        end
+
         HotbarFrame.Visible = anyItemAtAll
+        HotbarFrame.Size = UDim2.new(0, math.max(52, lastHotbarIndex * 56 + 52), 0, 68)
+        BackpackToggleBtn.Position = UDim2.new(0, lastHotbarIndex * 56 + 4, 0.5, -22)
+
         if not anyItemAtAll then
             BackpackPanel.Visible = false
             backpackOpen = false
@@ -3692,6 +3735,7 @@ function LZNLib:CreateWindow(options)
         for i = 1, 10 do
             local itemName = hotbarSlots[i]
             local sObj = slotButtons[i]
+            sObj.btn.Visible = itemName ~= nil
             if itemName then
                 local tools = FindToolsByName(itemName)
                 local imgId = (#tools > 0 and GetItemImage(tools[1])) or (toolTemplates[itemName] and GetItemImage(toolTemplates[itemName])) or "rbxassetid://78521393913034"
