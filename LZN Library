@@ -12,7 +12,21 @@ local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 
-local Player = Players.LocalPlayer
+local Player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+
+local function GetSafeGuiParent()
+    local ok, res = pcall(function()
+        if gethui then
+            return gethui()
+        end
+        return CoreGui
+    end)
+    if ok and res then
+        return res
+    end
+    local pg = Player:FindFirstChildOfClass("PlayerGui") or Player:WaitForChild("PlayerGui", 5)
+    return pg or CoreGui
+end
 
 local DefaultThemes = {
     NeonCyan = {
@@ -82,7 +96,7 @@ local function SafeCall(fn, ...)
     local results = {pcall(fn, ...)}
     if results[1] then
         table.remove(results, 1)
-        return unpack(results)
+        return table.unpack(results)
     end
     return nil
 end
@@ -502,7 +516,7 @@ function LZNLib:CreateWindow(options)
     local floatImage = options.FloatingImage or "rbxassetid://119050109637022"
     local musicId = options.MusicId or "rbxassetid://132631534724831"
     local musicVolume = options.MusicVolume or 0.12
-    local customInventoryEnabled = options.CustomInventory ~= false
+    local customInventoryEnabled = options.CustomInventory == true
     local tabPosition = string.lower(options.TabPosition or "top")
     local compactMode = options.Compact == true
 
@@ -530,6 +544,7 @@ function LZNLib:CreateWindow(options)
     local clickSoundId = options.ClickSound or "rbxassetid://6895079853"
     local sfxEnabled = options.SoundEffects ~= false
 
+    local guiParent = GetSafeGuiParent()
     local windowTracker = CreateConnectionTracker()
     local trackedStrokes = {}
     local trackedCorners = {}
@@ -562,36 +577,37 @@ function LZNLib:CreateWindow(options)
         return inst
     end
 
-    pcall(function()
-        StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, not customInventoryEnabled)
-    end)
-
-    if CoreGui:FindFirstChild(hubName) then
-        CoreGui[hubName]:Destroy()
+    if customInventoryEnabled then
+        pcall(function()
+            StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+        end)
     end
 
-    if CoreGui:FindFirstChild(hubName .. "_TopBlurGui") then
-        CoreGui[hubName .. "_TopBlurGui"]:Destroy()
-    end
-
-    if CoreGui:FindFirstChild(hubName .. "_CustomInventory") then
-        CoreGui[hubName .. "_CustomInventory"]:Destroy()
+    for _, container in ipairs({CoreGui, guiParent}) do
+        if container then
+            for _, suffix in ipairs({"", "_TopBlurGui", "_CustomInventory"}) do
+                local oldGui = container:FindFirstChild(hubName .. suffix)
+                if oldGui then
+                    pcall(function() oldGui:Destroy() end)
+                end
+            end
+        end
     end
 
     for _, oldS in ipairs(SoundService:GetChildren()) do
         if oldS:IsA("Sound") and string.find(oldS.Name, hubName .. "_SFX_", 1, true) then
-            oldS:Destroy()
+            pcall(function() oldS:Destroy() end)
         end
     end
 
     local oldSound = SoundService:FindFirstChild(hubName .. "_BGM")
     if oldSound then
-        oldSound:Destroy()
+        pcall(function() oldSound:Destroy() end)
     end
 
     local oldBlur = Lighting:FindFirstChild(hubName .. "_PopupBlur")
     if oldBlur then
-        oldBlur:Destroy()
+        pcall(function() oldBlur:Destroy() end)
     end
 
     local function CreateSFX(suffix, soundId, vol, pitch)
@@ -623,14 +639,14 @@ function LZNLib:CreateWindow(options)
 
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = hubName
-    ScreenGui.Parent = CoreGui
+    ScreenGui.Parent = guiParent
     ScreenGui.ResetOnSpawn = false
     ScreenGui.DisplayOrder = 40
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     local FullScreenBlurGui = Instance.new("ScreenGui")
     FullScreenBlurGui.Name = hubName .. "_TopBlurGui"
-    FullScreenBlurGui.Parent = CoreGui
+    FullScreenBlurGui.Parent = guiParent
     FullScreenBlurGui.ResetOnSpawn = false
     FullScreenBlurGui.DisplayOrder = 999999
     FullScreenBlurGui.IgnoreGuiInset = true
@@ -833,7 +849,9 @@ function LZNLib:CreateWindow(options)
     BackgroundMusic.Volume = musicVolume
     BackgroundMusic.Looped = true
     BackgroundMusic.Parent = SoundService
-    pcall(function() BackgroundMusic:Play() end)
+    if options.AutoPlayMusic == true then
+        pcall(function() BackgroundMusic:Play() end)
+    end
 
     local MusicButton = Instance.new("TextButton")
     MusicButton.Size = UDim2.new(0, 68, 0, 24)
@@ -855,8 +873,8 @@ function LZNLib:CreateWindow(options)
     BGMText.Size = UDim2.new(1, -24, 1, 0)
     BGMText.Position = UDim2.new(0, 22, 0, 0)
     BGMText.BackgroundTransparency = 1
-    BGMText.Text = "BGM"
-    BGMText.TextColor3 = accentColor
+    BGMText.Text = BackgroundMusic.IsPlaying and "BGM" or "OFF"
+    BGMText.TextColor3 = BackgroundMusic.IsPlaying and accentColor or mutedTextColor
     BGMText.Font = activeFont
     BGMText.TextSize = 10
     BGMText.TextXAlignment = Enum.TextXAlignment.Left
@@ -870,7 +888,7 @@ function LZNLib:CreateWindow(options)
             BGMText.Text = "OFF"
             BGMText.TextColor3 = mutedTextColor
         else
-            BackgroundMusic:Resume()
+            pcall(function() BackgroundMusic:Play() end)
             BGMText.Text = "BGM"
             BGMText.TextColor3 = accentColor
         end
@@ -944,11 +962,13 @@ function LZNLib:CreateWindow(options)
     RegisterAccent(ClockLabel, "TextColor3")
 
     task.spawn(function()
-        local ok, image = pcall(function()
-            return Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+        pcall(function()
+            local image = Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+            if image and Avatar and Avatar.Parent then
+                Avatar.Image = image
+            end
         end)
-        if ok then Avatar.Image = image end
-        while ScreenGui.Parent do
+        while ScreenGui and ScreenGui.Parent do
             ClockLabel.Text = os.date("%H:%M:%S")
             task.wait(1)
         end
@@ -1276,7 +1296,7 @@ function LZNLib:CreateWindow(options)
     GameName.Size = UDim2.new(1, -80, 0, 34)
     GameName.Position = UDim2.new(0, 76, 0, 8)
     GameName.BackgroundTransparency = 1
-    GameName.Text = "Carregando mapa..."
+    GameName.Text = (type(game.Name) == "string" and #game.Name > 0) and game.Name or ("Mapa #" .. tostring(game.PlaceId))
     GameName.TextColor3 = textColor
     GameName.Font = activeFont
     GameName.TextSize = 12
@@ -1318,9 +1338,12 @@ function LZNLib:CreateWindow(options)
     end
 
     task.spawn(function()
+        task.wait(1)
         local productInfo
         pcall(function() productInfo = MarketplaceService:GetProductInfo(game.PlaceId) end)
-        GameName.Text = ResolveRealGameName(productInfo)
+        if GameName and GameName.Parent then
+            GameName.Text = ResolveRealGameName(productInfo)
+        end
 
         local playing, visits = "N/D", "N/D"
         if game.GameId and game.GameId > 0 then
@@ -1334,12 +1357,14 @@ function LZNLib:CreateWindow(options)
         local created = productInfo and productInfo.Created and tostring(productInfo.Created):sub(1, 10) or "N/D"
         local updated = productInfo and productInfo.Updated and tostring(productInfo.Updated):sub(1, 10) or "N/D"
         local function UpdateGameStats()
-            GameStats.Text = "Jogando neste servidor: " .. tostring(#Players:GetPlayers()) ..
-                "\nJogando no mapa: " .. playing .. "\nVisitas: " .. visits ..
-                "\nCriado: " .. created .. "\nAtualizado: " .. updated
+            if GameStats and GameStats.Parent then
+                GameStats.Text = "Jogando neste servidor: " .. tostring(#Players:GetPlayers()) ..
+                    "\nJogando no mapa: " .. playing .. "\nVisitas: " .. visits ..
+                    "\nCriado: " .. created .. "\nAtualizado: " .. updated
+            end
         end
         UpdateGameStats()
-        while ScreenGui.Parent do
+        while ScreenGui and ScreenGui.Parent do
             task.wait(15)
             UpdateGameStats()
         end
@@ -1489,7 +1514,7 @@ function LZNLib:CreateWindow(options)
 
     local InvGui = Instance.new("ScreenGui")
     InvGui.Name = hubName .. "_CustomInventory"
-    InvGui.Parent = CoreGui
+    InvGui.Parent = guiParent
     InvGui.ResetOnSpawn = false
     InvGui.DisplayOrder = 5
     InvGui.Enabled = customInventoryEnabled
@@ -1849,21 +1874,6 @@ function LZNLib:CreateWindow(options)
                 end
             end
         end
-    end
-
-    local function BuildComponentContainer(parentScroll, heightPx, layoutOrder, customTransp, customCorner)
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, 0, 0, heightPx)
-        frame.BackgroundColor3 = surfaceColor
-        frame.BackgroundTransparency = customTransp ~= nil and customTransp or elementTransparency
-        frame.LayoutOrder = layoutOrder or NextOrder()
-        frame.ZIndex = 24
-        frame.Parent = parentScroll
-        local cr = RegisterCorner(Instance.new("UICorner", frame), 1)
-        cr.CornerRadius = UDim.new(0, customCorner or cornerRadiusPx)
-        local st = RegisterStroke(AddGlow(frame, accentColor, borderThickness, borderTransparency), true)
-        RegisterSurface(frame)
-        return frame, st, cr
     end
 
     local function AttachStandardComponentAPI(apiObj, cfgTable)
@@ -3648,7 +3658,7 @@ function LZNLib:CreateWindow(options)
     end
 
     function Window:CreateSection(secName)
-        return defaultHomeSection:CreateSection and defaultHomeSection:CreateSection(secName) or CreateSectionComponents(ContentContainer, secName, NextOrder())
+        return CreateSectionComponents(ContentContainer, secName, NextOrder())
     end
 
     function Window:AddDivider(cfg)
@@ -4126,128 +4136,11 @@ function LZNLib:CreateWindow(options)
     end
 
     function Window:AddButton(cfg)
-        cfg = cfg or {}
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, 0, 0, 38)
-        btn.BackgroundColor3 = cfg.Color or surfaceColor
-        btn.BackgroundTransparency = 0.35
-        btn.Text = ""
-        btn.LayoutOrder = NextOrder()
-        btn.ZIndex = 24
-        btn.Parent = ContentContainer
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
-        local stroke = RegisterStroke(AddGlow(btn, cfg.GlowColor or accentColor, 1.2, 0.35), not cfg.GlowColor)
-        AddClickEffect(btn, animSpeed, windowTracker)
-
-        local ic = CreateCustomIcon(btn, cfg.Icon or "play", cfg.TextColor or accentColor, 13)
-        ic.Position = UDim2.new(0, 12, 0.5, -6)
-
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1, -34, 1, 0)
-        lbl.Position = UDim2.new(0, 30, 0, 0)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = cfg.Text or "Botão"
-        lbl.TextColor3 = cfg.TextColor or accentColor
-        lbl.Font = activeFont
-        lbl.TextSize = 12
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.Parent = btn
-
-        windowTracker:Add(btn.MouseButton1Down:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundTransparency = 0.1}):Play()
-            TweenService:Create(stroke, TweenInfo.new(0.1), {Transparency = 0.05, Thickness = 1.8}):Play()
-        end))
-        windowTracker:Add(btn.MouseButton1Up:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.18), {BackgroundTransparency = 0.35}):Play()
-            TweenService:Create(stroke, TweenInfo.new(0.18), {Transparency = 0.35, Thickness = 1.2}):Play()
-        end))
-
-        windowTracker:Add(btn.MouseButton1Click:Connect(function()
-            PlaySFX(ClickSFX, 1)
-            SafeCall(cfg.Callback)
-        end))
-
-        return btn
+        return defaultHomeSection:AddButton(cfg)
     end
 
     function Window:AddToggle(cfg)
-        cfg = cfg or {}
-        local state = cfg.Default or false
-        local baseText = cfg.Text or "Toggle"
-
-        local rowFrame = Instance.new("Frame")
-        rowFrame.Size = UDim2.new(1, 0, 0, 38)
-        rowFrame.BackgroundColor3 = surfaceColor
-        rowFrame.BackgroundTransparency = state and 0.18 or 0.45
-        rowFrame.LayoutOrder = NextOrder()
-        rowFrame.ZIndex = 24
-        rowFrame.Parent = ContentContainer
-        Instance.new("UICorner", rowFrame).CornerRadius = UDim.new(0, 10)
-        local stroke = RegisterStroke(AddGlow(rowFrame, state and secondaryColor or accentColor, state and 1.8 or 1.2, state and 0.15 or 0.4), not state)
-
-        local highlight = Instance.new("Frame")
-        highlight.Size = UDim2.new(0, 4, 0.65, 0)
-        highlight.Position = UDim2.new(0, 4, 0.175, 0)
-        highlight.BackgroundColor3 = secondaryColor
-        highlight.BackgroundTransparency = state and 0 or 1
-        highlight.BorderSizePixel = 0
-        highlight.Parent = rowFrame
-        Instance.new("UICorner", highlight).CornerRadius = UDim.new(1, 0)
-
-        local ic = CreateCustomIcon(rowFrame, cfg.Icon or "success", state and secondaryColor or mutedTextColor, 13)
-        ic.Position = UDim2.new(0, 14, 0.5, -6)
-
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1, -88, 1, 0)
-        lbl.Position = UDim2.new(0, 32, 0, 0)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = baseText
-        lbl.TextColor3 = state and textColor or mutedTextColor
-        lbl.Font = activeFont
-        lbl.TextSize = 12
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.TextTruncate = Enum.TextTruncate.AtEnd
-        lbl.Parent = rowFrame
-
-        local pill = Instance.new("Frame")
-        pill.Size = UDim2.new(0, 42, 0, 22)
-        pill.Position = UDim2.new(1, -52, 0.5, -11)
-        pill.BackgroundColor3 = state and secondaryColor or Color3.fromRGB(28, 36, 52)
-        pill.Parent = rowFrame
-        Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
-        local pillStroke = AddGlow(pill, state and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110), 1, 0.3)
-
-        local dot = Instance.new("Frame")
-        dot.Size = UDim2.new(0, 16, 0, 16)
-        dot.Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
-        dot.BackgroundColor3 = Color3.new(1, 1, 1)
-        dot.Parent = pill
-        Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
-
-        local ctrl = AttachStrictToggleControl(pill, dot, state, function(newState)
-            state = newState
-            TweenService:Create(rowFrame, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundTransparency = state and 0.18 or 0.45
-            }):Play()
-            TweenService:Create(highlight, TweenInfo.new(0.22), {
-                BackgroundTransparency = state and 0 or 1
-            }):Play()
-            lbl.TextColor3 = state and textColor or mutedTextColor
-            stroke.Color = state and secondaryColor or accentColor
-            stroke.Thickness = state and 1.8 or 1.2
-            stroke.Transparency = state and 0.15 or 0.4
-            pillStroke.Color = state and secondaryColor or Color3.fromRGB(60, 80, 110)
-            local col = state and secondaryColor or mutedTextColor
-            for _, ch in ipairs(ic:GetChildren()) do
-                if ch:IsA("Frame") then ch.BackgroundColor3 = col end
-            end
-            SafeCall(cfg.Callback, state)
-        end)
-
-        local obj = {}
-        function obj:Set(v) ctrl.Set(v, true) end
-        function obj:Get() return ctrl.Get() end
-        return obj
+        return defaultHomeSection:AddToggle(cfg)
     end
 
     function Window:AddTextBox(cfg)
@@ -4746,7 +4639,6 @@ function LZNLib:CreateWindow(options)
             end
         end))
 
-        pcall(function() AudioSound:Play() end)
         SyncPlayPauseVisual()
     end
 
@@ -5193,10 +5085,12 @@ function LZNLib:CreateWindow(options)
     PAvatar.Parent = PlayerCard
     Instance.new("UICorner", PAvatar).CornerRadius = UDim.new(1, 0)
     task.spawn(function()
-        local ok, img = pcall(function()
-            return Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+        pcall(function()
+            local img = Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+            if img and PAvatar and PAvatar.Parent then
+                PAvatar.Image = img
+            end
         end)
-        if ok then PAvatar.Image = img end
     end)
 
     local PInfo = Instance.new("TextLabel")
@@ -5354,11 +5248,14 @@ function LZNLib:CreateWindow(options)
         end))
     end
 
-    for _, desc in ipairs(workspace:GetDescendants()) do
-        if desc:IsA("BasePart") then
-            HookHazardPart(desc)
+    task.spawn(function()
+        for _, desc in ipairs(workspace:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                HookHazardPart(desc)
+            end
         end
-    end
+    end)
+
     windowTracker:Add(workspace.DescendantAdded:Connect(function(desc)
         if desc:IsA("BasePart") then
             HookHazardPart(desc)
@@ -5626,969 +5523,654 @@ function LZNLib:CreateWindow(options)
 
     local EquippedActionBar = Instance.new("Frame")
     EquippedActionBar.Name = "EquippedActionBar"
-    EquippedActionBar.Size = UDim2.new(0, 172, 0, 28)
+    EquippedActionBar.Size = UDim2.new(0, 178, 0, 32)
     EquippedActionBar.Position = UDim2.new(0.5, 0, 1, -86)
     EquippedActionBar.AnchorPoint = Vector2.new(0.5, 1)
-    EquippedActionBar.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
+    EquippedActionBar.BackgroundColor3 = Color3.fromRGB(11, 15, 24)
     EquippedActionBar.BackgroundTransparency = 0.2
     EquippedActionBar.Visible = false
-    EquippedActionBar.ZIndex = 12
+    EquippedActionBar.ZIndex = 8
     EquippedActionBar.Parent = InvGui
-    Instance.new("UICorner", EquippedActionBar).CornerRadius = UDim.new(0, 8)
-    RegisterStroke(AddGlow(EquippedActionBar, accentColor, 1.2, 0.35), true)
+    Instance.new("UICorner", EquippedActionBar).CornerRadius = UDim.new(0, 10)
+    RegisterStroke(AddGlow(EquippedActionBar, accentColor, 1.3, 0.35), true)
 
-    local QtyBox = Instance.new("TextBox")
-    QtyBox.Size = UDim2.new(0, 42, 0, 20)
-    QtyBox.Position = UDim2.new(0, 4, 0.5, -10)
-    QtyBox.BackgroundColor3 = Color3.fromRGB(7, 10, 16)
-    QtyBox.Text = "1"
-    QtyBox.PlaceholderText = "Qtd"
-    QtyBox.PlaceholderColor3 = mutedTextColor
-    QtyBox.TextColor3 = accentColor
-    QtyBox.Font = Enum.Font.GothamBold
-    QtyBox.TextSize = 10
-    QtyBox.ClearTextOnFocus = false
-    QtyBox.ZIndex = 13
-    QtyBox.Parent = EquippedActionBar
-    Instance.new("UICorner", QtyBox).CornerRadius = UDim.new(0, 6)
-    AddGlow(QtyBox, accentColor, 1, 0.5)
+    local DropToolBtn = Instance.new("TextButton")
+    DropToolBtn.Name = "DropEquippedBtn"
+    DropToolBtn.Size = UDim2.new(0, 82, 0, 22)
+    DropToolBtn.Position = UDim2.new(0, 6, 0.5, -11)
+    DropToolBtn.BackgroundColor3 = Color3.fromRGB(28, 14, 18)
+    DropToolBtn.Text = "DROPAR"
+    DropToolBtn.TextColor3 = Color3.fromRGB(255, 95, 115)
+    DropToolBtn.Font = Enum.Font.GothamBlack
+    DropToolBtn.TextSize = 10
+    DropToolBtn.ZIndex = 9
+    DropToolBtn.Parent = EquippedActionBar
+    Instance.new("UICorner", DropToolBtn).CornerRadius = UDim.new(0, 7)
+    AddGlow(DropToolBtn, Color3.fromRGB(255, 80, 105), 1, 0.35)
+    AddClickEffect(DropToolBtn, animSpeed, windowTracker)
 
-    local DropMiniBtn = Instance.new("TextButton")
-    DropMiniBtn.Size = UDim2.new(0, 56, 0, 20)
-    DropMiniBtn.Position = UDim2.new(0, 50, 0.5, -10)
-    DropMiniBtn.BackgroundColor3 = Color3.fromRGB(28, 16, 24)
-    DropMiniBtn.Text = "DROPAR"
-    DropMiniBtn.TextColor3 = Color3.fromRGB(255, 110, 135)
-    DropMiniBtn.Font = Enum.Font.GothamBold
-    DropMiniBtn.TextSize = 9
-    DropMiniBtn.ZIndex = 13
-    DropMiniBtn.Parent = EquippedActionBar
-    Instance.new("UICorner", DropMiniBtn).CornerRadius = UDim.new(0, 6)
-    AddGlow(DropMiniBtn, Color3.fromRGB(255, 85, 115), 1, 0.4)
-    AddClickEffect(DropMiniBtn, animSpeed, windowTracker)
+    local UnequipToolBtn = Instance.new("TextButton")
+    UnequipToolBtn.Name = "UnequipBtn"
+    UnequipToolBtn.Size = UDim2.new(0, 82, 0, 22)
+    UnequipToolBtn.Position = UDim2.new(1, -88, 0.5, -11)
+    UnequipToolBtn.BackgroundColor3 = surfaceColor
+    UnequipToolBtn.Text = "GUARDAR"
+    UnequipToolBtn.TextColor3 = accentColor
+    UnequipToolBtn.Font = Enum.Font.GothamBlack
+    UnequipToolBtn.TextSize = 10
+    UnequipToolBtn.ZIndex = 9
+    UnequipToolBtn.Parent = EquippedActionBar
+    Instance.new("UICorner", UnequipToolBtn).CornerRadius = UDim.new(0, 7)
+    RegisterStroke(AddGlow(UnequipToolBtn, accentColor, 1, 0.4), true)
+    AddClickEffect(UnequipToolBtn, animSpeed, windowTracker)
 
-    local StoreMiniBtn = Instance.new("TextButton")
-    StoreMiniBtn.Size = UDim2.new(0, 58, 0, 20)
-    StoreMiniBtn.Position = UDim2.new(0, 110, 0.5, -10)
-    StoreMiniBtn.BackgroundColor3 = Color3.fromRGB(12, 24, 36)
-    StoreMiniBtn.Text = "MOCHILA"
-    StoreMiniBtn.TextColor3 = accentColor
-    StoreMiniBtn.Font = Enum.Font.GothamBold
-    StoreMiniBtn.TextSize = 9
-    StoreMiniBtn.ZIndex = 13
-    StoreMiniBtn.Parent = EquippedActionBar
-    Instance.new("UICorner", StoreMiniBtn).CornerRadius = UDim.new(0, 6)
-    AddGlow(StoreMiniBtn, accentColor, 1, 0.4)
-    AddClickEffect(StoreMiniBtn, animSpeed, windowTracker)
+    local BackpackButton = Instance.new("TextButton")
+    BackpackButton.Name = "BackpackToggle"
+    BackpackButton.Size = UDim2.new(0, 42, 0, 42)
+    BackpackButton.Position = UDim2.new(0.5, -334, 1, -24)
+    BackpackButton.AnchorPoint = Vector2.new(0.5, 1)
+    BackpackButton.BackgroundColor3 = Color3.fromRGB(11, 15, 24)
+    BackpackButton.BackgroundTransparency = 0.15
+    BackpackButton.Text = ""
+    BackpackButton.ZIndex = 10
+    BackpackButton.Parent = InvGui
+    Instance.new("UICorner", BackpackButton).CornerRadius = UDim.new(0, 12)
+    RegisterStroke(AddGlow(BackpackButton, accentColor, 1.4, 0.3), true)
+    AddClickEffect(BackpackButton, animSpeed, windowTracker)
+
+    local bpIcon = CreateCustomIcon(BackpackButton, "backpack", accentColor, 18)
+    bpIcon.Position = UDim2.new(0.5, -9, 0.5, -9)
 
     local BackpackPanel = Instance.new("Frame")
     BackpackPanel.Name = "BackpackPanel"
-    BackpackPanel.Size = UDim2.new(0, 560, 0, 236)
-    BackpackPanel.Position = UDim2.new(0.5, 0, 1, -122)
+    BackpackPanel.Size = UDim2.new(0, 560, 0, 210)
+    BackpackPanel.Position = UDim2.new(0.5, 0, 1, -88)
     BackpackPanel.AnchorPoint = Vector2.new(0.5, 1)
-    BackpackPanel.BackgroundColor3 = Color3.fromRGB(9, 13, 21)
-    BackpackPanel.BackgroundTransparency = 0.14
+    BackpackPanel.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
+    BackpackPanel.BackgroundTransparency = 0.12
     BackpackPanel.Visible = false
-    BackpackPanel.ZIndex = 14
+    BackpackPanel.ZIndex = 12
     BackpackPanel.Parent = InvGui
     Instance.new("UICorner", BackpackPanel).CornerRadius = UDim.new(0, 14)
     RegisterStroke(AddGlow(BackpackPanel, accentColor, 1.5, 0.25), true)
-    AddGradient(BackpackPanel, Color3.fromRGB(15, 21, 34), Color3.fromRGB(7, 10, 16), 135)
+    AddGradient(BackpackPanel, Color3.fromRGB(16, 22, 36), Color3.fromRGB(8, 10, 16), 135)
 
     local SearchBox = Instance.new("TextBox")
-    SearchBox.Size = UDim2.new(1, -20, 0, 28)
-    SearchBox.Position = UDim2.new(0, 10, 0, 10)
-    SearchBox.BackgroundColor3 = Color3.fromRGB(14, 20, 32)
-    SearchBox.Text = ""
+    SearchBox.Size = UDim2.new(1, -24, 0, 28)
+    SearchBox.Position = UDim2.new(0, 12, 0, 10)
+    SearchBox.BackgroundColor3 = Color3.fromRGB(8, 11, 18)
     SearchBox.PlaceholderText = "Pesquisar item na mochila..."
     SearchBox.PlaceholderColor3 = mutedTextColor
+    SearchBox.Text = ""
     SearchBox.TextColor3 = textColor
-    SearchBox.Font = Enum.Font.GothamBold
+    SearchBox.Font = activeFont
     SearchBox.TextSize = 11
     SearchBox.ClearTextOnFocus = false
-    SearchBox.ZIndex = 15
+    SearchBox.ZIndex = 13
     SearchBox.Parent = BackpackPanel
     Instance.new("UICorner", SearchBox).CornerRadius = UDim.new(0, 8)
-    AddGlow(SearchBox, accentColor, 1.1, 0.4)
+    RegisterStroke(AddGlow(SearchBox, accentColor, 1, 0.45), true)
 
     local BackpackScroll = Instance.new("ScrollingFrame")
-    BackpackScroll.Size = UDim2.new(1, -20, 1, -48)
-    BackpackScroll.Position = UDim2.new(0, 10, 0, 42)
+    BackpackScroll.Size = UDim2.new(1, -24, 1, -50)
+    BackpackScroll.Position = UDim2.new(0, 12, 0, 44)
     BackpackScroll.BackgroundTransparency = 1
     BackpackScroll.BorderSizePixel = 0
     BackpackScroll.ScrollBarThickness = 3
     BackpackScroll.ScrollBarImageColor3 = accentColor
     BackpackScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    BackpackScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    BackpackScroll.ZIndex = 15
+    BackpackScroll.ZIndex = 13
     BackpackScroll.Parent = BackpackPanel
 
-    local BackpackGrid = Instance.new("UIGridLayout")
-    BackpackGrid.CellSize = UDim2.new(0, 48, 0, 62)
-    BackpackGrid.CellPadding = UDim2.new(0, 6, 0, 6)
-    BackpackGrid.FillDirection = Enum.FillDirection.Horizontal
-    BackpackGrid.SortOrder = Enum.SortOrder.LayoutOrder
-    BackpackGrid.Parent = BackpackScroll
-
-    local DragGhost = Instance.new("Frame")
-    DragGhost.Size = UDim2.new(0, 52, 0, 62)
-    DragGhost.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
-    DragGhost.BackgroundTransparency = 0.55
-    DragGhost.Visible = false
-    DragGhost.ZIndex = 50
-    DragGhost.Parent = InvGui
-    Instance.new("UICorner", DragGhost).CornerRadius = UDim.new(0, 8)
-    AddGlow(DragGhost, accentColor, 2, 0.05)
-
-    local GhostImg = Instance.new("ImageLabel")
-    GhostImg.Size = UDim2.new(0, 32, 0, 32)
-    GhostImg.Position = UDim2.new(0.5, -16, 0.5, -12)
-    GhostImg.BackgroundTransparency = 1
-    GhostImg.ZIndex = 51
-    GhostImg.Parent = DragGhost
-
-    local GhostLbl = Instance.new("TextLabel")
-    GhostLbl.Size = UDim2.new(1, -4, 0, 14)
-    GhostLbl.Position = UDim2.new(0, 2, 0, 2)
-    GhostLbl.BackgroundTransparency = 1
-    GhostLbl.TextColor3 = Color3.new(1, 1, 1)
-    GhostLbl.Font = Enum.Font.GothamBold
-    GhostLbl.TextSize = 8
-    GhostLbl.TextTruncate = Enum.TextTruncate.AtEnd
-    GhostLbl.ZIndex = 51
-    GhostLbl.Parent = DragGhost
+    local bpGrid = Instance.new("UIGridLayout")
+    bpGrid.CellSize = UDim2.new(0, 100, 0, 62)
+    bpGrid.CellPadding = UDim2.new(0, 8, 0, 8)
+    bpGrid.FillDirectionMaxCells = 5
+    bpGrid.SortOrder = Enum.SortOrder.LayoutOrder
+    bpGrid.Parent = BackpackScroll
 
     local slotButtons = {}
-    local backpackButtons = {}
-    local dragSource = nil
-    local isDraggingItem = false
-    local dragStartScreen = nil
 
-    local function GetItemImage(tool)
+    local function GetToolIcon(tool)
         if tool and tool.TextureId and tool.TextureId ~= "" then
             return tool.TextureId
         end
-        return "rbxassetid://78521393913034"
+        return "rbxthumb://type=Asset&id=" .. tostring(game.PlaceId) .. "&w=150&h=150"
     end
 
-    local function SaveToolTemplate(tool)
+    local function CacheToolTemplate(tool)
         if not tool or not tool:IsA("Tool") then return end
-        local ok, cloned = pcall(function()
-            local c = tool:Clone()
-            c.Parent = nil
-            return c
-        end)
-        if ok and cloned then
-            if toolTemplates[tool.Name] then
-                pcall(function() toolTemplates[tool.Name]:Destroy() end)
-            end
-            toolTemplates[tool.Name] = cloned
-        end
-    end
-
-    local function BuildRealTool(itemName, fallbackImage)
-        local tpl = toolTemplates[itemName]
-        if tpl then
+        if not toolTemplates[tool.Name] then
             local ok, clone = pcall(function()
-                local c = tpl:Clone()
-                c.Name = itemName
+                local c = tool:Clone()
+                for _, d in ipairs(c:GetDescendants()) do
+                    if d:IsA("Script") or d:IsA("LocalScript") then
+                        pcall(function() d:Destroy() end)
+                    end
+                end
                 return c
             end)
             if ok and clone then
-                return clone
+                toolTemplates[tool.Name] = clone
             end
         end
-        local fallback = Instance.new("Tool")
-        fallback.Name = itemName
-        fallback.TextureId = (fallbackImage and fallbackImage ~= "") and fallbackImage or "rbxassetid://78521393913034"
-        fallback.RequiresHandle = true
-        local handle = Instance.new("Part")
-        handle.Name = "Handle"
-        handle.Size = Vector3.new(1, 1, 1)
-        handle.Transparency = 1
-        handle.CanCollide = false
-        handle.Massless = true
-        handle.Parent = fallback
-        return fallback
     end
 
-    local function GiveRealToolToPlayer(itemName, fallbackImage, equipNow)
-        local bp = Player:FindFirstChildOfClass("Backpack")
-        local char = Player.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if not bp and not char then return nil end
-
-        suppressedToolNames[itemName] = (suppressedToolNames[itemName] or 0) + 1
-        local realTool = BuildRealTool(itemName, fallbackImage)
-        if not realTool then
-            suppressedToolNames[itemName] = math.max(0, (suppressedToolNames[itemName] or 1) - 1)
-            return nil
-        end
-
-        if equipNow and char and hum then
-            pcall(function()
-                hum:UnequipTools()
-                realTool.Parent = char
-                hum:EquipTool(realTool)
-            end)
-        elseif bp then
-            pcall(function()
-                realTool.Parent = bp
-            end)
-        end
-
-        lastKnownToolCounts[itemName] = (lastKnownToolCounts[itemName] or 0) + 1
-        return realTool
-    end
-
-    local function FindToolsByName(itemName)
-        local found = {}
-        local bp = Player:FindFirstChildOfClass("Backpack")
+    local function FindActualToolInstance(itemName)
+        local bp = Player:FindFirstChild("Backpack")
         if bp then
             for _, t in ipairs(bp:GetChildren()) do
                 if t:IsA("Tool") and t.Name == itemName then
-                    table.insert(found, t)
+                    return t
                 end
             end
         end
-        if Player.Character then
-            for _, t in ipairs(Player.Character:GetChildren()) do
+        local char = Player.Character
+        if char then
+            for _, t in ipairs(char:GetChildren()) do
                 if t:IsA("Tool") and t.Name == itemName then
-                    table.insert(found, t)
+                    return t
                 end
             end
         end
-        return found
+        return nil
     end
 
-    local function EnsureBackpackEntry(itemName, textureId)
-        for _, entry in ipairs(backpackItems) do
-            if entry.Name == itemName then
-                if textureId and textureId ~= "" then entry.Image = textureId end
-                return entry
-            end
-        end
-        local newEntry = {
-            Name = itemName,
-            Image = (textureId and textureId ~= "") and textureId or "rbxassetid://78521393913034",
-            Count = 0
-        }
-        table.insert(backpackItems, newEntry)
-        return newEntry
-    end
-
-    local function RemoveBackpackCount(itemName, qty)
-        for idx = #backpackItems, 1, -1 do
-            local entry = backpackItems[idx]
-            if entry.Name == itemName then
-                entry.Count = math.max(0, entry.Count - qty)
-                if entry.Count <= 0 then
-                    table.remove(backpackItems, idx)
-                end
-                break
-            end
-        end
-    end
-
-    local RebuildHotbarAndBackpack
-
-    local function EquipSlot(slotIdx)
-        local itemName = hotbarSlots[slotIdx]
+    local function UnequipCurrentTool()
+        equippedSlotIdx = nil
         local char = Player.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if not itemName or not hum or not char then return end
-
-        PlaySFX(ClickSFX, 1.05)
-
-        if equippedSlotIdx == slotIdx then
-            equippedSlotIdx = nil
-            pcall(function()
-                hum:UnequipTools()
-                local bp = Player:FindFirstChildOfClass("Backpack")
-                if bp then
-                    for _, t in ipairs(char:GetChildren()) do
-                        if t:IsA("Tool") then
-                            t.Parent = bp
-                        end
-                    end
+        if hum then
+            pcall(function() hum:UnequipTools() end)
+        end
+        if char then
+            local bp = Player:FindFirstChild("Backpack")
+            for _, t in ipairs(char:GetChildren()) do
+                if t:IsA("Tool") and bp then
+                    pcall(function() t.Parent = bp end)
                 end
-            end)
-            EquippedActionBar.Visible = false
+            end
+        end
+    end
+
+    local function EquipSlot(idx)
+        local itemName = hotbarSlots[idx]
+        if not itemName then return end
+
+        if equippedSlotIdx == idx then
+            UnequipCurrentTool()
             return
         end
 
-        local tools = FindToolsByName(itemName)
-        if #tools > 0 then
-            local toolToEquip = tools[1]
-            SaveToolTemplate(toolToEquip)
-            equippedSlotIdx = slotIdx
-            pcall(function()
-                hum:UnequipTools()
-                toolToEquip.Parent = char
-                hum:EquipTool(toolToEquip)
-                if toolToEquip.Parent ~= char then
-                    toolToEquip.Parent = char
-                end
-            end)
-            EquippedActionBar.Visible = true
-        else
-            local restored = GiveRealToolToPlayer(itemName, nil, true)
-            if restored then
-                equippedSlotIdx = slotIdx
-                EquippedActionBar.Visible = true
-            end
-        end
-    end
-
-    local function CollectDroppedTool(tool)
-        if not tool or not tool:IsA("Tool") or not tool.Parent then return end
-        SaveToolTemplate(tool)
-        local bp = Player:FindFirstChildOfClass("Backpack")
+        UnequipCurrentTool()
         local char = Player.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if not bp or not char then return end
+        local tool = FindActualToolInstance(itemName)
 
-        droppedToolRegistry[tool] = nil
-        pcall(function()
-            tool.Parent = bp
-            if hum then
+        if not tool and toolTemplates[itemName] then
+            local bp = Player:FindFirstChild("Backpack")
+            local ok, created = pcall(function()
+                local c = toolTemplates[itemName]:Clone()
+                c.Parent = bp or char
+                return c
+            end)
+            if ok and created then
+                tool = created
+            end
+        end
+
+        if tool and hum and char then
+            equippedSlotIdx = idx
+            pcall(function()
+                tool.Parent = char
                 hum:EquipTool(tool)
-            end
-        end)
-
-        local existsInHotbar = false
-        for s = 1, 10 do
-            if hotbarSlots[s] == tool.Name then
-                existsInHotbar = true
-                break
-            end
-        end
-        if not existsInHotbar then
-            for s = 1, 10 do
-                if not hotbarSlots[s] then
-                    hotbarSlots[s] = tool.Name
-                    break
-                end
-            end
-        end
-
-        if RebuildHotbarAndBackpack then
-            RebuildHotbarAndBackpack()
+            end)
         end
     end
 
-    windowTracker:Add(DropMiniBtn.MouseButton1Click:Connect(function()
+    local function DropEquippedTool()
         if not equippedSlotIdx then return end
-        local itemName = hotbarSlots[equippedSlotIdx]
-        if not itemName then return end
-        PlaySFX(ClickSFX, 0.95)
-        local qty = math.max(1, math.floor(tonumber(QtyBox.Text) or 1))
-        local tools = FindToolsByName(itemName)
+        local slotNum = equippedSlotIdx
+        local itemName = hotbarSlots[slotNum]
         local char = Player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local dropped = 0
+        local tool = itemName and FindActualToolInstance(itemName)
 
-        for _, t in ipairs(tools) do
-            if dropped >= qty then break end
-            SaveToolTemplate(t)
+        equippedSlotIdx = nil
+        if itemName then
+            suppressedToolNames[itemName] = true
+        end
+        hotbarSlots[slotNum] = nil
+
+        if tool and hrp then
             pcall(function()
-                if t.Parent == char and hum then
-                    hum:UnequipTools()
+                tool.Parent = workspace
+                local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("BasePart", true)
+                if handle then
+                    handle.CFrame = hrp.CFrame * CFrame.new(0, 1.5, -4)
+                    handle.AssemblyLinearVelocity = hrp.CFrame.LookVector * 18 + Vector3.new(0, 6, 0)
                 end
-                t.CanBeDropped = true
-                local baseCF = hrp and (hrp.CFrame * CFrame.new(0, 1.5, -3.5 - (dropped * 0.8))) or CFrame.new(0, 5, 0)
-                for _, p in ipairs(t:GetDescendants()) do
-                    if p:IsA("BasePart") then
-                        p.Anchored = false
-                        p.CanCollide = true
-                        p.CFrame = baseCF
-                    end
-                end
-                t.Parent = workspace
-                droppedToolRegistry[t] = true
-                for _, p in ipairs(t:GetDescendants()) do
-                    if p:IsA("BasePart") then
-                        windowTracker:Add(p.Touched:Connect(function(hit)
-                            if droppedToolRegistry[t] and char and hit and hit:IsDescendantOf(char) then
-                                CollectDroppedTool(t)
-                            end
-                        end))
+            end)
+            droppedToolRegistry[tool] = itemName or tool.Name
+        elseif itemName and hrp then
+            local part = Instance.new("Part")
+            part.Name = "Dropped_" .. itemName
+            part.Size = Vector3.new(1.5, 0.5, 3)
+            part.Material = Enum.Material.Neon
+            part.Color = accentColor
+            part.CFrame = hrp.CFrame * CFrame.new(0, 1.5, -4)
+            part.AssemblyLinearVelocity = hrp.CFrame.LookVector * 18 + Vector3.new(0, 6, 0)
+            part.Parent = workspace
+            droppedToolRegistry[part] = itemName
+        end
+    end
+
+    windowTracker:Add(workspace.ChildAdded:Connect(function(child)
+        if droppedToolRegistry[child] then
+            local name = droppedToolRegistry[child]
+            local conn
+            conn = child.Touched:Connect(function(hit)
+                local char = Player.Character
+                if char and hit and hit:IsDescendantOf(char) then
+                    suppressedToolNames[name] = nil
+                    droppedToolRegistry[child] = nil
+                    if conn then conn:Disconnect() end
+                    if child:IsA("Tool") then
+                        local bp = Player:FindFirstChild("Backpack")
+                        if bp then child.Parent = bp end
+                    else
+                        child:Destroy()
                     end
                 end
             end)
-            dropped = dropped + 1
-        end
-
-        if #tools - dropped <= 0 then
-            hotbarSlots[equippedSlotIdx] = nil
-            equippedSlotIdx = nil
-            EquippedActionBar.Visible = false
-        end
-        if RebuildHotbarAndBackpack then RebuildHotbarAndBackpack() end
-    end))
-
-    windowTracker:Add(StoreMiniBtn.MouseButton1Click:Connect(function()
-        if not equippedSlotIdx then return end
-        local itemName = hotbarSlots[equippedSlotIdx]
-        if not itemName then return end
-        PlaySFX(ClickSFX, 1.05)
-        local qty = math.max(1, math.floor(tonumber(QtyBox.Text) or 1))
-        local tools = FindToolsByName(itemName)
-        if #tools == 0 then return end
-        local moveCount = math.min(qty, #tools)
-        SaveToolTemplate(tools[1])
-        local entry = EnsureBackpackEntry(itemName, GetItemImage(tools[1]))
-        for i = 1, moveCount do
-            local t = tools[i]
-            suppressedToolNames[itemName] = (suppressedToolNames[itemName] or 0) + 1
-            pcall(function() t:Destroy() end)
-            entry.Count = entry.Count + 1
-        end
-        if #tools - moveCount <= 0 then
-            hotbarSlots[equippedSlotIdx] = nil
-            equippedSlotIdx = nil
-            EquippedActionBar.Visible = false
-        end
-        if RebuildHotbarAndBackpack then RebuildHotbarAndBackpack() end
-    end))
-
-    local function RenderSlotVisual(btn, nameLbl, imgLbl, countLbl, itemName, imgId, countVal, isHeldOrEquipped)
-        if not itemName then
-            nameLbl.Text = ""
-            imgLbl.Image = ""
-            countLbl.Text = ""
-            btn.BackgroundColor3 = Color3.fromRGB(12, 16, 25)
-            btn.BackgroundTransparency = 0.35
-            local st = btn:FindFirstChildOfClass("UIStroke")
-            if st then
-                st.Color = accentColor
-                st.Transparency = 0.55
-                st.Thickness = 1
-            end
-            return
-        end
-
-        nameLbl.Text = itemName
-        imgLbl.Image = (imgId and imgId ~= "") and imgId or "rbxassetid://78521393913034"
-        countLbl.Text = (countVal and countVal > 1) and ("x" .. tostring(countVal)) or ""
-
-        if isHeldOrEquipped then
-            btn.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
-            btn.BackgroundTransparency = 0.55
-            local st = btn:FindFirstChildOfClass("UIStroke")
-            if st then
-                st.Color = accentColor
-                st.Transparency = 0.05
-                st.Thickness = 2
-            end
-        else
-            btn.BackgroundColor3 = Color3.fromRGB(14, 20, 32)
-            btn.BackgroundTransparency = 0.22
-            local st = btn:FindFirstChildOfClass("UIStroke")
-            if st then
-                st.Color = accentColor
-                st.Transparency = 0.4
-                st.Thickness = 1.2
-            end
-        end
-    end
-
-    local function BeginItemDrag(kind, indexOrName, itemName, imgId, inputPos, slotObj)
-        if not itemName then return end
-        dragSource = { kind = kind, key = indexOrName, name = itemName, image = imgId }
-        dragStartScreen = inputPos
-        isDraggingItem = false
-    end
-
-    windowTracker:Add(UserInputService.InputChanged:Connect(function(input)
-        if dragSource and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStartScreen then
-            local delta = (input.Position - dragStartScreen).Magnitude
-            if delta > 14 then
-                isDraggingItem = true
-                DragGhost.Visible = true
-                DragGhost.Position = UDim2.new(0, input.Position.X - 26, 0, input.Position.Y - 31)
-                GhostImg.Image = dragSource.image or "rbxassetid://78521393913034"
-                GhostLbl.Text = dragSource.name or ""
-            end
         end
     end))
 
-    local function CompleteDropAt(screenPos)
-        if not dragSource then return end
-        local src = dragSource
-        dragSource = nil
-        DragGhost.Visible = false
-
-        if not isDraggingItem then
-            if src.kind == "hotbar" then
-                EquipSlot(src.key)
-                if RebuildHotbarAndBackpack then RebuildHotbarAndBackpack() end
-            elseif src.kind == "backpack" then
-                local emptySlot = nil
-                for i = 1, 10 do
-                    if not hotbarSlots[i] then
-                        emptySlot = i
-                        break
-                    end
-                end
-                if emptySlot then
-                    PlaySFX(ClickSFX, 1.08)
-                    RemoveBackpackCount(src.name, 1)
-                    hotbarSlots[emptySlot] = src.name
-                    GiveRealToolToPlayer(src.name, src.image, false)
-                    if RebuildHotbarAndBackpack then RebuildHotbarAndBackpack() end
-                end
-            end
-            isDraggingItem = false
-            return
-        end
-
-        isDraggingItem = false
-        PlaySFX(ClickSFX, 1.02)
-        local droppedOnHotbarIdx = nil
-        for i = 1, 10 do
-            local sObj = slotButtons[i]
-            if sObj and sObj.btn and sObj.btn.Visible then
-                local p0 = sObj.btn.AbsolutePosition
-                local p1 = p0 + sObj.btn.AbsoluteSize
-                if screenPos.X >= p0.X and screenPos.X <= p1.X and screenPos.Y >= p0.Y and screenPos.Y <= p1.Y then
-                    droppedOnHotbarIdx = i
-                    break
-                end
-            end
-        end
-
-        local droppedOnBackpackPanel = false
-        if BackpackPanel.Visible then
-            local b0 = BackpackPanel.AbsolutePosition
-            local b1 = b0 + BackpackPanel.AbsoluteSize
-            if screenPos.X >= b0.X and screenPos.X <= b1.X and screenPos.Y >= b0.Y and screenPos.Y <= b1.Y then
-                droppedOnBackpackPanel = true
-            end
-        end
-
-        if droppedOnHotbarIdx then
-            if src.kind == "hotbar" and src.key ~= droppedOnHotbarIdx then
-                local tmp = hotbarSlots[droppedOnHotbarIdx]
-                hotbarSlots[droppedOnHotbarIdx] = hotbarSlots[src.key]
-                hotbarSlots[src.key] = tmp
-                if equippedSlotIdx == src.key then
-                    equippedSlotIdx = droppedOnHotbarIdx
-                elseif equippedSlotIdx == droppedOnHotbarIdx then
-                    equippedSlotIdx = src.key
-                end
-            elseif src.kind == "backpack" then
-                local targetExisting = hotbarSlots[droppedOnHotbarIdx]
-                RemoveBackpackCount(src.name, 1)
-                if targetExisting then
-                    local existingTools = FindToolsByName(targetExisting)
-                    if #existingTools > 0 then
-                        SaveToolTemplate(existingTools[1])
-                    end
-                    local tEntry = EnsureBackpackEntry(targetExisting, "rbxassetid://78521393913034")
-                    tEntry.Count = tEntry.Count + 1
-                    for _, exT in ipairs(existingTools) do
-                        suppressedToolNames[targetExisting] = (suppressedToolNames[targetExisting] or 0) + 1
-                        pcall(function() exT:Destroy() end)
-                    end
-                end
-                hotbarSlots[droppedOnHotbarIdx] = src.name
-                GiveRealToolToPlayer(src.name, src.image, false)
-            end
-        elseif droppedOnBackpackPanel and src.kind == "hotbar" then
-            local hName = hotbarSlots[src.key]
-            if hName then
-                local tools = FindToolsByName(hName)
-                if #tools > 0 then
-                    SaveToolTemplate(tools[1])
-                end
-                local entry = EnsureBackpackEntry(hName, src.image)
-                entry.Count = entry.Count + math.max(#tools, 1)
-                for _, t in ipairs(tools) do
-                    suppressedToolNames[hName] = (suppressedToolNames[hName] or 0) + 1
-                    pcall(function() t:Destroy() end)
-                end
-                hotbarSlots[src.key] = nil
-                if equippedSlotIdx == src.key then
-                    equippedSlotIdx = nil
-                    EquippedActionBar.Visible = false
-                end
-            end
-        end
-
-        if RebuildHotbarAndBackpack then RebuildHotbarAndBackpack() end
-    end
-
-    windowTracker:Add(UserInputService.InputEnded:Connect(function(input)
-        if dragSource and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            CompleteDropAt(input.Position)
-        end
-    end))
-
-    for i = 1, 10 do
-        local sBtn = Instance.new("TextButton")
-        sBtn.Name = "HotbarSlot_" .. tostring(i)
-        sBtn.Size = UDim2.new(0, 52, 0, 64)
-        sBtn.Position = UDim2.new(0, (i - 1) * 56, 0, 2)
-        sBtn.BackgroundColor3 = Color3.fromRGB(14, 20, 32)
-        sBtn.BackgroundTransparency = 0.22
-        sBtn.Text = ""
-        sBtn.Visible = false
-        sBtn.ZIndex = 7
-        sBtn.Parent = HotbarFrame
-        Instance.new("UICorner", sBtn).CornerRadius = UDim.new(0, 9)
-        local sStroke = AddGlow(sBtn, accentColor, 1.2, 0.4)
-
-        local nLbl = Instance.new("TextLabel")
-        nLbl.Size = UDim2.new(1, -4, 0, 14)
-        nLbl.Position = UDim2.new(0, 2, 0, 2)
-        nLbl.BackgroundTransparency = 1
-        nLbl.TextColor3 = Color3.fromRGB(235, 246, 255)
-        nLbl.Font = Enum.Font.GothamBold
-        nLbl.TextSize = 8
-        nLbl.TextTruncate = Enum.TextTruncate.AtEnd
-        nLbl.ZIndex = 8
-        nLbl.Parent = sBtn
-
-        local iLbl = Instance.new("ImageLabel")
-        iLbl.Size = UDim2.new(0, 30, 0, 30)
-        iLbl.Position = UDim2.new(0.5, -15, 0.5, -9)
-        iLbl.BackgroundTransparency = 1
-        iLbl.ScaleType = Enum.ScaleType.Fit
-        iLbl.ZIndex = 8
-        iLbl.Parent = sBtn
-
-        local cLbl = Instance.new("TextLabel")
-        cLbl.Size = UDim2.new(1, -6, 0, 12)
-        cLbl.Position = UDim2.new(0, 3, 1, -14)
-        cLbl.BackgroundTransparency = 1
-        cLbl.TextColor3 = secondaryColor
-        cLbl.Font = Enum.Font.GothamBlack
-        cLbl.TextSize = 9
-        cLbl.TextXAlignment = Enum.TextXAlignment.Right
-        cLbl.ZIndex = 9
-        cLbl.Parent = sBtn
-
-        slotButtons[i] = { btn = sBtn, nameLbl = nLbl, imgLbl = iLbl, countLbl = cLbl, stroke = sStroke }
-
-        windowTracker:Add(sBtn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                local itemName = hotbarSlots[i]
-                if itemName then
-                    BeginItemDrag("hotbar", i, itemName, iLbl.Image, input.Position, slotButtons[i])
-                end
-            end
-        end))
-    end
-
-    local BackpackToggleBtn = Instance.new("TextButton")
-    BackpackToggleBtn.Name = "BackpackToggleBtn"
-    BackpackToggleBtn.Size = UDim2.new(0, 44, 0, 44)
-    BackpackToggleBtn.Position = UDim2.new(0, 10 * 56 + 4, 0.5, -22)
-    BackpackToggleBtn.BackgroundColor3 = Color3.fromRGB(12, 18, 30)
-    BackpackToggleBtn.BackgroundTransparency = 0.2
-    BackpackToggleBtn.Text = ""
-    BackpackToggleBtn.ZIndex = 8
-    BackpackToggleBtn.Parent = HotbarFrame
-    Instance.new("UICorner", BackpackToggleBtn).CornerRadius = UDim.new(0, 12)
-    AddGlow(BackpackToggleBtn, accentColor, 1.4, 0.3)
-    AddClickEffect(BackpackToggleBtn, animSpeed, windowTracker)
-
-    local bpIcon = CreateCustomIcon(BackpackToggleBtn, "backpack", accentColor, 18)
-    bpIcon.Position = UDim2.new(0.5, -9, 0.5, -9)
-
-    windowTracker:Add(BackpackToggleBtn.MouseButton1Click:Connect(function()
-        backpackOpen = not backpackOpen
-        PlaySFX(DropdownSFX, backpackOpen and 1.12 or 0.92)
-        BackpackPanel.Visible = backpackOpen
-    end))
-
-    windowTracker:Add(SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        searchQuery = string.lower(SearchBox.Text or "")
-        if RebuildHotbarAndBackpack then RebuildHotbarAndBackpack() end
-    end))
-
-    local function RebuildBackpackGrid()
-        for _, ch in ipairs(BackpackScroll:GetChildren()) do
-            if ch:IsA("TextButton") then ch:Destroy() end
-        end
-        backpackButtons = {}
-
-        local inHotbarMap = {}
-        for i = 1, 10 do
-            if hotbarSlots[i] then
-                inHotbarMap[hotbarSlots[i]] = true
-            end
-        end
-
-        local onlyBackpack = {}
-        for _, bEntry in ipairs(backpackItems) do
-            if not inHotbarMap[bEntry.Name] and bEntry.Count > 0 then
-                table.insert(onlyBackpack, { Name = bEntry.Name, Image = bEntry.Image, Count = bEntry.Count })
-            end
-        end
-
-        for idx, itemData in ipairs(onlyBackpack) do
-            local matches = (searchQuery == "") or string.find(string.lower(itemData.Name), searchQuery, 1, true) ~= nil
-            if matches then
-                local bCard = Instance.new("TextButton")
-                bCard.Size = UDim2.new(0, 48, 0, 62)
-                bCard.LayoutOrder = idx
-                bCard.BackgroundColor3 = Color3.fromRGB(15, 22, 36)
-                bCard.BackgroundTransparency = 0.22
-                bCard.Text = ""
-                bCard.ZIndex = 16
-                bCard.Parent = BackpackScroll
-                Instance.new("UICorner", bCard).CornerRadius = UDim.new(0, 8)
-                local bStroke = AddGlow(bCard, accentColor, 1.1, 0.4)
-
-                local nL = Instance.new("TextLabel")
-                nL.Size = UDim2.new(1, -4, 0, 13)
-                nL.Position = UDim2.new(0, 2, 0, 2)
-                nL.BackgroundTransparency = 1
-                nL.Text = itemData.Name
-                nL.TextColor3 = Color3.fromRGB(235, 246, 255)
-                nL.Font = Enum.Font.GothamBold
-                nL.TextSize = 8
-                nL.TextTruncate = Enum.TextTruncate.AtEnd
-                nL.ZIndex = 17
-                nL.Parent = bCard
-
-                local iL = Instance.new("ImageLabel")
-                iL.Size = UDim2.new(0, 28, 0, 28)
-                iL.Position = UDim2.new(0.5, -14, 0.5, -8)
-                iL.BackgroundTransparency = 1
-                iL.ScaleType = Enum.ScaleType.Fit
-                iL.Image = itemData.Image
-                iL.ZIndex = 17
-                iL.Parent = bCard
-
-                local cL = Instance.new("TextLabel")
-                cL.Size = UDim2.new(1, -4, 0, 12)
-                cL.Position = UDim2.new(0, 2, 1, -13)
-                cL.BackgroundTransparency = 1
-                cL.Text = itemData.Count > 1 and ("x" .. tostring(itemData.Count)) or ""
-                cL.TextColor3 = secondaryColor
-                cL.Font = Enum.Font.GothamBlack
-                cL.TextSize = 8
-                cL.TextXAlignment = Enum.TextXAlignment.Right
-                cL.ZIndex = 18
-                cL.Parent = bCard
-
-                local entryObj = { btn = bCard, stroke = bStroke }
-                table.insert(backpackButtons, entryObj)
-
-                windowTracker:Add(bCard.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        BeginItemDrag("backpack", itemData.Name, itemData.Name, itemData.Image, input.Position, entryObj)
-                    end
-                end))
-            end
-        end
-    end
-
-    RebuildHotbarAndBackpack = function()
-        local hasAnyHotbar = false
-        for i = 1, 10 do
-            if hotbarSlots[i] then
-                hasAnyHotbar = true
-                break
-            end
-        end
-        local hasAnyBackpack = false
-        for _, bE in ipairs(backpackItems) do
-            if bE.Count > 0 then
-                hasAnyBackpack = true
-                break
-            end
-        end
-
-        local anyItemAtAll = hasAnyHotbar or hasAnyBackpack
-        local lastHotbarIndex = 0
-        for i = 1, 10 do
-            if hotbarSlots[i] then
-                lastHotbarIndex = i
-            end
-        end
-
-        HotbarFrame.Visible = anyItemAtAll
-        HotbarFrame.Size = UDim2.new(0, math.max(52, lastHotbarIndex * 56 + 52), 0, 68)
-        BackpackToggleBtn.Position = UDim2.new(0, lastHotbarIndex * 56 + 4, 0.5, -22)
-
-        if not anyItemAtAll then
-            BackpackPanel.Visible = false
-            backpackOpen = false
-            EquippedActionBar.Visible = false
-            equippedSlotIdx = nil
-        end
-
-        for i = 1, 10 do
-            local itemName = hotbarSlots[i]
-            local sObj = slotButtons[i]
-            sObj.btn.Visible = itemName ~= nil
-            if itemName then
-                local tools = FindToolsByName(itemName)
-                local imgId = (#tools > 0 and GetItemImage(tools[1])) or (toolTemplates[itemName] and GetItemImage(toolTemplates[itemName])) or "rbxassetid://78521393913034"
-                local totalCount = math.max(#tools, 1)
-                local isEq = (equippedSlotIdx == i)
-                RenderSlotVisual(sObj.btn, sObj.nameLbl, sObj.imgLbl, sObj.countLbl, itemName, imgId, totalCount, isEq)
-            else
-                RenderSlotVisual(sObj.btn, sObj.nameLbl, sObj.imgLbl, sObj.countLbl, nil, nil, nil, false)
-            end
-        end
-
-        RebuildBackpackGrid()
-    end
-
-    local function SyncPlayerToolsToInventory()
-        local countsNow = {}
-        local texByName = {}
-
-        local bp = Player:FindFirstChildOfClass("Backpack")
+    local function CountAllTools()
+        local counts = {}
+        local bp = Player:FindFirstChild("Backpack")
         if bp then
             for _, t in ipairs(bp:GetChildren()) do
-                if t:IsA("Tool") then
-                    SaveToolTemplate(t)
-                    countsNow[t.Name] = (countsNow[t.Name] or 0) + 1
-                    if t.TextureId and t.TextureId ~= "" then texByName[t.Name] = t.TextureId end
+                if t:IsA("Tool") and not suppressedToolNames[t.Name] then
+                    CacheToolTemplate(t)
+                    counts[t.Name] = (counts[t.Name] or 0) + 1
                 end
             end
         end
-        if Player.Character then
-            for _, t in ipairs(Player.Character:GetChildren()) do
-                if t:IsA("Tool") then
-                    SaveToolTemplate(t)
-                    countsNow[t.Name] = (countsNow[t.Name] or 0) + 1
-                    if t.TextureId and t.TextureId ~= "" then texByName[t.Name] = t.TextureId end
+        local char = Player.Character
+        if char then
+            for _, t in ipairs(char:GetChildren()) do
+                if t:IsA("Tool") and not suppressedToolNames[t.Name] then
+                    CacheToolTemplate(t)
+                    counts[t.Name] = (counts[t.Name] or 0) + 1
+                end
+            end
+        end
+        return counts
+    end
+
+    local function AssignSlotToEmptyOrSame(itemName)
+        if suppressedToolNames[itemName] then return end
+        for s = 1, 10 do
+            if hotbarSlots[s] == itemName then
+                return
+            end
+        end
+        for s = 1, 10 do
+            if hotbarSlots[s] == nil then
+                hotbarSlots[s] = itemName
+                return
+            end
+        end
+    end
+
+    local function SyncInventoryState()
+        local counts = CountAllTools()
+
+        for name, cnt in pairs(counts) do
+            if cnt > 0 and not suppressedToolNames[name] then
+                AssignSlotToEmptyOrSame(name)
+            end
+        end
+
+        for s = 1, 10 do
+            local name = hotbarSlots[s]
+            if name and (not counts[name] or counts[name] <= 0) then
+                hotbarSlots[s] = nil
+                if equippedSlotIdx == s then
+                    equippedSlotIdx = nil
                 end
             end
         end
 
-        for name, cnt in pairs(countsNow) do
-            local prev = lastKnownToolCounts[name] or 0
-            local sup = suppressedToolNames[name] or 0
-            if cnt > prev then
-                local added = cnt - prev
-                if sup > 0 then
-                    local skip = math.min(sup, added)
-                    suppressedToolNames[name] = sup - skip
-                    added = added - skip
+        backpackItems = {}
+        for name, cnt in pairs(counts) do
+            if cnt > 0 and not suppressedToolNames[name] then
+                table.insert(backpackItems, {Name = name, Count = cnt})
+            end
+        end
+        table.sort(backpackItems, function(a, b) return a.Name < b.Name end)
+
+        lastKnownToolCounts = counts
+    end
+
+    local function RefreshInventoryUI()
+        local hasAny = false
+        for s = 1, 10 do
+            if hotbarSlots[s] ~= nil then
+                hasAny = true
+                break
+            end
+        end
+        if not hasAny and #backpackItems > 0 then
+            hasAny = true
+        end
+
+        HotbarFrame.Visible = hasAny
+        EquippedActionBar.Visible = (equippedSlotIdx ~= nil and hotbarSlots[equippedSlotIdx] ~= nil)
+
+        for s = 1, 10 do
+            local entry = slotButtons[s]
+            local itemName = hotbarSlots[s]
+            local isEq = (equippedSlotIdx == s and itemName ~= nil)
+
+            entry.stroke.Color = isEq and secondaryColor or accentColor
+            entry.stroke.Thickness = isEq and 2 or 1.15
+            entry.btn.BackgroundTransparency = isEq and 0.08 or 0.25
+
+            if itemName then
+                local realTool = FindActualToolInstance(itemName) or toolTemplates[itemName]
+                entry.icon.Image = GetToolIcon(realTool)
+                entry.icon.Visible = true
+                entry.nameLbl.Text = itemName
+                local cnt = lastKnownToolCounts[itemName] or 1
+                entry.countLbl.Text = cnt > 1 and ("x" .. tostring(cnt)) or ""
+            else
+                entry.icon.Visible = false
+                entry.nameLbl.Text = ""
+                entry.countLbl.Text = ""
+            end
+        end
+
+        if backpackOpen then
+            for _, child in ipairs(BackpackScroll:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child:Destroy()
                 end
-                if added > 0 then
-                    local alreadyInHotbar = false
-                    for s = 1, 10 do
-                        if hotbarSlots[s] == name then
-                            alreadyInHotbar = true
-                            break
-                        end
-                    end
-                    if not alreadyInHotbar then
+            end
+
+            local q = string.lower(searchQuery)
+            local visibleCount = 0
+
+            for idx, item in ipairs(backpackItems) do
+                if q == "" or string.find(string.lower(item.Name), q, 1, true) then
+                    visibleCount = visibleCount + 1
+                    local itemCard = Instance.new("TextButton")
+                    itemCard.Size = UDim2.new(0, 100, 0, 62)
+                    itemCard.LayoutOrder = idx
+                    itemCard.BackgroundColor3 = surfaceColor
+                    itemCard.BackgroundTransparency = 0.22
+                    itemCard.Text = ""
+                    itemCard.ZIndex = 14
+                    itemCard.Parent = BackpackScroll
+                    Instance.new("UICorner", itemCard).CornerRadius = UDim.new(0, 9)
+                    RegisterStroke(AddGlow(itemCard, accentColor, 1, 0.45), true)
+                    AddClickEffect(itemCard, animSpeed, windowTracker)
+
+                    local realTool = FindActualToolInstance(item.Name) or toolTemplates[item.Name]
+                    local ic = Instance.new("ImageLabel")
+                    ic.Size = UDim2.new(0, 28, 0, 28)
+                    ic.Position = UDim2.new(0.5, -14, 0, 5)
+                    ic.BackgroundTransparency = 1
+                    ic.Image = GetToolIcon(realTool)
+                    ic.ZIndex = 15
+                    ic.Parent = itemCard
+                    Instance.new("UICorner", ic).CornerRadius = UDim.new(0, 6)
+
+                    local nLbl = Instance.new("TextLabel")
+                    nLbl.Size = UDim2.new(1, -8, 0, 22)
+                    nLbl.Position = UDim2.new(0, 4, 1, -24)
+                    nLbl.BackgroundTransparency = 1
+                    nLbl.Text = item.Name .. (item.Count > 1 and (" (x" .. tostring(item.Count) .. ")") or "")
+                    nLbl.TextColor3 = textColor
+                    nLbl.Font = activeFont
+                    nLbl.TextSize = 9
+                    nLbl.TextWrapped = true
+                    nLbl.ZIndex = 15
+                    nLbl.Parent = itemCard
+
+                    windowTracker:Add(itemCard.MouseButton1Click:Connect(function()
+                        PlaySFX(ClickSFX, 1.05)
+                        local alreadyInSlot = nil
                         for s = 1, 10 do
-                            if not hotbarSlots[s] then
-                                hotbarSlots[s] = name
+                            if hotbarSlots[s] == item.Name then
+                                alreadyInSlot = s
                                 break
                             end
                         end
-                    end
+                        if alreadyInSlot then
+                            EquipSlot(alreadyInSlot)
+                        else
+                            local emptySlot = nil
+                            for s = 1, 10 do
+                                if hotbarSlots[s] == nil then
+                                    emptySlot = s
+                                    break
+                                end
+                            end
+                            local targetSlot = emptySlot or 1
+                            hotbarSlots[targetSlot] = item.Name
+                            EquipSlot(targetSlot)
+                        end
+                        backpackOpen = false
+                        BackpackPanel.Visible = false
+                        SyncInventoryState()
+                        RefreshInventoryUI()
+                    end))
                 end
             end
-        end
 
-        for s = 1, 10 do
-            local hName = hotbarSlots[s]
-            if hName then
-                local inWorldOrBp = (countsNow[hName] or 0) > 0
-                local inBackpackQueue = false
-                for _, bE in ipairs(backpackItems) do
-                    if bE.Name == hName and bE.Count > 0 then
-                        inBackpackQueue = true
-                        break
-                    end
-                end
-                if not inWorldOrBp and not inBackpackQueue then
-                    hotbarSlots[s] = nil
-                    if equippedSlotIdx == s then
-                        equippedSlotIdx = nil
-                        EquippedActionBar.Visible = false
-                    end
-                end
+            local rows = math.ceil(visibleCount / 5)
+            BackpackScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(0, rows * 70))
+        end
+    end
+
+    for s = 1, 10 do
+        local slotBtn = Instance.new("TextButton")
+        slotBtn.Name = "Slot_" .. tostring(s)
+        slotBtn.Size = UDim2.new(0, 56, 0, 62)
+        slotBtn.Position = UDim2.new(0, (s - 1) * 62, 0, 3)
+        slotBtn.BackgroundColor3 = Color3.fromRGB(11, 15, 24)
+        slotBtn.BackgroundTransparency = 0.25
+        slotBtn.Text = ""
+        slotBtn.ZIndex = 7
+        slotBtn.Parent = HotbarFrame
+        Instance.new("UICorner", slotBtn).CornerRadius = UDim.new(0, 10)
+        local st = RegisterStroke(AddGlow(slotBtn, accentColor, 1.15, 0.35), true)
+        AddClickEffect(slotBtn, animSpeed, windowTracker)
+
+        local numLbl = Instance.new("TextLabel")
+        numLbl.Size = UDim2.new(0, 16, 0, 14)
+        numLbl.Position = UDim2.new(0, 4, 0, 2)
+        numLbl.BackgroundTransparency = 1
+        numLbl.Text = tostring(s)
+        numLbl.TextColor3 = accentColor
+        numLbl.Font = Enum.Font.GothamBlack
+        numLbl.TextSize = 9
+        numLbl.TextXAlignment = Enum.TextXAlignment.Left
+        numLbl.ZIndex = 8
+        numLbl.Parent = slotBtn
+
+        local countLbl = Instance.new("TextLabel")
+        countLbl.Size = UDim2.new(0, 24, 0, 14)
+        countLbl.Position = UDim2.new(1, -28, 0, 2)
+        countLbl.BackgroundTransparency = 1
+        countLbl.Text = ""
+        countLbl.TextColor3 = secondaryColor
+        countLbl.Font = Enum.Font.GothamBlack
+        countLbl.TextSize = 9
+        countLbl.TextXAlignment = Enum.TextXAlignment.Right
+        countLbl.ZIndex = 8
+        countLbl.Parent = slotBtn
+
+        local iconImg = Instance.new("ImageLabel")
+        iconImg.Size = UDim2.new(0, 28, 0, 28)
+        iconImg.Position = UDim2.new(0.5, -14, 0, 15)
+        iconImg.BackgroundTransparency = 1
+        iconImg.Image = ""
+        iconImg.Visible = false
+        iconImg.ZIndex = 8
+        iconImg.Parent = slotBtn
+        Instance.new("UICorner", iconImg).CornerRadius = UDim.new(0, 6)
+
+        local nameLbl = Instance.new("TextLabel")
+        nameLbl.Size = UDim2.new(1, -6, 0, 14)
+        nameLbl.Position = UDim2.new(0, 3, 1, -15)
+        nameLbl.BackgroundTransparency = 1
+        nameLbl.Text = ""
+        nameLbl.TextColor3 = textColor
+        nameLbl.Font = activeFont
+        nameLbl.TextSize = 8
+        nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+        nameLbl.ZIndex = 8
+        nameLbl.Parent = slotBtn
+
+        slotButtons[s] = {
+            btn = slotBtn,
+            stroke = st,
+            icon = iconImg,
+            nameLbl = nameLbl,
+            countLbl = countLbl
+        }
+
+        windowTracker:Add(slotBtn.MouseButton1Click:Connect(function()
+            PlaySFX(ClickSFX, 1.05)
+            EquipSlot(s)
+            SyncInventoryState()
+            RefreshInventoryUI()
+        end))
+    end
+
+    windowTracker:Add(DropToolBtn.MouseButton1Click:Connect(function()
+        PlaySFX(ToggleOffSFX, 0.9)
+        DropEquippedTool()
+        SyncInventoryState()
+        RefreshInventoryUI()
+    end))
+
+    windowTracker:Add(UnequipToolBtn.MouseButton1Click:Connect(function()
+        PlaySFX(ClickSFX, 1)
+        UnequipCurrentTool()
+        SyncInventoryState()
+        RefreshInventoryUI()
+    end))
+
+    windowTracker:Add(BackpackButton.MouseButton1Click:Connect(function()
+        backpackOpen = not backpackOpen
+        PlaySFX(DropdownSFX, backpackOpen and 1.12 or 0.92)
+        BackpackPanel.Visible = backpackOpen
+        SyncInventoryState()
+        RefreshInventoryUI()
+    end))
+
+    windowTracker:Add(SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        searchQuery = SearchBox.Text or ""
+        RefreshInventoryUI()
+    end))
+
+    local numberKeys = {
+        Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five,
+        Enum.KeyCode.Six, Enum.KeyCode.Seven, Enum.KeyCode.Eight, Enum.KeyCode.Nine, Enum.KeyCode.Zero
+    }
+    windowTracker:Add(UserInputService.InputBegan:Connect(function(input, gp)
+        if gp or not customInventoryEnabled then return end
+        for idx, kc in ipairs(numberKeys) do
+            if input.KeyCode == kc then
+                PlaySFX(ClickSFX, 1.05)
+                EquipSlot(idx)
+                SyncInventoryState()
+                RefreshInventoryUI()
+                break
             end
         end
+    end))
 
-        lastKnownToolCounts = countsNow
-        RebuildHotbarAndBackpack()
+    local function HookBackpackContainer(container)
+        if not container then return end
+        windowTracker:Add(container.ChildAdded:Connect(function()
+            SyncInventoryState()
+            RefreshInventoryUI()
+        end))
+        windowTracker:Add(container.ChildRemoved:Connect(function()
+            SyncInventoryState()
+            RefreshInventoryUI()
+        end))
     end
 
     task.spawn(function()
-        while InvGui.Parent do
-            if customInventoryEnabled then
-                pcall(function()
-                    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
-                end)
-                SyncPlayerToolsToInventory()
-            end
-            task.wait(0.25)
-        end
+        local bp = Player:FindFirstChild("Backpack") or Player:WaitForChild("Backpack", 5)
+        HookBackpackContainer(bp)
+        SyncInventoryState()
+        RefreshInventoryUI()
     end)
 
-    windowTracker:Add(RunService.Heartbeat:Connect(function()
+    windowTracker:Add(Player.CharacterAdded:Connect(function(newChar)
+        equippedSlotIdx = nil
+        HookBackpackContainer(newChar)
+        task.spawn(function()
+            local bp = Player:FindFirstChild("Backpack") or Player:WaitForChild("Backpack", 5)
+            HookBackpackContainer(bp)
+            SyncInventoryState()
+            RefreshInventoryUI()
+        end)
+    end))
+
+    if Player.Character then
+        HookBackpackContainer(Player.Character)
+    end
+
+    windowTracker:Add(RunService.RenderStepped:Connect(function()
         local char = Player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-        if hrp then
-            for dTool, active in pairs(droppedToolRegistry) do
-                if active and dTool and dTool.Parent == workspace then
-                    local handle = dTool:FindFirstChild("Handle") or dTool:FindFirstChildWhichIsA("BasePart")
-                    if handle and (handle.Position - hrp.Position).Magnitude <= 5.5 then
-                        CollectDroppedTool(dTool)
-                    end
-                elseif not dTool or dTool.Parent ~= workspace then
-                    droppedToolRegistry[dTool] = nil
-                end
-            end
-        end
-
-        if godModeActive and char and hum and hrp then
-            pcall(function()
-                if hum:GetState() == Enum.HumanoidStateType.Dead then
-                    hum:ChangeState(Enum.HumanoidStateType.Running)
-                end
-                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
-                hum.BreakJointsOnDeath = false
-                hum.MaxHealth = math.huge
-                hum.Health = math.huge
-                local vel = hrp.AssemblyLinearVelocity
-                if math.abs(vel.Y) > 110 then
-                    hrp.AssemblyLinearVelocity = Vector3.new(vel.X * 0.4, 0, vel.Z * 0.4)
-                end
-                if hrp.Position.Y > workspace.FallenPartsDestroyHeight + 20 then
-                    lastSavedPos = hrp.Position
-                elseif lastSavedPos then
-                    hrp.CFrame = CFrame.new(lastSavedPos + Vector3.new(0, 3.5, 0))
+        if godModeActive and char and hrp then
+            if hrp.Position.Y <= workspace.FallenPartsDestroyHeight + 25 and lastSavedPos then
+                pcall(function()
+                    hrp.CFrame = CFrame.new(lastSavedPos + Vector3.new(0, 4, 0))
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
-                end
-            end)
-        end
-
-        if antiFlingActive and hrp then
-            pcall(function()
-                if hrp.AssemblyAngularVelocity.Magnitude > 35 then
-                    hrp.AssemblyAngularVelocity = Vector3.zero
-                end
-            end)
+                end)
+            elseif hrp.Position.Y > workspace.FallenPartsDestroyHeight + 35 then
+                lastSavedPos = hrp.Position
+            end
         end
 
         if platformActive and platformPart and hrp then
-            if not platformFixedY then
+            if platformFixedY == nil then
                 platformFixedY = hrp.Position.Y - 3.6
             end
             platformPart.Position = Vector3.new(hrp.Position.X, platformFixedY, hrp.Position.Z)
+        end
+
+        if customInventoryEnabled and char then
+            local equippedToolInChar = nil
+            for _, ch in ipairs(char:GetChildren()) do
+                if ch:IsA("Tool") then
+                    equippedToolInChar = ch
+                    break
+                end
+            end
+            if equippedToolInChar then
+                for s = 1, 10 do
+                    if hotbarSlots[s] == equippedToolInChar.Name then
+                        equippedSlotIdx = s
+                        break
+                    end
+                end
+            else
+                equippedSlotIdx = nil
+            end
+            EquippedActionBar.Visible = (equippedSlotIdx ~= nil and hotbarSlots[equippedSlotIdx] ~= nil)
         end
     end))
 
