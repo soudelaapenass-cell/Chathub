@@ -198,6 +198,42 @@ local function CreateCustomIcon(parent, iconType, color, sizePx)
     return holder
 end
 
+local function SetCustomIconType(holder, iconType, color, sizePx)
+    if not holder then return end
+    for _, ch in ipairs(holder:GetChildren()) do
+        if ch:IsA("Frame") then
+            ch:Destroy()
+        end
+    end
+    color = color or Color3.fromRGB(0, 220, 255)
+    sizePx = sizePx or 14
+    holder.Size = UDim2.new(0, sizePx, 0, sizePx)
+
+    local function part(w, h, x, y, rot, round)
+        local f = Instance.new("Frame")
+        f.Size = UDim2.new(0, w, 0, h)
+        f.Position = UDim2.new(0.5, x, 0.5, y)
+        f.AnchorPoint = Vector2.new(0.5, 0.5)
+        f.Rotation = rot or 0
+        f.BackgroundColor3 = color
+        f.BorderSizePixel = 0
+        f.Parent = holder
+        if round then
+            Instance.new("UICorner", f).CornerRadius = UDim.new(1, 0)
+        end
+        return f
+    end
+
+    if iconType == "pause" then
+        part(3, 12, -3, 0, 0, true)
+        part(3, 12, 3, 0, 0, true)
+    elseif iconType == "play" then
+        part(9, 2.5, 0, -2.5, 32, true)
+        part(9, 2.5, 0, 2.5, -32, true)
+        part(2.5, 11, -3.5, 0, 0, true)
+    end
+end
+
 local function GetRequest(url)
     local req = (type(request) == "function" and request)
         or (type(http_request) == "function" and http_request)
@@ -280,6 +316,12 @@ function LZNLib:CreateWindow(options)
     local accentColor = options.AccentColor or Color3.fromRGB(0, 210, 255)
     local customInventoryEnabled = options.CustomInventory ~= false
 
+    local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://6895079853"
+    local toggleOffSoundId = options.ToggleOffSound or "rbxassetid://6895079853"
+    local dropdownSoundId = options.DropdownSound or "rbxassetid://6895079853"
+    local clickSoundId = options.ClickSound or "rbxassetid://6895079853"
+    local sfxEnabled = options.SoundEffects ~= false
+
     pcall(function()
         StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, not customInventoryEnabled)
     end)
@@ -296,6 +338,12 @@ function LZNLib:CreateWindow(options)
         CoreGui[hubName .. "_CustomInventory"]:Destroy()
     end
 
+    for _, oldS in ipairs(SoundService:GetChildren()) do
+        if oldS:IsA("Sound") and string.find(oldS.Name, hubName .. "_SFX_", 1, true) then
+            oldS:Destroy()
+        end
+    end
+
     local oldSound = SoundService:FindFirstChild(hubName .. "_BGM")
     if oldSound then
         oldSound:Destroy()
@@ -304,6 +352,33 @@ function LZNLib:CreateWindow(options)
     local oldBlur = Lighting:FindFirstChild(hubName .. "_PopupBlur")
     if oldBlur then
         oldBlur:Destroy()
+    end
+
+    local function CreateSFX(suffix, soundId, vol, pitch)
+        local s = Instance.new("Sound")
+        s.Name = hubName .. "_SFX_" .. suffix
+        s.SoundId = soundId
+        s.Volume = vol or 0.45
+        s.PlaybackSpeed = pitch or 1
+        s.Looped = false
+        s.Parent = SoundService
+        return s
+    end
+
+    local ToggleOnSFX = CreateSFX("ToggleOn", toggleOnSoundId, 0.45, 1.12)
+    local ToggleOffSFX = CreateSFX("ToggleOff", toggleOffSoundId, 0.42, 0.88)
+    local DropdownSFX = CreateSFX("Dropdown", dropdownSoundId, 0.4, 1.05)
+    local ClickSFX = CreateSFX("Click", clickSoundId, 0.35, 1)
+
+    local function PlaySFX(sfxObj, pitchOverride)
+        if not sfxEnabled or not sfxObj then return end
+        pcall(function()
+            if pitchOverride then
+                sfxObj.PlaybackSpeed = pitchOverride
+            end
+            sfxObj.TimePosition = 0
+            sfxObj:Play()
+        end)
     end
 
     local ScreenGui = Instance.new("ScreenGui")
@@ -454,6 +529,7 @@ function LZNLib:CreateWindow(options)
     BGMText.Parent = MusicButton
 
     MusicButton.MouseButton1Click:Connect(function()
+        PlaySFX(ClickSFX, 1.05)
         if BackgroundMusic.IsPlaying then
             BackgroundMusic:Pause()
             BGMText.Text = "OFF"
@@ -696,6 +772,7 @@ function LZNLib:CreateWindow(options)
     end
 
     local function SetPage(page)
+        PlaySFX(ClickSFX, 1.08)
         CurrentPage = page
         ContentContainer.Visible = page == "Home"
         GamePage.Visible = page == "Game"
@@ -810,7 +887,10 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
         AddGlow(b, Color3.fromRGB(0, 190, 255), 1, 0.45)
         AddClickEffect(b)
-        b.MouseButton1Click:Connect(callback)
+        b.MouseButton1Click:Connect(function()
+            PlaySFX(ClickSFX, 1)
+            if callback then callback() end
+        end)
         return b
     end
 
@@ -956,6 +1036,7 @@ function LZNLib:CreateWindow(options)
         if IsAnimatingHub then return end
         IsAnimatingHub = true
         HubOpen = not HubOpen
+        PlaySFX(DropdownSFX, HubOpen and 1.15 or 0.92)
 
         if HubOpen then
             MainFrame.Visible = true
@@ -989,12 +1070,18 @@ function LZNLib:CreateWindow(options)
     InvGui.Enabled = customInventoryEnabled
     InvGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+    local customInvToggleObj = nil
+
     local function SetCustomInventoryEnabled(enabled)
-        customInventoryEnabled = enabled == true
-        InvGui.Enabled = customInventoryEnabled
+        local target = enabled == true
+        customInventoryEnabled = target
+        InvGui.Enabled = target
         pcall(function()
-            StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, not customInventoryEnabled)
+            StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, not target)
         end)
+        if customInvToggleObj and customInvToggleObj.Get() ~= target then
+            customInvToggleObj.Set(target, false)
+        end
     end
 
     local function DestroyAllUI()
@@ -1006,6 +1093,14 @@ function LZNLib:CreateWindow(options)
                 BackgroundMusic:Stop()
                 BackgroundMusic:Destroy()
             end)
+        end
+        for _, sfx in ipairs({ToggleOnSFX, ToggleOffSFX, DropdownSFX, ClickSFX}) do
+            if sfx then
+                pcall(function()
+                    sfx:Stop()
+                    sfx:Destroy()
+                end)
+            end
         end
         local extraPlayer = SoundService:FindFirstChild(hubName .. "_AudioPlayer")
         if extraPlayer then
@@ -1029,6 +1124,7 @@ function LZNLib:CreateWindow(options)
     end
 
     DestroyHubBtn.MouseButton1Click:Connect(function()
+        PlaySFX(ToggleOffSFX, 0.85)
         DestroyAllUI()
     end)
 
@@ -1052,6 +1148,14 @@ function LZNLib:CreateWindow(options)
         return customInventoryEnabled
     end
 
+    function Window:SetSoundEffects(enabled)
+        sfxEnabled = enabled == true
+    end
+
+    function Window:IsSoundEffectsEnabled()
+        return sfxEnabled
+    end
+
     local function AttachStrictToggleControl(pillFrame, dotFrame, initialState, onStateChanged)
         local state = initialState == true
         local draggingToggle = false
@@ -1059,6 +1163,7 @@ function LZNLib:CreateWindow(options)
         local movedEnough = false
 
         local function applyVisual(newState, fire)
+            local prevState = state
             state = newState
             TweenService:Create(pillFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 BackgroundColor3 = state and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
@@ -1066,6 +1171,13 @@ function LZNLib:CreateWindow(options)
             TweenService:Create(dotFrame, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                 Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
             }):Play()
+            if fire and prevState ~= state then
+                if state then
+                    PlaySFX(ToggleOnSFX, 1.15)
+                else
+                    PlaySFX(ToggleOffSFX, 0.88)
+                end
+            end
             if fire and onStateChanged then
                 onStateChanged(state)
             end
@@ -1241,6 +1353,7 @@ function LZNLib:CreateWindow(options)
         popup:GetPropertyChangedSignal("Visible"):Connect(function()
             RefreshPopupOverlay()
             if popup.Visible then
+                PlaySFX(DropdownSFX, 1.12)
                 pScale.Scale = 0.82
                 TweenService:Create(pScale, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
             end
@@ -1273,6 +1386,7 @@ function LZNLib:CreateWindow(options)
             AddClickEffect(b)
 
             b.MouseButton1Click:Connect(function()
+                PlaySFX(ClickSFX, 1.05)
                 popup.Visible = false
                 if opt.Callback then opt.Callback() end
             end)
@@ -1322,6 +1436,7 @@ function LZNLib:CreateWindow(options)
         end)
 
         btn.MouseButton1Click:Connect(function()
+            PlaySFX(ClickSFX, 1)
             if cfg.Callback then cfg.Callback() end
         end)
 
@@ -1587,6 +1702,19 @@ function LZNLib:CreateWindow(options)
         bodyContainer.BackgroundTransparency = 1
         bodyContainer.Parent = card
 
+        local playPauseBtn = nil
+        local playPauseIcon = nil
+
+        local function SyncPlayPauseVisual()
+            if not playPauseIcon then return end
+            if AudioSound.IsPlaying then
+                SetCustomIconType(playPauseIcon, "pause", Color3.fromRGB(0, 230, 255), 14)
+            else
+                SetCustomIconType(playPauseIcon, "play", Color3.fromRGB(0, 255, 175), 14)
+            end
+            playPauseIcon.Position = UDim2.new(0.5, -7, 0.5, -7)
+        end
+
         local function refreshLayout()
             local extra = dropOpen and (listH + 4) or 0
             TweenService:Create(dropWrap, TweenInfo.new(0.24, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
@@ -1610,10 +1738,12 @@ function LZNLib:CreateWindow(options)
             if autoPlay then
                 pcall(function() AudioSound:Play() end)
             end
+            SyncPlayPauseVisual()
         end
 
         dropBtn.MouseButton1Click:Connect(function()
             dropOpen = not dropOpen
+            PlaySFX(DropdownSFX, dropOpen and 1.12 or 0.92)
             dropBtn.Text = "  " .. tracks[currentIdx].Name .. (dropOpen and "  ▴" or "  ▾")
             refreshLayout()
         end)
@@ -1633,6 +1763,7 @@ function LZNLib:CreateWindow(options)
             AddClickEffect(item)
 
             item.MouseButton1Click:Connect(function()
+                PlaySFX(ClickSFX, 1.08)
                 dropOpen = false
                 selectTrack(i, true)
                 refreshLayout()
@@ -1738,13 +1869,13 @@ function LZNLib:CreateWindow(options)
         local ctrlLayout = Instance.new("UIListLayout")
         ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
         ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-        ctrlLayout.Padding = UDim.new(0, 10)
+        ctrlLayout.Padding = UDim.new(0, 12)
         ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
         ctrlLayout.Parent = controlsRow
 
         local function makeControlBtn(iconName, order, callback)
             local b = Instance.new("TextButton")
-            b.Size = UDim2.new(0, 42, 0, 30)
+            b.Size = UDim2.new(0, 46, 0, 30)
             b.BackgroundColor3 = Color3.fromRGB(16, 22, 35)
             b.BackgroundTransparency = 0.2
             b.Text = ""
@@ -1757,8 +1888,11 @@ function LZNLib:CreateWindow(options)
             local ic = CreateCustomIcon(b, iconName, Color3.fromRGB(0, 230, 255), 14)
             ic.Position = UDim2.new(0.5, -7, 0.5, -7)
 
-            b.MouseButton1Click:Connect(callback)
-            return b
+            b.MouseButton1Click:Connect(function()
+                PlaySFX(ClickSFX, 1)
+                if callback then callback() end
+            end)
+            return b, ic
         end
 
         makeControlBtn("prev", 1, function()
@@ -1767,23 +1901,24 @@ function LZNLib:CreateWindow(options)
             selectTrack(nextI, true)
         end)
 
-        makeControlBtn("pause", 2, function()
+        playPauseBtn, playPauseIcon = makeControlBtn("pause", 2, function()
             if AudioSound.IsPlaying then
                 AudioSound:Pause()
-            end
-        end)
-
-        makeControlBtn("play", 3, function()
-            if not AudioSound.IsPlaying then
+            else
                 if AudioSound.TimePosition > 0 then
                     AudioSound:Resume()
                 else
                     pcall(function() AudioSound:Play() end)
                 end
             end
+            SyncPlayPauseVisual()
         end)
 
-        makeControlBtn("next", 4, function()
+        AudioSound.Played:Connect(SyncPlayPauseVisual)
+        AudioSound.Paused:Connect(SyncPlayPauseVisual)
+        AudioSound.Ended:Connect(SyncPlayPauseVisual)
+
+        makeControlBtn("next", 3, function()
             local nextI = currentIdx + 1
             if nextI > #tracks then nextI = 1 end
             selectTrack(nextI, true)
@@ -1887,6 +2022,7 @@ function LZNLib:CreateWindow(options)
         end)
 
         pcall(function() AudioSound:Play() end)
+        SyncPlayPauseVisual()
     end
 
     local function BuildSliderRow(parent, cfg, order)
@@ -2057,6 +2193,7 @@ function LZNLib:CreateWindow(options)
             ric.Position = UDim2.new(0.5, -7, 0.5, -7)
 
             resetBtn.MouseButton1Click:Connect(function()
+                PlaySFX(ClickSFX, 0.95)
                 applyValue(cfg.ResetValue, true)
                 setHighlight(true)
                 task.delay(0.2, function()
@@ -2120,6 +2257,7 @@ function LZNLib:CreateWindow(options)
                 isOpen = false
             else
                 isOpen = not isOpen
+                PlaySFX(DropdownSFX, isOpen and 1.12 or 0.92)
             end
             local targetH = isOpen and (42 + (#items * 30)) or 38
             dropBtn.Text = label .. ": " .. tostring(current) .. (isOpen and "  ▴" or "  ▾")
@@ -2142,6 +2280,7 @@ function LZNLib:CreateWindow(options)
             AddClickEffect(itemBtn)
 
             itemBtn.MouseButton1Click:Connect(function()
+                PlaySFX(ClickSFX, 1.08)
                 current = item
                 toggle(true)
                 if cfg.Callback then cfg.Callback(item) end
@@ -2278,9 +2417,11 @@ function LZNLib:CreateWindow(options)
 
             itemBtn.MouseButton1Click:Connect(function()
                 selectedMap[key] = not selectedMap[key]
+                local nowSel = selectedMap[key] == true
+                PlaySFX(nowSel and ToggleOnSFX or ToggleOffSFX, nowSel and 1.14 or 0.9)
                 refreshOptionsVisual()
                 if cfg.Callback then
-                    cfg.Callback(getSelectedList(), item, selectedMap[key] == true)
+                    cfg.Callback(getSelectedList(), item, nowSel)
                 end
             end)
         end
@@ -2289,6 +2430,7 @@ function LZNLib:CreateWindow(options)
 
         dropBtn.MouseButton1Click:Connect(function()
             isOpen = not isOpen
+            PlaySFX(DropdownSFX, isOpen and 1.12 or 0.92)
             dropBtn.Text = formatHeader()
             local targetH = isOpen and (42 + (#items * 30)) or 38
             TweenService:Create(wrapper, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
@@ -2605,17 +2747,17 @@ function LZNLib:CreateWindow(options)
         SyncPlayerCollisionStates()
     end)
 
-    local function makeStrictPlayerToggle(textStr, iconName, order, onToggle)
+    local function makeStrictPlayerToggle(textStr, iconName, order, initialVal, onToggle)
         local cardB = Instance.new("Frame")
         cardB.Size = UDim2.new(1, 0, 0, 38)
         cardB.BackgroundColor3 = Color3.fromRGB(14, 19, 30)
-        cardB.BackgroundTransparency = 0.35
+        cardB.BackgroundTransparency = initialVal and 0.18 or 0.35
         cardB.LayoutOrder = order
         cardB.Parent = PlayerPage
         Instance.new("UICorner", cardB).CornerRadius = UDim.new(0, 10)
-        local st = AddGlow(cardB, accentColor, 1.1, 0.4)
+        local st = AddGlow(cardB, initialVal and Color3.fromRGB(0, 255, 170) or accentColor, initialVal and 1.7 or 1.1, 0.4)
 
-        local ic = CreateCustomIcon(cardB, iconName, Color3.fromRGB(185, 205, 225), 13)
+        local ic = CreateCustomIcon(cardB, iconName, initialVal and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(185, 205, 225), 13)
         ic.Position = UDim2.new(0, 12, 0.5, -6)
 
         local tx = Instance.new("TextLabel")
@@ -2633,33 +2775,41 @@ function LZNLib:CreateWindow(options)
         local pillB = Instance.new("Frame")
         pillB.Size = UDim2.new(0, 42, 0, 22)
         pillB.Position = UDim2.new(1, -50, 0.5, -11)
-        pillB.BackgroundColor3 = Color3.fromRGB(28, 36, 52)
+        pillB.BackgroundColor3 = initialVal and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
         pillB.Parent = cardB
         Instance.new("UICorner", pillB).CornerRadius = UDim.new(1, 0)
 
         local dotB = Instance.new("Frame")
         dotB.Size = UDim2.new(0, 16, 0, 16)
-        dotB.Position = UDim2.new(0, 2, 0.5, -8)
+        dotB.Position = initialVal and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
         dotB.BackgroundColor3 = Color3.new(1, 1, 1)
         dotB.Parent = pillB
         Instance.new("UICorner", dotB).CornerRadius = UDim.new(1, 0)
 
-        AttachStrictToggleControl(pillB, dotB, false, function(active)
+        return AttachStrictToggleControl(pillB, dotB, initialVal == true, function(active)
             st.Color = active and Color3.fromRGB(0, 255, 170) or accentColor
             st.Thickness = active and 1.7 or 1.1
+            local col = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(185, 205, 225)
+            for _, ch in ipairs(ic:GetChildren()) do
+                if ch:IsA("Frame") then ch.BackgroundColor3 = col end
+            end
             TweenService:Create(cardB, TweenInfo.new(0.2), {
                 BackgroundTransparency = active and 0.18 or 0.35
             }):Play()
-            onToggle(active)
+            if onToggle then onToggle(active) end
         end)
     end
 
-    makeStrictPlayerToggle("anti-fling (desativa sua colisão contra Players)", "platform", 5, function(state)
+    customInvToggleObj = makeStrictPlayerToggle("INVENTÁRIO CUSTOMIZADO", "backpack", 5, customInventoryEnabled, function(state)
+        SetCustomInventoryEnabled(state)
+    end)
+
+    makeStrictPlayerToggle("anti-fling (desativa sua colisão contra Players)", "platform", 6, false, function(state)
         antiFlingActive = state
         SyncPlayerCollisionStates()
     end)
 
-    makeStrictPlayerToggle("God Mode (REFORÇADO)", "success", 6, function(state)
+    makeStrictPlayerToggle("God Mode (REFORÇADO)", "success", 7, false, function(state)
         SetGodModeState(state)
     end)
 
@@ -2667,7 +2817,7 @@ function LZNLib:CreateWindow(options)
         SyncPlayerCollisionStates()
     end)
 
-    makeStrictPlayerToggle("X-RAY", "xray", 7, function(state)
+    makeStrictPlayerToggle("X-RAY", "xray", 8, false, function(state)
         xrayActive = state
         if xrayActive then
             for _, obj in ipairs(workspace:GetDescendants()) do
@@ -2688,7 +2838,7 @@ function LZNLib:CreateWindow(options)
         end
     end)
 
-    makeStrictPlayerToggle("PULO INFINITO", "jump", 8, function(state)
+    makeStrictPlayerToggle("PULO INFINITO", "jump", 9, false, function(state)
         infJumpActive = state
     end)
 
@@ -2701,7 +2851,7 @@ function LZNLib:CreateWindow(options)
         end
     end)
 
-    makeStrictPlayerToggle("PLATAFORMA TRANSPARENTE", "platform", 9, function(state)
+    makeStrictPlayerToggle("PLATAFORMA TRANSPARENTE", "platform", 10, false, function(state)
         platformActive = state
         if platformActive then
             if not platformPart then
@@ -3025,6 +3175,8 @@ function LZNLib:CreateWindow(options)
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         if not itemName or not hum or not char then return end
 
+        PlaySFX(ClickSFX, 1.05)
+
         if equippedSlotIdx == slotIdx then
             equippedSlotIdx = nil
             pcall(function()
@@ -3106,6 +3258,7 @@ function LZNLib:CreateWindow(options)
         if not equippedSlotIdx then return end
         local itemName = hotbarSlots[equippedSlotIdx]
         if not itemName then return end
+        PlaySFX(ClickSFX, 0.95)
         local qty = math.max(1, math.floor(tonumber(QtyBox.Text) or 1))
         local tools = FindToolsByName(itemName)
         local char = Player.Character
@@ -3156,6 +3309,7 @@ function LZNLib:CreateWindow(options)
         if not equippedSlotIdx then return end
         local itemName = hotbarSlots[equippedSlotIdx]
         if not itemName then return end
+        PlaySFX(ClickSFX, 1.05)
         local qty = math.max(1, math.floor(tonumber(QtyBox.Text) or 1))
         local tools = FindToolsByName(itemName)
         if #tools == 0 then return end
@@ -3256,6 +3410,7 @@ function LZNLib:CreateWindow(options)
                     end
                 end
                 if emptySlot then
+                    PlaySFX(ClickSFX, 1.08)
                     RemoveBackpackCount(src.name, 1)
                     hotbarSlots[emptySlot] = src.name
                     GiveRealToolToPlayer(src.name, src.image, false)
@@ -3267,6 +3422,7 @@ function LZNLib:CreateWindow(options)
         end
 
         isDraggingItem = false
+        PlaySFX(ClickSFX, 1.02)
         local droppedOnHotbarIdx = nil
         for i = 1, 10 do
             local sObj = slotButtons[i]
@@ -3420,6 +3576,7 @@ function LZNLib:CreateWindow(options)
 
     BackpackToggleBtn.MouseButton1Click:Connect(function()
         backpackOpen = not backpackOpen
+        PlaySFX(DropdownSFX, backpackOpen and 1.12 or 0.92)
         BackpackPanel.Visible = backpackOpen
     end)
 
