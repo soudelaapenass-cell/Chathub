@@ -1161,6 +1161,13 @@ function LZNLib:CreateWindow(options)
     end)
 
     local Window = {}
+    local ActiveContainer = ContentContainer
+    local PublicTabs = {}
+    local ActivePublicTab = nil
+    local ComponentRegistry = {}
+    local KeybindRegistry = {}
+    local ThemeRegistry = {Default = {Accent = accentColor}}
+    local CurrentTheme = "Default"
     local OrderCounter = 0
 
     local function NextOrder()
@@ -1186,6 +1193,469 @@ function LZNLib:CreateWindow(options)
 
     function Window:IsSoundEffectsEnabled()
         return sfxEnabled
+    end
+
+    local function MakeScrollContainer(name)
+        local frame = Instance.new("ScrollingFrame")
+        frame.Name = name
+        frame.Size = UDim2.new(0.92, 0, 1, -120)
+        frame.Position = UDim2.new(0.04, 0, 0, 114)
+        frame.BackgroundTransparency = 1
+        frame.BorderSizePixel = 0
+        frame.ScrollBarThickness = 3
+        frame.ScrollBarImageColor3 = accentColor
+        frame.CanvasSize = UDim2.new(0, 0, 0, 0)
+        frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        frame.Visible = false
+        frame.ZIndex = 23
+        frame.Parent = MainFrame
+        local pad = Instance.new("UIPadding")
+        pad.PaddingTop = UDim.new(0, 2)
+        pad.PaddingBottom = UDim.new(0, 8)
+        pad.PaddingLeft = UDim.new(0, 2)
+        pad.PaddingRight = UDim.new(0, 4)
+        pad.Parent = frame
+        local layout = Instance.new("UIListLayout")
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = UDim.new(0, 9)
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.Parent = frame
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            if frame.Visible then UpdateHubHeight() end
+        end)
+        return frame
+    end
+
+    local function RegisterComponent(instance, object)
+        local id = HttpService:GenerateGUID(false)
+        ComponentRegistry[id] = {Instance = instance, Object = object}
+        object.Id = id
+        local oldDestroy = object.Destroy
+        function object:Destroy()
+            if oldDestroy then pcall(oldDestroy, self) end
+            if instance and instance.Parent then instance:Destroy() end
+            ComponentRegistry[id] = nil
+        end
+        function object:SetVisible(value)
+            if instance then instance.Visible = value == true end
+        end
+        if not object.SetText then
+            function object:SetText(value)
+                if not instance then return end
+                local label = (instance:IsA("TextLabel") or instance:IsA("TextButton")) and instance or nil
+                if label then label.Text = tostring(value) else
+                    for _, child in ipairs(instance:GetDescendants()) do
+                        if child:IsA("TextLabel") or child:IsA("TextButton") then child.Text = tostring(value); break end
+                    end
+                end
+            end
+        end
+        if not object.GetValue and object.Get then function object:GetValue() return self.Get() end end
+        if not object.SetValue and object.Set then function object:SetValue(value) return self.Set(value, true) end end
+        return object
+    end
+
+    local function WithContainer(container, callback)
+        local previous = ActiveContainer
+        ActiveContainer = container or ContentContainer
+        local ok, result = pcall(callback)
+        ActiveContainer = previous
+        if not ok then warn("[LZN Library] " .. tostring(result)); return nil end
+        return result
+    end
+
+    function Window:CreateTab(name, icon)
+        name = tostring(name or ("Aba " .. tostring(#PublicTabs + 1)))
+        if PublicTabs[name] then return PublicTabs[name].API end
+        local page = MakeScrollContainer("PublicTab_" .. name:gsub("%W", "_"))
+        local button = Instance.new("TextButton")
+        button.Name = "Tab_" .. name:gsub("%W", "_")
+        button.Size = UDim2.new(0, 108, 1, 0)
+        button.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
+        button.BackgroundTransparency = 0.5
+        button.Text = ""
+        button.Parent = PageNav
+        button.LayoutOrder = #PublicTabs + 4
+        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+        AddClickEffect(button)
+        local iconFrame = CreateCustomIcon(button, icon or "text", accentColor, 12)
+        iconFrame.Position = UDim2.new(0, 13, 0.5, -6)
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1, -30, 1, 0)
+        title.Position = UDim2.new(0, 30, 0, 0)
+        title.BackgroundTransparency = 1
+        title.Text = name
+        title.TextColor3 = Color3.fromRGB(190, 210, 230)
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 11
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Parent = button
+        local tab = {Name = name, Icon = icon, Container = page, Button = button, Sections = {}}
+        local api = {Name = name, Icon = icon}
+        tab.API = api
+        function api:AddSection(sectionName)
+            local sectionFrame = Instance.new("Frame")
+            sectionFrame.Name = tostring(sectionName or "Section")
+            sectionFrame.Size = UDim2.new(1, 0, 0, 38)
+            sectionFrame.AutomaticSize = Enum.AutomaticSize.Y
+            sectionFrame.BackgroundColor3 = Color3.fromRGB(12, 17, 27)
+            sectionFrame.BackgroundTransparency = 0.28
+            sectionFrame.BorderSizePixel = 0
+            sectionFrame.LayoutOrder = NextOrder()
+            sectionFrame.Parent = page
+            Instance.new("UICorner", sectionFrame).CornerRadius = UDim.new(0, 10)
+            AddGlow(sectionFrame, accentColor, 1, 0.72)
+            local pad = Instance.new("UIPadding")
+            pad.PaddingTop = UDim.new(0, 9); pad.PaddingBottom = UDim.new(0, 9)
+            pad.PaddingLeft = UDim.new(0, 9); pad.PaddingRight = UDim.new(0, 9)
+            pad.Parent = sectionFrame
+            local layout = Instance.new("UIListLayout")
+            layout.SortOrder = Enum.SortOrder.LayoutOrder
+            layout.Padding = UDim.new(0, 8)
+            layout.Parent = sectionFrame
+            local heading = Instance.new("TextLabel")
+            heading.Size = UDim2.new(1, 0, 0, 18)
+            heading.BackgroundTransparency = 1
+            heading.Text = tostring(sectionName or "SEÇÃO")
+            heading.TextColor3 = Color3.fromRGB(0, 220, 255)
+            heading.Font = Enum.Font.GothamBold
+            heading.TextSize = 11
+            heading.TextXAlignment = Enum.TextXAlignment.Left
+            heading.LayoutOrder = 0
+            heading.Parent = sectionFrame
+            local section = {Container = sectionFrame}
+            local sectionAPI = {}
+            local function add(method, cfg)
+                return WithContainer(sectionFrame, function()
+                    local before = {}
+                    for _, child in ipairs(sectionFrame:GetChildren()) do before[child] = true end
+                    local result = Window[method](Window, cfg or {})
+                    local newest
+                    for _, child in ipairs(sectionFrame:GetChildren()) do
+                        if not before[child] and child:IsA("GuiObject") then newest = child end
+                    end
+                    if newest and type(result) == "table" then RegisterComponent(newest, result) end
+                    return result
+                end)
+            end
+            function sectionAPI:AddButton(cfg) return add("AddButton", cfg) end
+            function sectionAPI:AddToggle(cfg) return add("AddToggle", cfg) end
+            function sectionAPI:AddTextBox(cfg) return add("AddTextBox", cfg) end
+            function sectionAPI:AddSlider(cfg) return add("AddSlider", cfg) end
+            function sectionAPI:AddDropdown(cfg) return add("AddDropdown", cfg) end
+            function sectionAPI:AddMultiDropdown(cfg) return add("AddMultiDropdown", cfg) end
+            function sectionAPI:AddParagraph(titleText, bodyText) return WithContainer(sectionFrame, function() return Window:AddParagraph({Title = titleText, Text = bodyText}) end) end
+            function sectionAPI:AddLabel(textValue) return WithContainer(sectionFrame, function() return Window:AddLabel(textValue) end) end
+            function sectionAPI:AddDivider() return WithContainer(sectionFrame, function() return Window:AddDivider() end) end
+            function sectionAPI:SetVisible(value) sectionFrame.Visible = value == true end
+            function sectionAPI:Destroy() sectionFrame:Destroy() end
+            section.API = sectionAPI
+            table.insert(tab.Sections, section)
+            return sectionAPI
+        end
+        local function addToTab(method, cfg)
+            return WithContainer(page, function()
+                local before = {}
+                for _, child in ipairs(page:GetChildren()) do before[child] = true end
+                local result = Window[method](Window, cfg or {})
+                local newest
+                for _, child in ipairs(page:GetChildren()) do
+                    if not before[child] and child:IsA("GuiObject") then newest = child end
+                end
+                if newest and type(result) == "table" then RegisterComponent(newest, result) end
+                return result
+            end)
+        end
+        function api:AddButton(cfg) return addToTab("AddButton", cfg) end
+        function api:AddToggle(cfg) return addToTab("AddToggle", cfg) end
+        function api:AddTextBox(cfg) return addToTab("AddTextBox", cfg) end
+        function api:AddSlider(cfg) return addToTab("AddSlider", cfg) end
+        function api:AddDropdown(cfg) return addToTab("AddDropdown", cfg) end
+        function api:AddMultiDropdown(cfg) return addToTab("AddMultiDropdown", cfg) end
+        function api:AddKeybind(cfg) return addToTab("AddKeybind", cfg) end
+        function api:AddColorPicker(cfg) return addToTab("AddColorPicker", cfg) end
+        function api:AddImage(cfg) return addToTab("AddImage", cfg) end
+        function api:AddParagraph(titleText, bodyText) return WithContainer(page, function() return Window:AddParagraph({Title = titleText, Text = bodyText}) end) end
+        function api:AddLabel(textValue) return WithContainer(page, function() return Window:AddLabel(textValue) end) end
+        function api:AddDivider() return WithContainer(page, function() return Window:AddDivider() end) end
+        function api:AddSearchBox(cfg) return addToTab("AddSearchBox", cfg) end
+        function api:AddMultiSelect(cfg) return addToTab("AddMultiSelect", cfg) end
+        function api:AddButtonWithIcon(cfg) return addToTab("AddButtonWithIcon", cfg) end
+        function api:AddInputNumber(cfg) return addToTab("AddInputNumber", cfg) end
+        function api:AddConfirmButton(cfg) return addToTab("AddConfirmButton", cfg) end
+        function api:AddProgressBar(cfg) return addToTab("AddProgressBar", cfg) end
+        function api:AddList(cfg) return addToTab("AddList", cfg) end
+        function api:AddBindToggle(cfg) return addToTab("AddBindToggle", cfg) end
+        function api:SetVisible(value) page.Visible = value == true end
+        function api:Destroy() Window:RemoveTab(name) end
+        PublicTabs[name] = tab
+        button.MouseButton1Click:Connect(function() Window:SetTab(api) end)
+        if not ActivePublicTab then Window:SetTab(api) end
+        return api
+    end
+
+    function Window:SetTab(tabValue)
+        local tab = type(tabValue) == "table" and tabValue or PublicTabs[tostring(tabValue)] and PublicTabs[tostring(tabValue)].API
+        if not tab then return false end
+        for _, entry in pairs(PublicTabs) do
+            entry.Container.Visible = entry.API == tab
+            entry.Title = entry.Title
+            if entry.Button then entry.Button.BackgroundTransparency = entry.API == tab and 0.12 or 0.5 end
+        end
+        ContentContainer.Visible = false
+        GamePage.Visible = false
+        PlayerPage.Visible = false
+        ActivePublicTab = tab
+        UpdateHubHeight()
+        return true
+    end
+
+    function Window:GetTabs()
+        local result = {}
+        for _, tab in pairs(PublicTabs) do table.insert(result, tab.API) end
+        table.sort(result, function(a, b) return tostring(a.Name) < tostring(b.Name) end)
+        return result
+    end
+
+    function Window:RemoveTab(name)
+        local tab = PublicTabs[tostring(name)]
+        if not tab then return false end
+        if tab.Container then tab.Container:Destroy() end
+        if tab.Button then tab.Button:Destroy() end
+        PublicTabs[tostring(name)] = nil
+        if ActivePublicTab == tab.API then
+            ActivePublicTab = nil
+            ContentContainer.Visible = true
+            for _, remaining in pairs(PublicTabs) do Window:SetTab(remaining.API); break end
+        end
+        return true
+    end
+
+    function Window:AddDivider()
+        local line = Instance.new("Frame")
+        line.Name = "LZN_Divider"
+        line.Size = UDim2.new(1, 0, 0, 1)
+        line.BackgroundColor3 = accentColor
+        line.BackgroundTransparency = 0.55
+        line.BorderSizePixel = 0
+        line.LayoutOrder = NextOrder()
+        line.Parent = ActiveContainer
+        return RegisterComponent(line, {})
+    end
+
+    function Window:AddLabel(textValue)
+        local label = Instance.new("TextLabel")
+        label.Name = "LZN_Label"
+        label.Size = UDim2.new(1, 0, 0, 22)
+        label.BackgroundTransparency = 1
+        label.Text = tostring(textValue or "")
+        label.TextColor3 = Color3.fromRGB(220, 235, 255)
+        label.Font = Enum.Font.GothamMedium
+        label.TextSize = 12
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.LayoutOrder = NextOrder()
+        label.Parent = ActiveContainer
+        return RegisterComponent(label, {GetValue = function() return label.Text end})
+    end
+
+    function Window:AddParagraph(cfg, body)
+        if type(cfg) ~= "table" then cfg = {Title = cfg, Text = body} end
+        local frame = Instance.new("Frame")
+        frame.Name = "LZN_Paragraph"
+        frame.Size = UDim2.new(1, 0, 0, 54)
+        frame.AutomaticSize = Enum.AutomaticSize.Y
+        frame.BackgroundColor3 = Color3.fromRGB(13, 19, 30)
+        frame.BackgroundTransparency = 0.18
+        frame.BorderSizePixel = 0
+        frame.LayoutOrder = NextOrder()
+        frame.Parent = ActiveContainer
+        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 9)
+        local pad = Instance.new("UIPadding")
+        pad.PaddingTop = UDim.new(0, 8); pad.PaddingBottom = UDim.new(0, 8)
+        pad.PaddingLeft = UDim.new(0, 10); pad.PaddingRight = UDim.new(0, 10); pad.Parent = frame
+        local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0, 4); layout.Parent = frame
+        local heading = Instance.new("TextLabel")
+        heading.Size = UDim2.new(1, 0, 0, 16); heading.AutomaticSize = Enum.AutomaticSize.Y
+        heading.BackgroundTransparency = 1; heading.Text = tostring(cfg.Title or "Informação")
+        heading.TextColor3 = accentColor; heading.Font = Enum.Font.GothamBold; heading.TextSize = 12
+        heading.TextXAlignment = Enum.TextXAlignment.Left; heading.Parent = frame
+        local desc = Instance.new("TextLabel")
+        desc.Size = UDim2.new(1, 0, 0, 20); desc.AutomaticSize = Enum.AutomaticSize.Y
+        desc.BackgroundTransparency = 1; desc.TextWrapped = true; desc.Text = tostring(cfg.Text or cfg.Description or "")
+        desc.TextColor3 = Color3.fromRGB(185, 200, 220); desc.Font = Enum.Font.Gotham; desc.TextSize = 11
+        desc.TextXAlignment = Enum.TextXAlignment.Left; desc.Parent = frame
+        return RegisterComponent(frame, {SetText = function(_, value) desc.Text = tostring(value) end, GetValue = function() return desc.Text end})
+    end
+
+    function Window:AddImage(cfg)
+        cfg = cfg or {}
+        local image = Instance.new("ImageLabel")
+        image.Name = "LZN_Image"; image.Size = cfg.Size or UDim2.new(1, 0, 0, 120)
+        image.BackgroundTransparency = 1; image.Image = tostring(cfg.Image or cfg.ImageId or "")
+        image.ScaleType = cfg.ScaleType or Enum.ScaleType.Fit; image.LayoutOrder = NextOrder(); image.Parent = ActiveContainer
+        Instance.new("UICorner", image).CornerRadius = UDim.new(0, cfg.Radius or 8)
+        return RegisterComponent(image, {SetImage = function(_, value) image.Image = tostring(value) end})
+    end
+
+    function Window:AddButtonWithIcon(cfg)
+        cfg = cfg or {}
+        local obj = Window:AddButton(cfg)
+        return obj
+    end
+
+    function Window:AddInputNumber(cfg)
+        cfg = cfg or {}; cfg.Title = cfg.Text or cfg.Title or "Número"; cfg.Default = tostring(cfg.Default or "0")
+        local obj = Window:AddTextBox(cfg)
+        function obj:GetValue() return tonumber(obj:GetText()) end
+        function obj:SetValue(value) obj:SetText(tostring(tonumber(value) or 0)) end
+        return obj
+    end
+
+    function Window:AddKeybind(cfg)
+        cfg = cfg or {}
+        local key = cfg.Default or Enum.KeyCode.Unknown
+        local frame = Instance.new("TextButton")
+        frame.Size = UDim2.new(1, 0, 0, 36); frame.BackgroundColor3 = Color3.fromRGB(14, 18, 28)
+        frame.BackgroundTransparency = 0.2; frame.Text = tostring(cfg.Text or "Atalho") .. " : " .. key.Name
+        frame.TextColor3 = Color3.fromRGB(220, 235, 255); frame.Font = Enum.Font.GothamBold; frame.TextSize = 11
+        frame.LayoutOrder = NextOrder(); frame.Parent = ActiveContainer; Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+        local listening = false
+        frame.MouseButton1Click:Connect(function() listening = true; frame.Text = tostring(cfg.Text or "Atalho") .. " : ..." end)
+        local conn = UserInputService.InputBegan:Connect(function(input, processed)
+            if processed then return end
+            if listening and input.UserInputType == Enum.UserInputType.Keyboard then
+                key = input.KeyCode; listening = false; frame.Text = tostring(cfg.Text or "Atalho") .. " : " .. key.Name
+                if cfg.Changed then pcall(cfg.Changed, key) end
+            elseif not listening and input.KeyCode == key and cfg.Callback then pcall(cfg.Callback) end
+        end)
+        local obj = {GetValue = function() return key end, SetValue = function(_, value) key = value; frame.Text = tostring(cfg.Text or "Atalho") .. " : " .. key.Name end}
+        function obj:Destroy() conn:Disconnect(); frame:Destroy() end
+        return RegisterComponent(frame, obj)
+    end
+
+    function Window:AddBindToggle(cfg)
+        cfg = cfg or {}
+        local toggle = Window:AddToggle(cfg)
+        local bind = Window:AddKeybind({Text = (cfg.Text or "Toggle") .. " bind", Default = cfg.Key or Enum.KeyCode.Unknown, Callback = function() toggle.Set(not toggle.Get(), true) end})
+        return {Toggle = toggle, Bind = bind, Destroy = function() toggle.Destroy(); bind.Destroy() end}
+    end
+
+    function Window:AddColorPicker(cfg)
+        cfg = cfg or {}
+        local current = cfg.Default or accentColor
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, 0, 0, 36); button.BackgroundColor3 = current; button.BackgroundTransparency = 0.12
+        button.Text = tostring(cfg.Text or "Cor") .. "  " .. current:ToHex(); button.TextColor3 = Color3.new(1,1,1)
+        button.Font = Enum.Font.GothamBold; button.TextSize = 11; button.LayoutOrder = NextOrder(); button.Parent = ActiveContainer
+        Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+        local hue = 0
+        button.MouseButton1Click:Connect(function()
+            hue = (hue + 0.08) % 1; current = Color3.fromHSV(hue, 0.85, 1); button.BackgroundColor3 = current
+            button.Text = tostring(cfg.Text or "Cor") .. "  " .. current:ToHex()
+            if cfg.Callback then pcall(cfg.Callback, current) end
+        end)
+        return RegisterComponent(button, {GetValue = function() return current end, SetValue = function(_, value) if typeof(value) == "Color3" then current = value; button.BackgroundColor3 = value; button.Text = tostring(cfg.Text or "Cor") .. "  " .. value:ToHex() end end})
+    end
+
+    function Window:AddSearchBox(cfg)
+        cfg = cfg or {}
+        local box = Instance.new("TextBox")
+        box.Size = UDim2.new(1, 0, 0, 36); box.BackgroundColor3 = Color3.fromRGB(10, 15, 24); box.BackgroundTransparency = 0.1
+        box.PlaceholderText = cfg.Placeholder or "Pesquisar..."; box.Text = ""; box.TextColor3 = Color3.new(1,1,1)
+        box.Font = Enum.Font.Gotham; box.TextSize = 12; box.LayoutOrder = NextOrder(); box.Parent = ActiveContainer
+        Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+        box:GetPropertyChangedSignal("Text"):Connect(function() if cfg.Callback then pcall(cfg.Callback, box.Text) end end)
+        return RegisterComponent(box, {GetValue = function() return box.Text end, SetValue = function(_, v) box.Text = tostring(v) end})
+    end
+
+    function Window:AddMultiSelect(cfg)
+        cfg = cfg or {}; cfg.Text = cfg.Text or "Seleção múltipla"
+        return Window:AddMultiDropdown(cfg)
+    end
+
+    function Window:AddConfirmButton(cfg)
+        cfg = cfg or {}; local armed = false
+        local original = cfg.Callback
+        cfg.Callback = function(...) if not armed then armed = true; return end; armed = false; if original then original(...) end end
+        cfg.Text = cfg.Text or "Confirmar"
+        return Window:AddButton(cfg)
+    end
+
+    function Window:AddProgressBar(cfg)
+        cfg = cfg or {}; local value = math.clamp(tonumber(cfg.Default) or 0, 0, 100)
+        local wrap = Instance.new("Frame"); wrap.Size = UDim2.new(1, 0, 0, 32); wrap.BackgroundTransparency = 1
+        wrap.LayoutOrder = NextOrder(); wrap.Parent = ActiveContainer
+        local label = Instance.new("TextLabel"); label.Size = UDim2.new(1, 0, 0, 14); label.BackgroundTransparency = 1
+        label.Text = tostring(cfg.Text or "Progresso") .. "  " .. value .. "%"; label.TextColor3 = Color3.new(1,1,1)
+        label.Font = Enum.Font.GothamBold; label.TextSize = 10; label.TextXAlignment = Enum.TextXAlignment.Left; label.Parent = wrap
+        local bg = Instance.new("Frame"); bg.Position = UDim2.new(0,0,0,19); bg.Size = UDim2.new(1,0,0,8); bg.BackgroundColor3 = Color3.fromRGB(30,38,52); bg.Parent = wrap
+        Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
+        local fill = Instance.new("Frame"); fill.Size = UDim2.new(value/100,0,1,0); fill.BackgroundColor3 = accentColor; fill.Parent = bg
+        Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
+        local obj = {GetValue = function() return value end, SetValue = function(_, v) value = math.clamp(tonumber(v) or 0,0,100); fill.Size = UDim2.new(value/100,0,1,0); label.Text = tostring(cfg.Text or "Progresso") .. "  " .. value .. "%" end}
+        return RegisterComponent(wrap, obj)
+    end
+
+    function Window:AddList(cfg)
+        cfg = cfg or {}; local items = cfg.Items or cfg.Options or {}
+        local holder = Instance.new("Frame"); holder.Size = UDim2.new(1,0,0,0); holder.AutomaticSize = Enum.AutomaticSize.Y
+        holder.BackgroundTransparency = 1; holder.LayoutOrder = NextOrder(); holder.Parent = ActiveContainer
+        local layout = Instance.new("UIListLayout"); layout.Padding = UDim.new(0,4); layout.Parent = holder
+        local obj = {}
+        function obj:SetOptions(newItems)
+            for _, child in ipairs(holder:GetChildren()) do if child:IsA("TextLabel") then child:Destroy() end end
+            items = newItems or {}
+            for _, item in ipairs(items) do local label = Instance.new("TextLabel"); label.Size = UDim2.new(1,0,0,22); label.BackgroundTransparency = 1; label.Text = tostring(item); label.TextColor3 = Color3.fromRGB(220,235,255); label.Font = Enum.Font.Gotham; label.TextSize = 11; label.TextXAlignment = Enum.TextXAlignment.Left; label.Parent = holder end
+        end
+        obj:GetValue = function() return items end
+        obj:SetOptions(items)
+        return RegisterComponent(holder, obj)
+    end
+
+    function Window:SetTheme(name, theme)
+        if type(name) ~= "string" then return false end
+        if type(theme) == "table" then ThemeRegistry[name] = theme end
+        local selected = ThemeRegistry[name]
+        if not selected then return false end
+        CurrentTheme = name
+        if typeof(selected.Accent) == "Color3" then accentColor = selected.Accent end
+        return true
+    end
+
+    function Window:GetTheme() return CurrentTheme, ThemeRegistry[CurrentTheme] end
+    function Window:SetCompact(enabled) MainFrame.Size = enabled and UDim2.new(0, 390, 0, 330) or UDim2.new(0, 440, 0, 425) end
+    function Window:SetVisible(enabled) MainFrame.Visible = enabled == true; HubOpen = enabled == true end
+    function Window:GetComponents() return ComponentRegistry end
+    function Window:NotifyManager(config) return Window:Notify(config or {}) end
+    function Window:SaveConfig(name)
+        local data = {Theme = CurrentTheme, Components = {}}
+        for id, entry in pairs(ComponentRegistry) do
+            local obj = entry.Object
+            if obj and obj.GetValue then local ok, value = pcall(obj.GetValue, obj); if ok and (type(value) == "string" or type(value) == "number" or type(value) == "boolean") then data.Components[id] = value end end
+        end
+        if writefile then pcall(writefile, tostring(name or "LZN_Config") .. ".json", HttpService:JSONEncode(data)) end
+        return data
+    end
+    function Window:LoadConfig(name)
+        if not readfile or not isfile then return false end
+        local path = tostring(name or "LZN_Config") .. ".json"
+        if not isfile(path) then return false end
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
+        if not ok or type(data) ~= "table" then return false end
+        if data.Theme then Window:SetTheme(data.Theme) end
+        for id, value in pairs(data.Components or {}) do local entry = ComponentRegistry[id]; if entry and entry.Object.SetValue then pcall(entry.Object.SetValue, entry.Object, value) end end
+        return true
+    end
+    function Window:Search(query)
+        query = string.lower(tostring(query or "")); local found = {}
+        for id, entry in pairs(ComponentRegistry) do
+            local instance = entry.Instance
+            if instance and instance.Parent then
+                local textValue = ((instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox")) and instance.Text) or instance.Name
+                if string.find(string.lower(tostring(textValue)), query, 1, true) then table.insert(found, entry) end
+            end
+        end
+        return found
     end
 
     local function AttachStrictToggleControl(pillFrame, dotFrame, initialState, onStateChanged)
@@ -1439,7 +1909,7 @@ function LZNLib:CreateWindow(options)
         btn.Text = ""
         btn.LayoutOrder = NextOrder()
         btn.ZIndex = 24
-        btn.Parent = ContentContainer
+        btn.Parent = ActiveContainer
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
         local stroke = AddGlow(btn, cfg.GlowColor or accentColor, 1.2, 0.35)
         AddClickEffect(btn)
@@ -1486,7 +1956,7 @@ function LZNLib:CreateWindow(options)
         rowFrame.BackgroundTransparency = state and 0.18 or 0.45
         rowFrame.LayoutOrder = NextOrder()
         rowFrame.ZIndex = 24
-        rowFrame.Parent = ContentContainer
+        rowFrame.Parent = ActiveContainer
         Instance.new("UICorner", rowFrame).CornerRadius = UDim.new(0, 10)
         local stroke = AddGlow(rowFrame, state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(0, 170, 255), state and 1.8 or 1.2, state and 0.15 or 0.4)
 
@@ -1563,7 +2033,7 @@ function LZNLib:CreateWindow(options)
         boxWrap.BackgroundTransparency = 0.25
         boxWrap.LayoutOrder = NextOrder()
         boxWrap.ZIndex = 24
-        boxWrap.Parent = ContentContainer
+        boxWrap.Parent = ActiveContainer
         Instance.new("UICorner", boxWrap).CornerRadius = UDim.new(0, 11)
         local wrapStroke = AddGlow(boxWrap, accentColor, 1.2, 0.45)
         AddGradient(boxWrap, Color3.fromRGB(16, 22, 35), Color3.fromRGB(9, 12, 19), 135)
@@ -1666,7 +2136,7 @@ function LZNLib:CreateWindow(options)
         card.LayoutOrder = NextOrder()
         card.ClipsDescendants = true
         card.ZIndex = 24
-        card.Parent = ContentContainer
+        card.Parent = ActiveContainer
         Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
         AddGlow(card, accentColor, 1.3, 0.35)
         AddGradient(card, Color3.fromRGB(16, 22, 36), Color3.fromRGB(8, 10, 16), 135)
@@ -2243,7 +2713,7 @@ function LZNLib:CreateWindow(options)
     end
 
     function Window:AddSlider(cfg)
-        return BuildSliderRow(ContentContainer, cfg, NextOrder())
+        return BuildSliderRow(ActiveContainer, cfg, NextOrder())
     end
 
     function Window:AddDropdown(cfg)
@@ -2259,7 +2729,7 @@ function LZNLib:CreateWindow(options)
         wrapper.LayoutOrder = NextOrder()
         wrapper.ClipsDescendants = true
         wrapper.ZIndex = 24
-        wrapper.Parent = ContentContainer
+        wrapper.Parent = ActiveContainer
 
         local dropBtn = Instance.new("TextButton")
         dropBtn.Size = UDim2.new(1, 0, 0, 38)
@@ -2367,7 +2837,7 @@ function LZNLib:CreateWindow(options)
         wrapper.LayoutOrder = NextOrder()
         wrapper.ClipsDescendants = true
         wrapper.ZIndex = 24
-        wrapper.Parent = ContentContainer
+        wrapper.Parent = ActiveContainer
 
         local dropBtn = Instance.new("TextButton")
         dropBtn.Size = UDim2.new(1, 0, 0, 38)
