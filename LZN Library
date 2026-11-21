@@ -784,9 +784,28 @@ function LZNLib:CreateWindow(options)
         PlaySFX(ClickSFX, 1.08)
         CurrentPage = page
         ContentContainer.Visible = page == "Home"
-        if page == "Home" then ActiveContainer = ContentContainer; ActiveTabName = nil end
         GamePage.Visible = page == "Game"
         PlayerPage.Visible = page == "Player"
+
+        if page == "Home" then
+            ActiveContainer = ContentContainer
+            ActiveTabName = nil
+        elseif page == "Game" then
+            ActiveContainer = GamePage
+            ActiveTabName = nil
+        elseif page == "Player" then
+            ActiveContainer = PlayerPage
+            ActiveTabName = nil
+        end
+
+        for _, entry in pairs(TabRegistry) do
+            if entry.Page then entry.Page.Visible = false end
+            if entry.Button then
+                entry.Button.BackgroundTransparency = 0.55
+                entry.Button.TextColor3 = Color3.fromRGB(190, 210, 230)
+            end
+        end
+
         SetTabColor(HomeTabIcon, HomeTabText, page == "Home")
         SetTabColor(GameTabIcon, GameTabText, page == "Game")
         SetTabColor(PlayerTabIcon, PlayerTabText, page == "Player")
@@ -2574,9 +2593,12 @@ function LZNLib:CreateWindow(options)
         return page, layout
     end
 
-    local function SelectPublicTab(tab)
+    local function SelectPublicTab(tab, silent)
         if type(tab) == "string" then tab = TabRegistry[tab] end
         if not tab or not tab.Page or not tab.Page.Parent then return false end
+        if not silent then
+            PlaySFX(ClickSFX, 1.08)
+        end
         ActiveTabName = tab.Name
         ActiveContainer = tab.Page
         ContentContainer.Visible = false
@@ -2589,6 +2611,9 @@ function LZNLib:CreateWindow(options)
                 entry.Button.TextColor3 = entry == tab and Color3.fromRGB(0, 225, 255) or Color3.fromRGB(190, 210, 230)
             end
         end
+        SetTabColor(HomeTabIcon, HomeTabText, false)
+        SetTabColor(GameTabIcon, GameTabText, false)
+        SetTabColor(PlayerTabIcon, PlayerTabText, false)
         CurrentPage = "Public:" .. tab.Name
         UpdateHubHeight()
         return true
@@ -2632,7 +2657,7 @@ function LZNLib:CreateWindow(options)
         button.Parent = PageNav
         Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
         AddClickEffect(button)
-        button.MouseButton1Click:Connect(function() SelectPublicTab(name) end)
+        button.MouseButton1Click:Connect(function() SelectPublicTab(name, false) end)
         local tab = {Name = name, Icon = icon, Page = page, Layout = layout, Button = button, Sections = {}}
         TabRegistry[name] = tab
         table.insert(TabOrder, name)
@@ -2670,7 +2695,7 @@ function LZNLib:CreateWindow(options)
         function tab:Get() return page end
         function tab:SetVisible(value) page.Visible = value == true end
         function tab:Destroy() Window:RemoveTab(name) end
-        if #TabOrder == 1 then SelectPublicTab(tab) end
+        if #TabOrder == 1 then SelectPublicTab(tab, true) end
         return tab
     end
 
