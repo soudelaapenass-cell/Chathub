@@ -354,6 +354,8 @@ function LZNLib:CreateWindow(options)
         oldBlur:Destroy()
     end
 
+    local Window = {}
+
     local function CreateSFX(suffix, soundId, vol, pitch)
         local s = Instance.new("Sound")
         s.Name = hubName .. "_SFX_" .. suffix
@@ -369,6 +371,19 @@ function LZNLib:CreateWindow(options)
     local ToggleOffSFX = CreateSFX("ToggleOff", toggleOffSoundId, 0.42, 0.88)
     local DropdownSFX = CreateSFX("Dropdown", dropdownSoundId, 0.4, 1.05)
     local ClickSFX = CreateSFX("Click", clickSoundId, 0.35, 1)
+    Window.IntroThankSFX = CreateSFX("IntroThank", "rbxassetid://7116606826", 0.62, 1)
+    Window.IntroWelcomeSFX = CreateSFX("IntroWelcome", "rbxassetid://117409737658405", 0.62, 1)
+    Window.NotificationSFX = {}
+    for i, soundId in ipairs(type(options.NotificationSounds) == "table" and options.NotificationSounds or {
+        "rbxassetid://7116606826",
+        "rbxassetid://117409737658405",
+        "rbxassetid://4499400560",
+        "rbxassetid://101735926591481",
+        "rbxassetid://6895079853"
+    }) do
+        Window.NotificationSFX[i] = CreateSFX("Notification" .. tostring(i), soundId, 0.42, 1)
+    end
+    Window.NotificationSoundIndex = 0
 
     local function PlaySFX(sfxObj, pitchOverride)
         if not sfxEnabled or not sfxObj then return end
@@ -824,7 +839,7 @@ function LZNLib:CreateWindow(options)
             if entry.Page then entry.Page.Visible = false end
             if entry.Button then
                 entry.Button.BackgroundTransparency = 0.55
-                entry.Button.TextColor3 = Color3.fromRGB(190, 210, 230)
+                if entry.Label then entry.Label.TextColor3 = Color3.fromRGB(190, 210, 230) end
             end
         end
 
@@ -832,6 +847,7 @@ function LZNLib:CreateWindow(options)
         SetTabColor(GameTabIcon, GameTabText, page == "Game")
         SetTabColor(PlayerTabIcon, PlayerTabText, page == "Player")
         UpdateHubHeight()
+        if Window.NotifyAction then Window.NotifyAction("Navegação", "Aba aberta: " .. tostring(page), "info") end
     end
 
     SetTabColor(HomeTabIcon, HomeTabText, true)
@@ -941,6 +957,7 @@ function LZNLib:CreateWindow(options)
         b.MouseButton1Click:Connect(function()
             PlaySFX(ClickSFX, 1)
             if callback then callback() end
+            if Window.NotifyAction then Window.NotifyAction("Jogo", textValue, "info") end
         end)
         return b
     end
@@ -1145,13 +1162,19 @@ function LZNLib:CreateWindow(options)
                 BackgroundMusic:Destroy()
             end)
         end
-        for _, sfx in ipairs({ToggleOnSFX, ToggleOffSFX, DropdownSFX, ClickSFX}) do
+        for _, sfx in ipairs({ToggleOnSFX, ToggleOffSFX, DropdownSFX, ClickSFX, Window.IntroThankSFX, Window.IntroWelcomeSFX}) do
             if sfx then
                 pcall(function()
                     sfx:Stop()
                     sfx:Destroy()
                 end)
             end
+        end
+        for _, sfx in ipairs(Window.NotificationSFX) do
+            pcall(function()
+                sfx:Stop()
+                sfx:Destroy()
+            end)
         end
         local extraPlayer = SoundService:FindFirstChild(hubName .. "_AudioPlayer")
         if extraPlayer then
@@ -1179,7 +1202,6 @@ function LZNLib:CreateWindow(options)
         DestroyAllUI()
     end)
 
-    local Window = {}
     local OrderCounter = 0
 
     local function NextOrder()
@@ -1278,6 +1300,10 @@ function LZNLib:CreateWindow(options)
 
     function Window:Notify(cfg)
         cfg = cfg or {}
+        if #Window.NotificationSFX > 0 then
+            Window.NotificationSoundIndex = (Window.NotificationSoundIndex % #Window.NotificationSFX) + 1
+            PlaySFX(Window.NotificationSFX[Window.NotificationSoundIndex], 1)
+        end
         local nType = string.lower(cfg.Type or "sucesso")
         local titleStr = cfg.Title or (nType == "error" and "ERRO" or (nType == "falhou" and "FALHOU" or "SUCESSO!"))
         local msgStr = cfg.Message or ""
@@ -1378,6 +1404,15 @@ function LZNLib:CreateWindow(options)
         end)
     end
 
+    Window.NotifyAction = function(title, message, nType)
+        Window:Notify({
+            Type = nType or "info",
+            Title = tostring(title or "LZN Library"),
+            Message = tostring(message or "Ação realizada"),
+            Duration = 2.4
+        })
+    end
+
     function Window:CreatePopup(cfg)
         cfg = cfg or {}
         local options = cfg.Options or {}
@@ -1440,6 +1475,7 @@ function LZNLib:CreateWindow(options)
                 PlaySFX(ClickSFX, 1.05)
                 popup.Visible = false
                 if opt.Callback then opt.Callback() end
+                Window.NotifyAction(cfg.Title or "Opções", "Selecionado: " .. tostring(opt.Text or "Opção"), "info")
             end)
         end
 
@@ -1489,6 +1525,7 @@ function LZNLib:CreateWindow(options)
         btn.MouseButton1Click:Connect(function()
             PlaySFX(ClickSFX, 1)
             if cfg.Callback then cfg.Callback() end
+            Window.NotifyAction(cfg.Text or "Botão", "Ação executada", "info")
         end)
 
         return btn
@@ -1566,6 +1603,7 @@ function LZNLib:CreateWindow(options)
                 if ch:IsA("Frame") then ch.BackgroundColor3 = col end
             end
             if cfg.Callback then cfg.Callback(state) end
+            Window.NotifyAction(baseText, state and "Ativado" or "Desativado", state and "success" or "info")
         end)
 
         local obj = {}
@@ -1644,6 +1682,7 @@ function LZNLib:CreateWindow(options)
             if cfg.Callback then
                 cfg.Callback(tb.Text, enterPressed)
             end
+            Window.NotifyAction(cfg.Title or "Entrada de texto", enterPressed and "Texto confirmado" or "Campo atualizado", "info")
         end)
 
         local obj = {Instance = boxWrap}
@@ -1945,6 +1984,7 @@ function LZNLib:CreateWindow(options)
             b.MouseButton1Click:Connect(function()
                 PlaySFX(ClickSFX, 1)
                 if callback then callback() end
+                if Window.NotifyAction then Window.NotifyAction("Reprodutor", iconName == "prev" and "Faixa anterior" or (iconName == "next" and "Próxima faixa" or "Reprodução alterada"), "info") end
             end)
             return b, ic
         end
@@ -2027,6 +2067,7 @@ function LZNLib:CreateWindow(options)
                 num = math.clamp(num, 0.1, 10)
                 AudioSound.PlaybackSpeed = num
                 box.Text = tostring(num)
+                if Window.NotifyAction then Window.NotifyAction("Reprodutor", "Velocidade: " .. tostring(num) .. "x", "info") end
             else
                 box.Text = tostring(AudioSound.PlaybackSpeed)
             end
@@ -2212,32 +2253,70 @@ function LZNLib:CreateWindow(options)
             applyValue(minV + (rel * (maxV - minV)), true)
         end
 
+        local dragStartPosition = nil
+        local dragMoved = false
+
+        local function finishSliderDrag()
+            if not dragging then return end
+            local changedByUser = dragMoved
+            dragging = false
+            activeDragInput = nil
+            activeDragType = nil
+            dragStartPosition = nil
+            dragMoved = false
+            setHighlight(false)
+            if changedByUser then
+                Window.NotifyAction(cfg.Text or "Slider", "Valor: " .. fmt(currentV), "info")
+            end
+        end
+
         hit.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                activeDragInput = input
-                activeDragType = input.UserInputType
-                setHighlight(true)
+            if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+            if dragging then return end
+            dragging = true
+            activeDragInput = input
+            activeDragType = input.UserInputType
+            dragStartPosition = input.Position
+            dragMoved = false
+            setHighlight(true)
+            local thumbCenterX = thumb.AbsolutePosition.X + thumb.AbsoluteSize.X * 0.5
+            local thumbCenterY = thumb.AbsolutePosition.Y + thumb.AbsoluteSize.Y * 0.5
+            local pressedThumb = math.abs(input.Position.X - thumbCenterX) <= 13 and math.abs(input.Position.Y - thumbCenterY) <= 13
+            if not pressedThumb then
+                dragMoved = true
+                updateFromInput(input.Position.X)
+            end
+            input.Changed:Connect(function(property)
+                if property == "UserInputState" and input.UserInputState == Enum.UserInputState.End then
+                    if activeDragInput == input then finishSliderDrag() end
+                end
+            end)
+        end)
+
+        UserInputService.TouchMoved:Connect(function(input)
+            if not dragging or activeDragType ~= Enum.UserInputType.Touch then return end
+            if input ~= activeDragInput and (not activeDragInput.TouchId or input.TouchId ~= activeDragInput.TouchId) then return end
+            if dragStartPosition and (input.Position - dragStartPosition).Magnitude >= 2 then
+                dragMoved = true
                 updateFromInput(input.Position.X)
             end
         end)
+
         UserInputService.InputChanged:Connect(function(input)
             if not dragging or not activeDragInput then return end
-            if activeDragType == Enum.UserInputType.Touch then
-                if input == activeDragInput then
-                    updateFromInput(input.Position.X)
-                end
-            elseif activeDragType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local isMouseMove = activeDragType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement
+            local isActiveTouch = activeDragType == Enum.UserInputType.Touch and input.UserInputType == Enum.UserInputType.Touch and (input == activeDragInput or (activeDragInput.TouchId and input.TouchId == activeDragInput.TouchId))
+            if not isMouseMove and not isActiveTouch then return end
+            if dragStartPosition and (input.Position - dragStartPosition).Magnitude >= 2 then
+                dragMoved = true
                 updateFromInput(input.Position.X)
             end
         end)
+
         UserInputService.InputEnded:Connect(function(input)
             if not dragging or not activeDragInput then return end
             if input == activeDragInput or (activeDragType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1) then
-                dragging = false
-                activeDragInput = nil
-                activeDragType = nil
-                setHighlight(false)
+                finishSliderDrag()
             end
         end)
 
@@ -2259,6 +2338,7 @@ function LZNLib:CreateWindow(options)
             resetBtn.MouseButton1Click:Connect(function()
                 PlaySFX(ClickSFX, 0.95)
                 applyValue(cfg.ResetValue, true)
+                Window.NotifyAction(cfg.Text or "Slider", "Valor restaurado para " .. fmt(currentV), "info")
                 setHighlight(true)
                 task.delay(0.2, function()
                     if not dragging then setHighlight(false) end
@@ -2348,6 +2428,7 @@ function LZNLib:CreateWindow(options)
                 current = item
                 toggle(true)
                 if cfg.Callback then cfg.Callback(item) end
+                Window.NotifyAction(label, "Selecionado: " .. tostring(item), "info")
             end)
         end
 
@@ -2488,6 +2569,7 @@ function LZNLib:CreateWindow(options)
                 if cfg.Callback then
                     cfg.Callback(getSelectedList(), item, nowSel)
                 end
+                Window.NotifyAction(label, tostring(item) .. (nowSel and " selecionado" or " removido"), "info")
             end)
         end
 
@@ -2637,7 +2719,9 @@ function LZNLib:CreateWindow(options)
             entry.Page.Visible = entry == tab
             if entry.Button then
                 entry.Button.BackgroundTransparency = entry == tab and 0.12 or 0.55
-                entry.Button.TextColor3 = entry == tab and Color3.fromRGB(0, 225, 255) or Color3.fromRGB(190, 210, 230)
+                if entry.Label then
+                    entry.Label.TextColor3 = entry == tab and Color3.fromRGB(0, 225, 255) or Color3.fromRGB(190, 210, 230)
+                end
             end
         end
         SetTabColor(HomeTabIcon, HomeTabText, false)
@@ -2645,6 +2729,7 @@ function LZNLib:CreateWindow(options)
         SetTabColor(PlayerTabIcon, PlayerTabText, false)
         UpdateTabNavigation(tab.Button)
         CurrentPage = "Public:" .. tab.Name
+        if not silent then Window.NotifyAction("Navegação", "Aba aberta: " .. tab.Name, "info") end
         UpdateHubHeight()
         return true
     end
@@ -2667,29 +2752,44 @@ function LZNLib:CreateWindow(options)
         local page, layout = MakeTabContainer(name)
         local button = Instance.new("TextButton")
         button.Name = "TabButton_" .. name:gsub("[^%w_%-]", "")
-        button.Size = UDim2.new(0, 108, 1, 0)
+        button.Size = UDim2.new(0, math.clamp(34 + (#name * 6), 84, 150), 1, 0)
         button.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
         button.BackgroundTransparency = 0.55
         button.BorderSizePixel = 0
-        button.Text = name
-        if type(icon) == "string" and icon ~= "" then
-            pcall(function()
-                local tabIcon = CreateCustomIcon(button, icon, Color3.fromRGB(190, 210, 230), 12)
-                tabIcon.Position = UDim2.new(0, 8, 0.5, -6)
-                button.TextXAlignment = Enum.TextXAlignment.Left
-                button.Text = "   " .. name
-            end)
-        end
-        button.TextColor3 = Color3.fromRGB(190, 210, 230)
-        button.Font = Enum.Font.GothamBold
-        button.TextSize = 10
-        button.TextTruncate = Enum.TextTruncate.AtEnd
+        button.Text = ""
+        button.AutoButtonColor = false
+        button.ZIndex = 25
         button.LayoutOrder = #TabOrder + 1
         button.Parent = PageNav
         Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
+        local tabIcon = nil
+        if type(icon) == "string" and icon ~= "" then
+            pcall(function()
+                tabIcon = CreateCustomIcon(button, icon, Color3.fromRGB(190, 210, 230), 12)
+                tabIcon.Position = UDim2.new(0, 8, 0.5, -6)
+                tabIcon.ZIndex = button.ZIndex + 1
+            end)
+        end
+        local tabLabel = Instance.new("TextLabel")
+        tabLabel.Name = "TabName"
+        tabLabel.Size = UDim2.new(1, -36, 1, 0)
+        tabLabel.Position = UDim2.new(0, 28, 0, 0)
+        tabLabel.BackgroundTransparency = 1
+        tabLabel.Text = name
+        tabLabel.TextColor3 = Color3.fromRGB(190, 210, 230)
+        tabLabel.Font = Enum.Font.GothamBold
+        tabLabel.TextSize = 10
+        tabLabel.TextXAlignment = Enum.TextXAlignment.Left
+        tabLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        tabLabel.ZIndex = button.ZIndex + 1
+        tabLabel.Parent = button
+        if not tabIcon then
+            tabLabel.Position = UDim2.new(0, 10, 0, 0)
+            tabLabel.Size = UDim2.new(1, -18, 1, 0)
+        end
         AddClickEffect(button)
         button.MouseButton1Click:Connect(function() SelectPublicTab(name, false) end)
-        local tab = {Name = name, Icon = icon, Page = page, Layout = layout, Button = button, Sections = {}}
+        local tab = {Name = name, Icon = icon, Page = page, Layout = layout, Button = button, Label = tabLabel, IconObject = tabIcon, Sections = {}}
         TabRegistry[name] = tab
         table.insert(TabOrder, name)
 
@@ -2922,6 +3022,9 @@ function LZNLib:CreateWindow(options)
         box.Parent = ActiveContainer
         Instance.new("UICorner", box).CornerRadius = UDim.new(0, 9)
         box:GetPropertyChangedSignal("Text"):Connect(function() SafeCallback(cfg.Callback, box.Text) end)
+        box.FocusLost:Connect(function()
+            Window.NotifyAction(cfg.Text or "Pesquisa", box.Text ~= "" and ("Busca: " .. box.Text) or "Pesquisa limpa", "info")
+        end)
         return MakeComponentHandle(box, function() return box.Text end, function(v) box.Text = tostring(v) end)
     end
 
@@ -3134,6 +3237,7 @@ function LZNLib:CreateWindow(options)
                 key = input.KeyCode
                 binding = Window.KeybindManager:Bind(key, cfg.Callback)
                 button.Text = tostring(cfg.Text or "Atalho") .. ": " .. key.Name
+                Window.NotifyAction(cfg.Text or "Atalho", "Tecla definida: " .. key.Name, "info")
             end
         end)
         local handle = MakeComponentHandle(button)
@@ -3468,6 +3572,7 @@ function LZNLib:CreateWindow(options)
             committedColor = draftColor
             swatch.BackgroundColor3 = committedColor
             SafeCallback(cfg.Callback, committedColor, committedColor:ToHSV())
+            Window.NotifyAction(cfg.Text or "ColorPicker", "Cor aplicada: " .. string.format("#%02X%02X%02X", math.floor(committedColor.R * 255 + 0.5), math.floor(committedColor.G * 255 + 0.5), math.floor(committedColor.B * 255 + 0.5)), "success")
             animatePopup(false)
         end)
         row.Destroying:Connect(function()
@@ -3898,6 +4003,7 @@ function LZNLib:CreateWindow(options)
             }):Play()
             tx.TextColor3 = active and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(185, 205, 225)
             if onToggle then onToggle(active) end
+            Window.NotifyAction(textStr, active and "Ativado" or "Desativado", active and "success" or "info")
         end)
     end
 
@@ -4404,6 +4510,7 @@ function LZNLib:CreateWindow(options)
             EquippedActionBar.Visible = false
         end
         if RebuildHotbarAndBackpack then RebuildHotbarAndBackpack() end
+        if Window.NotifyAction then Window.NotifyAction("Inventário", "Item descartado: " .. tostring(dropped), "info") end
     end)
 
     StoreMiniBtn.MouseButton1Click:Connect(function()
@@ -4429,6 +4536,7 @@ function LZNLib:CreateWindow(options)
             EquippedActionBar.Visible = false
         end
         if RebuildHotbarAndBackpack then RebuildHotbarAndBackpack() end
+        if Window.NotifyAction then Window.NotifyAction("Inventário", "Itens guardados: " .. tostring(moveCount), "info") end
     end)
 
     local function RenderSlotVisual(btn, nameLbl, imgLbl, countLbl, itemName, imgId, countVal, isHeldOrEquipped)
@@ -4956,6 +5064,407 @@ function LZNLib:CreateWindow(options)
             end
             platformPart.Position = Vector3.new(hrp.Position.X, platformFixedY, hrp.Position.Z)
         end
+    end)
+
+
+    Window.LoadIntroImage = function(url, fileName, fallback)
+        if type(getcustomasset) ~= "function" and type(getsynasset) ~= "function" then
+            return fallback or ""
+        end
+        if type(writefile) ~= "function" then
+            return fallback or ""
+        end
+        local assetGetter = type(getcustomasset) == "function" and getcustomasset or getsynasset
+        local cached = false
+        if type(isfile) == "function" then
+            pcall(function() cached = isfile(fileName) end)
+        end
+        if not cached then
+            local requestFunction = nil
+            if type(request) == "function" then
+                requestFunction = request
+            elseif type(http_request) == "function" then
+                requestFunction = http_request
+            elseif type(syn) == "table" and type(syn.request) == "function" then
+                requestFunction = syn.request
+            end
+            local body = nil
+            if requestFunction then
+                local ok, response = pcall(requestFunction, {Url = url, Method = "GET"})
+                if ok and type(response) == "table" and response.Success ~= false then
+                    body = response.Body
+                end
+            end
+            if type(body) ~= "string" or #body < 100 then
+                local ok, result = pcall(function() return game:HttpGet(url) end)
+                if ok and type(result) == "string" and #result > 100 then body = result end
+            end
+            if type(body) == "string" and #body > 100 then
+                pcall(writefile, fileName, body)
+            end
+        end
+        local ok, asset = pcall(assetGetter, fileName)
+        if ok and type(asset) == "string" then return asset end
+        return fallback or ""
+    end
+
+    task.spawn(function()
+        MainFrame.Visible = false
+        ToggleHubBtn.Visible = false
+        HubOpen = true
+        if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
+
+        local introBlur = Instance.new("BlurEffect")
+        introBlur.Name = hubName .. "_IntroBlur"
+        introBlur.Size = 0
+        introBlur.Parent = Lighting
+        TweenService:Create(introBlur, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 24}):Play()
+
+        local overlay = Instance.new("Frame")
+        overlay.Name = "LZNLanguageIntro"
+        overlay.Size = UDim2.new(1, 0, 1, 0)
+        overlay.BackgroundColor3 = Color3.fromRGB(3, 5, 10)
+        overlay.BackgroundTransparency = 0.22
+        overlay.BorderSizePixel = 0
+        overlay.ZIndex = 300
+        overlay.Parent = FullScreenBlurGui
+
+        local panel = Instance.new("Frame")
+        local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(360, 720)
+        panel.Size = UDim2.new(0, math.min(340, math.max(280, viewport.X - 28)), 0, math.min(560, math.max(500, viewport.Y - 32)))
+        panel.AnchorPoint = Vector2.new(0.5, 0.5)
+        panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+        panel.BackgroundColor3 = Color3.fromRGB(9, 13, 22)
+        panel.BackgroundTransparency = 0.06
+        panel.BorderSizePixel = 0
+        panel.ZIndex = 301
+        panel.Parent = overlay
+        Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 18)
+        AddGlow(panel, accentColor, 1.8, 0.16)
+        AddGradient(panel, Color3.fromRGB(17, 25, 41), Color3.fromRGB(7, 10, 18), 135)
+
+        local panelScale = Instance.new("UIScale")
+        panelScale.Scale = 0.88
+        panelScale.Parent = panel
+        TweenService:Create(panelScale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+        local image1 = Instance.new("ImageLabel")
+        image1.Name = "ThankYouImage"
+        image1.Size = UDim2.new(0, 122, 0, 122)
+        image1.Position = UDim2.new(0.5, -61, 0, 18)
+        image1.BackgroundTransparency = 1
+        image1.Image = Window.LoadIntroImage("https://i.ibb.co/Lhz8DG4k/IMG-20261122-065924.png", "LZN_intro_thank.png", options.IntroImage1)
+        image1.ScaleType = Enum.ScaleType.Fit
+        image1.ImageTransparency = 1
+        image1.ZIndex = 302
+        image1.Parent = panel
+        local image1Scale = Instance.new("UIScale")
+        image1Scale.Scale = 0.72
+        image1Scale.Parent = image1
+
+        local thankText = Instance.new("TextLabel")
+        thankText.Size = UDim2.new(1, -28, 0, 34)
+        thankText.Position = UDim2.new(0, 14, 0, 145)
+        thankText.BackgroundTransparency = 1
+        thankText.Text = "obrigado por usar minha library cute cute:3"
+        thankText.TextColor3 = Color3.fromRGB(245, 248, 255)
+        thankText.Font = Enum.Font.GothamBold
+        thankText.TextSize = 13
+        thankText.TextWrapped = true
+        thankText.TextTransparency = 1
+        thankText.TextXAlignment = Enum.TextXAlignment.Center
+        thankText.ZIndex = 302
+        thankText.Parent = panel
+
+        local byline = Instance.new("TextLabel")
+        byline.Size = UDim2.new(1, -28, 0, 20)
+        byline.Position = UDim2.new(0, 14, 0, 179)
+        byline.BackgroundTransparency = 1
+        byline.Text = "Library by LZN (Lezin)"
+        byline.TextColor3 = Color3.fromRGB(0, 215, 255)
+        byline.Font = Enum.Font.GothamBold
+        byline.TextSize = 11
+        byline.TextTransparency = 1
+        byline.TextXAlignment = Enum.TextXAlignment.Center
+        byline.ZIndex = 302
+        byline.Parent = panel
+
+        local image2 = Instance.new("ImageLabel")
+        image2.Name = "IntroSecondaryImage"
+        image2.Size = UDim2.new(0, 148, 0, 96)
+        image2.Position = UDim2.new(0.5, -74, 0, 207)
+        image2.BackgroundTransparency = 1
+        image2.Image = Window.LoadIntroImage("https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png", "LZN_intro_secondary.png", options.IntroImage2)
+        image2.ScaleType = Enum.ScaleType.Fit
+        image2.ImageTransparency = 1
+        image2.ZIndex = 302
+        image2.Parent = panel
+        local image2Scale = Instance.new("UIScale")
+        image2Scale.Scale = 0.58
+        image2Scale.Parent = image2
+
+        local languageTitle = Instance.new("TextLabel")
+        languageTitle.Size = UDim2.new(1, -28, 0, 24)
+        languageTitle.Position = UDim2.new(0, 14, 0, 318)
+        languageTitle.BackgroundTransparency = 1
+        languageTitle.Text = "escolha seu idioma"
+        languageTitle.TextColor3 = Color3.fromRGB(235, 245, 255)
+        languageTitle.Font = Enum.Font.GothamBold
+        languageTitle.TextSize = 12
+        languageTitle.TextXAlignment = Enum.TextXAlignment.Left
+        languageTitle.ZIndex = 302
+        languageTitle.Parent = panel
+
+        local languages = {
+            {Name = "Português (Brasil)", Code = "pt"},
+            {Name = "English", Code = "en"},
+            {Name = "Русский", Code = "ru"},
+            {Name = "Español", Code = "es"},
+            {Name = "Français", Code = "fr"},
+            {Name = "Deutsch", Code = "de"},
+            {Name = "日本語", Code = "ja"},
+            {Name = "한국어", Code = "ko"},
+            {Name = "中文", Code = "zh"},
+            {Name = "Türkçe", Code = "tr"},
+            {Name = "العربية", Code = "ar"},
+            {Name = "हिन्दी", Code = "hi"}
+        }
+        local selectedLanguage = languages[1]
+
+        local languageButton = Instance.new("TextButton")
+        languageButton.Size = UDim2.new(1, -28, 0, 36)
+        languageButton.Position = UDim2.new(0, 14, 0, 344)
+        languageButton.BackgroundColor3 = Color3.fromRGB(13, 22, 36)
+        languageButton.Text = selectedLanguage.Name .. "   ▾"
+        languageButton.TextColor3 = Color3.fromRGB(225, 240, 255)
+        languageButton.Font = Enum.Font.GothamBold
+        languageButton.TextSize = 11
+        languageButton.AutoButtonColor = false
+        languageButton.ZIndex = 303
+        languageButton.Parent = panel
+        Instance.new("UICorner", languageButton).CornerRadius = UDim.new(0, 9)
+        AddGlow(languageButton, accentColor, 1.2, 0.28)
+
+        local languageList = Instance.new("ScrollingFrame")
+        languageList.Size = UDim2.new(1, -28, 0, 0)
+        languageList.Position = UDim2.new(0, 14, 0, 384)
+        languageList.BackgroundColor3 = Color3.fromRGB(8, 12, 20)
+        languageList.BorderSizePixel = 0
+        languageList.ScrollBarThickness = 3
+        languageList.ScrollBarImageColor3 = accentColor
+        languageList.CanvasSize = UDim2.new(0, 0, 0, #languages * 30)
+        languageList.Visible = false
+        languageList.ZIndex = 304
+        languageList.Parent = panel
+        Instance.new("UICorner", languageList).CornerRadius = UDim.new(0, 8)
+        local langLayout = Instance.new("UIListLayout")
+        langLayout.Padding = UDim.new(0, 2)
+        langLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        langLayout.Parent = languageList
+
+        for i, language in ipairs(languages) do
+            local option = Instance.new("TextButton")
+            option.Size = UDim2.new(1, -6, 0, 28)
+            option.BackgroundColor3 = Color3.fromRGB(16, 23, 36)
+            option.BackgroundTransparency = 0.2
+            option.Text = language.Name
+            option.TextColor3 = Color3.fromRGB(220, 235, 250)
+            option.Font = Enum.Font.GothamMedium
+            option.TextSize = 11
+            option.LayoutOrder = i
+            option.AutoButtonColor = false
+            option.ZIndex = 305
+            option.Parent = languageList
+            Instance.new("UICorner", option).CornerRadius = UDim.new(0, 6)
+            option.MouseButton1Click:Connect(function()
+                selectedLanguage = language
+                languageButton.Text = language.Name .. "   ▾"
+                languageList.Visible = false
+                TweenService:Create(languageList, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -28, 0, 0)}):Play()
+            end)
+        end
+
+        local continueButton = Instance.new("TextButton")
+        continueButton.Size = UDim2.new(1, -28, 0, 38)
+        continueButton.Position = UDim2.new(0, 14, 1, -52)
+        continueButton.BackgroundColor3 = Color3.fromRGB(0, 145, 210)
+        continueButton.Text = "Continuar"
+        continueButton.TextColor3 = Color3.new(1, 1, 1)
+        continueButton.Font = Enum.Font.GothamBold
+        continueButton.TextSize = 12
+        continueButton.AutoButtonColor = false
+        continueButton.ZIndex = 303
+        continueButton.Parent = panel
+        Instance.new("UICorner", continueButton).CornerRadius = UDim.new(0, 9)
+        AddGlow(continueButton, Color3.fromRGB(90, 220, 255), 1.2, 0.18)
+
+        PlaySFX(Window.IntroThankSFX, 1)
+        TweenService:Create(image1, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+        TweenService:Create(image1Scale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(thankText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+        TweenService:Create(byline, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+
+        languageButton.MouseButton1Click:Connect(function()
+            local open = not languageList.Visible
+            languageList.Visible = true
+            TweenService:Create(languageList, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, -28, 0, open and 108 or 0)
+            }):Play()
+            if not open then
+                task.delay(0.18, function()
+                    if languageList and languageList.Parent then languageList.Visible = false end
+                end)
+            end
+        end)
+
+        local function buildTranslator()
+            local moduleRef = options.AutoTranslateModule
+            if not moduleRef and type(getgenv) == "function" then
+                pcall(function()
+                    local env = getgenv()
+                    moduleRef = env.AutoTranslateModule or env.LZN_AutoTranslateModule
+                end)
+            end
+            if type(moduleRef) == "string" then moduleRef = tonumber(moduleRef) or moduleRef end
+            local moduleObject = options.AutoTranslate
+            if not moduleObject and moduleRef then
+                local ok, result = pcall(require, moduleRef)
+                if ok then moduleObject = result end
+            end
+            if type(moduleObject) ~= "table" or type(moduleObject.new) ~= "function" then
+                return nil
+            end
+            local ok, instance = pcall(function()
+                return moduleObject.new({
+                    TargetLang = selectedLanguage.Code,
+                    SourceLang = "auto",
+                    DelayBetweenRequests = 0.08
+                })
+            end)
+            if ok then return instance end
+            return nil
+        end
+
+        local translator = nil
+        local translatedTextCache = {}
+        local function translateGuiObject(object)
+            if not translator or not object or not object.Parent then return end
+            if not (object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")) then return end
+            local original = object.Text
+            if type(original) ~= "string" or original == "" or translatedTextCache[original] ~= nil then
+                if translatedTextCache[original] and object.Parent then object.Text = translatedTextCache[original] end
+                return
+            end
+            if original:match("^rbxassetid://") or original:match("^#%x%x%x%x%x%x$") then return end
+            local ok = pcall(function()
+                translator:TranslateAsync(original, function(translatedText, err)
+                    if not err and type(translatedText) == "string" and object.Parent then
+                        translatedTextCache[original] = translatedText
+                        object.Text = translatedText
+                    end
+                end)
+            end)
+            if not ok then return end
+        end
+
+        local translateConnections = {}
+        local function applyLanguage()
+            translator = buildTranslator()
+            Window.Language = selectedLanguage.Code
+            Window.LanguageName = selectedLanguage.Name
+            if not translator then
+                warn("[LZN Library] AutoTranslate não foi carregado. Defina options.AutoTranslateModule com o ModuleScript ou ID do módulo.")
+                return
+            end
+            for _, object in ipairs(ScreenGui:GetDescendants()) do
+                translateGuiObject(object)
+            end
+            for _, object in ipairs(FullScreenBlurGui:GetDescendants()) do
+                translateGuiObject(object)
+            end
+            table.insert(translateConnections, ScreenGui.DescendantAdded:Connect(function(object)
+                task.defer(function() translateGuiObject(object) end)
+            end))
+            table.insert(translateConnections, FullScreenBlurGui.DescendantAdded:Connect(function(object)
+                task.defer(function() translateGuiObject(object) end)
+            end))
+        end
+
+        local completed = false
+        continueButton.MouseButton1Click:Connect(function()
+            if completed then return end
+            completed = true
+            applyLanguage()
+            languageButton.Active = false
+            continueButton.Active = false
+            languageTitle.Visible = false
+            languageButton.Visible = false
+            languageList.Visible = false
+            continueButton.Visible = false
+
+            TweenService:Create(image2, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+            TweenService:Create(image2Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+            task.wait(2.7)
+            if not overlay.Parent then return end
+            local fadeSecond = TweenService:Create(image2, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1})
+            fadeSecond:Play()
+            TweenService:Create(image2Scale, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.65}):Play()
+            fadeSecond.Completed:Wait()
+
+            if not overlay.Parent then return end
+            image2.Visible = false
+            local image3 = Instance.new("ImageLabel")
+            image3.Name = "WelcomeImage"
+            image3.Size = UDim2.new(0, 148, 0, 96)
+            image3.Position = UDim2.new(0.5, -74, 0, 207)
+            image3.BackgroundTransparency = 1
+            image3.Image = Window.LoadIntroImage("https://i.ibb.co/jFJt92F/file-000000003304820eb37d3ad0b97ead96.png", "LZN_intro_welcome.png", options.IntroImage3)
+            image3.ScaleType = Enum.ScaleType.Fit
+            image3.ImageTransparency = 1
+            image3.ZIndex = 302
+            image3.Parent = panel
+            local image3Scale = Instance.new("UIScale")
+            image3Scale.Scale = 0.58
+            image3Scale.Parent = image3
+
+            local welcomeText = Instance.new("TextLabel")
+            welcomeText.Size = UDim2.new(1, -28, 0, 32)
+            welcomeText.Position = UDim2.new(0, 14, 0, 310)
+            welcomeText.BackgroundTransparency = 1
+            welcomeText.Text = "Bem-vindo(a) " .. tostring(Player.DisplayName)
+            welcomeText.TextColor3 = Color3.fromRGB(245, 248, 255)
+            welcomeText.Font = Enum.Font.GothamBold
+            welcomeText.TextSize = 13
+            welcomeText.TextWrapped = true
+            welcomeText.TextTransparency = 1
+            welcomeText.TextXAlignment = Enum.TextXAlignment.Center
+            welcomeText.ZIndex = 302
+            welcomeText.Parent = panel
+
+            PlaySFX(Window.IntroWelcomeSFX, 1)
+            TweenService:Create(image3, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+            TweenService:Create(image3Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            TweenService:Create(welcomeText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            task.wait(2.6)
+
+            if overlay.Parent then
+                TweenService:Create(overlay, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+                TweenService:Create(panelScale, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.92}):Play()
+            end
+            TweenService:Create(introBlur, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0}):Play()
+            task.wait(0.45)
+            if overlay and overlay.Parent then overlay:Destroy() end
+            if introBlur and introBlur.Parent then introBlur:Destroy() end
+            if ScreenGui and ScreenGui.Parent then
+                MainFrame.Visible = true
+                ToggleHubBtn.Visible = true
+                HubOpen = true
+                HubScale.Scale = 0.72
+                TweenService:Create(HubScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+                if BackgroundMusic and BGMText.Text ~= "OFF" then BackgroundMusic:Resume() end
+            end
+        end)
     end)
 
     UpdateHubHeight()
