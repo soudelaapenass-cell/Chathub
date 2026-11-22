@@ -11,6 +11,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Player = Players.LocalPlayer
 
@@ -387,10 +388,16 @@ function LZNLib:CreateWindow(options)
 
     local function PlaySFX(sfxObj, pitchOverride)
         if not sfxEnabled or not sfxObj then return end
+        for _, sound in ipairs(SoundService:GetChildren()) do
+            if sound:IsA("Sound") and string.find(sound.Name, hubName .. "_SFX_", 1, true) and sound ~= sfxObj then
+                pcall(function() sound:Stop() end)
+            end
+        end
         pcall(function()
             if pitchOverride then
                 sfxObj.PlaybackSpeed = pitchOverride
             end
+            sfxObj:Stop()
             sfxObj.TimePosition = 0
             sfxObj:Play()
         end)
@@ -2221,10 +2228,9 @@ function LZNLib:CreateWindow(options)
             TweenService:Create(sliderCard, TweenInfo.new(0.16), {
                 BackgroundTransparency = active and 0.1 or 0.25
             }):Play()
-            TweenService:Create(thumb, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = active and UDim2.new(0, 16, 0, 16) or UDim2.new(0, 12, 0, 12),
-                Position = active and UDim2.new(fill.Size.X.Scale, -8, 0.5, -8) or UDim2.new(fill.Size.X.Scale, -6, 0.5, -6)
-            }):Play()
+            thumb.Size = active and UDim2.new(0, 16, 0, 16) or UDim2.new(0, 12, 0, 12)
+            local thumbSize = active and 16 or 12
+            thumb.Position = UDim2.new(fill.Size.X.Scale, -(thumbSize / 2), 0.5, -(thumbSize / 2))
             thumbGlow.Transparency = active and 0 or 0.1
         end
 
@@ -2298,7 +2304,7 @@ function LZNLib:CreateWindow(options)
         UserInputService.TouchMoved:Connect(function(input)
             if not dragging or activeDragType ~= Enum.UserInputType.Touch then return end
             if input ~= activeDragInput and (not activeDragInput.TouchId or input.TouchId ~= activeDragInput.TouchId) then return end
-            if dragStartPosition and (input.Position - dragStartPosition).Magnitude >= 2 then
+            if dragStartPosition and (input.Position - dragStartPosition).Magnitude >= 0.1 then
                 dragMoved = true
                 updateFromInput(input.Position.X)
             end
@@ -2309,7 +2315,7 @@ function LZNLib:CreateWindow(options)
             local isMouseMove = activeDragType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement
             local isActiveTouch = activeDragType == Enum.UserInputType.Touch and input.UserInputType == Enum.UserInputType.Touch and (input == activeDragInput or (activeDragInput.TouchId and input.TouchId == activeDragInput.TouchId))
             if not isMouseMove and not isActiveTouch then return end
-            if dragStartPosition and (input.Position - dragStartPosition).Magnitude >= 2 then
+            if dragStartPosition and (input.Position - dragStartPosition).Magnitude >= 0.1 then
                 dragMoved = true
                 updateFromInput(input.Position.X)
             end
@@ -3756,6 +3762,35 @@ function LZNLib:CreateWindow(options)
         end
     }, 4)
 
+    local function BindJumpPowerPersistence(hum)
+        if not hum then return end
+        local enforcing = false
+        local function enforceJumpPower()
+            if enforcing or not hum.Parent then return end
+            enforcing = true
+            pcall(function()
+                hum.UseJumpPower = true
+                local targetPower = jumpSlider:GetValue()
+                if math.abs(hum.JumpPower - targetPower) > 0.01 then
+                    hum.JumpPower = targetPower
+                end
+            end)
+            enforcing = false
+        end
+        hum:GetPropertyChangedSignal("JumpPower"):Connect(enforceJumpPower)
+        hum:GetPropertyChangedSignal("UseJumpPower"):Connect(enforceJumpPower)
+        hum.StateChanged:Connect(function(_, newState)
+            if newState == Enum.HumanoidStateType.Jumping or newState == Enum.HumanoidStateType.Freefall then
+                enforceJumpPower()
+            end
+        end)
+        enforceJumpPower()
+    end
+
+    if Player.Character then
+        BindJumpPowerPersistence(Player.Character:FindFirstChildOfClass("Humanoid"))
+    end
+
     local function SetCharacterNonCollide(enabled)
         local char = Player.Character
         if not char then return end
@@ -3932,6 +3967,7 @@ function LZNLib:CreateWindow(options)
             hum.WalkSpeed = speedSlider:GetValue()
             hum.UseJumpPower = true
             hum.JumpPower = jumpSlider:GetValue()
+            BindJumpPowerPersistence(hum)
         end
         if godModeActive then
             BindGodModeToCharacter(newChar)
@@ -4051,9 +4087,11 @@ function LZNLib:CreateWindow(options)
     end)
 
     UserInputService.JumpRequest:Connect(function()
-        if infJumpActive then
-            local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
+        local hum = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.UseJumpPower = true
+            hum.JumpPower = jumpSlider:GetValue()
+            if infJumpActive then
                 hum:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end
@@ -5336,13 +5374,28 @@ function LZNLib:CreateWindow(options)
 
         local function buildTranslator()
             local moduleRef = options.AutoTranslateModule
+            if not moduleRef then
+                moduleRef = ReplicatedStorage:FindFirstChild("AutoTranslate", true)
+            end
             if not moduleRef and type(getgenv) == "function" then
                 pcall(function()
                     local env = getgenv()
                     moduleRef = env.AutoTranslateModule or env.LZN_AutoTranslateModule
                 end)
             end
-            if type(moduleRef) == "string" then moduleRef = tonumber(moduleRef) or moduleRef end
+            if type(moduleRef) == "string" then
+                local numericRef = tonumber(moduleRef)
+                if numericRef then
+                    moduleRef = numericRef
+                else
+                    local path = moduleRef:gsub("^game%.ReplicatedStorage%.?", "")
+                    local current = ReplicatedStorage
+                    for segment in string.gmatch(path, "[^%.]+") do
+                        current = current and current:FindFirstChild(segment)
+                    end
+                    if current then moduleRef = current end
+                end
+            end
             local moduleObject = options.AutoTranslate
             if not moduleObject and moduleRef then
                 local ok, result = pcall(require, moduleRef)
@@ -5390,7 +5443,7 @@ function LZNLib:CreateWindow(options)
             Window.Language = selectedLanguage.Code
             Window.LanguageName = selectedLanguage.Name
             if not translator then
-                warn("[LZN Library] AutoTranslate não foi carregado. Defina options.AutoTranslateModule com o ModuleScript ou ID do módulo.")
+                warn("[LZN Library] Idioma selecionado: " .. tostring(selectedLanguage.Code) .. ". Para traduzir os textos, forneça options.AutoTranslateModule com o ModuleScript/ID ou publique um ModuleScript chamado AutoTranslate em ReplicatedStorage.")
                 return
             end
             for _, object in ipairs(ScreenGui:GetDescendants()) do
