@@ -319,7 +319,6 @@ function LZNLib:CreateWindow(options)
     local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://4499400560"
     local toggleOffSoundId = options.ToggleOffSound or "rbxassetid://101735926591481"
     local dropdownSoundId = options.DropdownSound or "rbxassetid://101735926591481"
-    local tabSoundId = options.TabSound or "rbxassetid://100082766010098"
     local clickSoundId = options.ClickSound or "rbxassetid://6895079853"
     local sfxEnabled = options.SoundEffects ~= false
 
@@ -370,7 +369,6 @@ function LZNLib:CreateWindow(options)
     local ToggleOffSFX = CreateSFX("ToggleOff", toggleOffSoundId, 0.42, 0.88)
     local DropdownSFX = CreateSFX("Dropdown", dropdownSoundId, 0.4, 1.05)
     local ClickSFX = CreateSFX("Click", clickSoundId, 0.35, 1)
-    local TabSFX = CreateSFX("Tab", tabSoundId, 0.42, 1)
 
     local function PlaySFX(sfxObj, pitchOverride)
         if not sfxEnabled or not sfxObj then return end
@@ -1147,7 +1145,7 @@ function LZNLib:CreateWindow(options)
                 BackgroundMusic:Destroy()
             end)
         end
-        for _, sfx in ipairs({ToggleOnSFX, ToggleOffSFX, DropdownSFX, ClickSFX, TabSFX}) do
+        for _, sfx in ipairs({ToggleOnSFX, ToggleOffSFX, DropdownSFX, ClickSFX}) do
             if sfx then
                 pcall(function()
                     sfx:Stop()
@@ -2089,6 +2087,8 @@ function LZNLib:CreateWindow(options)
         local currentV = math.clamp(cfg.Default or minV, minV, maxV)
         local hasReset = cfg.ResetValue ~= nil
         local dragging = false
+        local activeDragInput = nil
+        local activeDragType = nil
 
         local function fmt(v)
             if decimals > 0 then
@@ -2215,21 +2215,29 @@ function LZNLib:CreateWindow(options)
         hit.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
+                activeDragInput = input
+                activeDragType = input.UserInputType
                 setHighlight(true)
                 updateFromInput(input.Position.X)
             end
         end)
         UserInputService.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            if not dragging or not activeDragInput then return end
+            if activeDragType == Enum.UserInputType.Touch then
+                if input == activeDragInput then
+                    updateFromInput(input.Position.X)
+                end
+            elseif activeDragType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement then
                 updateFromInput(input.Position.X)
             end
         end)
         UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                if dragging then
-                    dragging = false
-                    setHighlight(false)
-                end
+            if not dragging or not activeDragInput then return end
+            if input == activeDragInput or (activeDragType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1) then
+                dragging = false
+                activeDragInput = nil
+                activeDragType = nil
+                setHighlight(false)
             end
         end)
 
@@ -2620,9 +2628,6 @@ function LZNLib:CreateWindow(options)
     local function SelectPublicTab(tab, silent)
         if type(tab) == "string" then tab = TabRegistry[tab] end
         if not tab or not tab.Page or not tab.Page.Parent then return false end
-        if not silent then
-            PlaySFX(TabSFX, 1)
-        end
         ActiveTabName = tab.Name
         ActiveContainer = tab.Page
         ContentContainer.Visible = false
@@ -3155,8 +3160,12 @@ function LZNLib:CreateWindow(options)
 
     function Window:AddColorPicker(cfg)
         cfg = cfg or {}
-        local current = cfg.Default or accentColor
-        local hue, saturation, value = current:ToHSV()
+        local defaultColor = cfg.Default or accentColor
+        local committedColor = defaultColor
+        local draftColor = defaultColor
+        local hue, saturation, value = draftColor:ToHSV()
+        local popupOpen = false
+        local popupTween = nil
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 40)
         row.BackgroundColor3 = Color3.fromRGB(14, 20, 31)
@@ -3182,28 +3191,29 @@ function LZNLib:CreateWindow(options)
         local swatch = Instance.new("TextButton")
         swatch.Size = UDim2.new(0, 38, 0, 26)
         swatch.Position = UDim2.new(1, -48, 0.5, -13)
-        swatch.BackgroundColor3 = current
+        swatch.BackgroundColor3 = committedColor
         swatch.Text = ""
         swatch.AutoButtonColor = false
         swatch.Parent = row
         swatch.ZIndex = 25
         Instance.new("UICorner", swatch).CornerRadius = UDim.new(0, 7)
-        AddGlow(swatch, current, 1.2, 0.15)
+        AddGlow(swatch, committedColor, 1.2, 0.15)
 
         local picker = Instance.new("Frame")
         picker.Name = "LZNColorPickerPopup"
-        picker.Size = UDim2.new(0, 244, 0, 220)
+        picker.Size = UDim2.new(0, 252, 0, 264)
         picker.BackgroundColor3 = Color3.fromRGB(11, 15, 24)
         picker.BorderSizePixel = 0
         picker.Visible = false
         picker.ZIndex = 80
         picker.Parent = ScreenGui
+        picker.ClipsDescendants = true
         Instance.new("UICorner", picker).CornerRadius = UDim.new(0, 12)
         AddGlow(picker, accentColor, 1.5, 0.18)
 
         local header = Instance.new("TextLabel")
-        header.Size = UDim2.new(1, -20, 0, 28)
-        header.Position = UDim2.new(0, 10, 0, 5)
+        header.Size = UDim2.new(1, -48, 0, 30)
+        header.Position = UDim2.new(0, 10, 0, 4)
         header.BackgroundTransparency = 1
         header.Text = tostring(cfg.Text or "SELECIONAR COR")
         header.TextColor3 = Color3.fromRGB(230, 242, 255)
@@ -3213,10 +3223,23 @@ function LZNLib:CreateWindow(options)
         header.ZIndex = 81
         header.Parent = picker
 
+        local closeBtn = Instance.new("TextButton")
+        closeBtn.Size = UDim2.new(0, 28, 0, 26)
+        closeBtn.Position = UDim2.new(1, -34, 0, 5)
+        closeBtn.BackgroundColor3 = Color3.fromRGB(30, 39, 56)
+        closeBtn.Text = "×"
+        closeBtn.TextColor3 = Color3.fromRGB(235, 245, 255)
+        closeBtn.Font = Enum.Font.GothamBold
+        closeBtn.TextSize = 18
+        closeBtn.AutoButtonColor = false
+        closeBtn.ZIndex = 83
+        closeBtn.Parent = picker
+        Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 7)
+
         local preview = Instance.new("Frame")
         preview.Size = UDim2.new(0, 26, 0, 20)
-        preview.Position = UDim2.new(1, -38, 0, 9)
-        preview.BackgroundColor3 = current
+        preview.Position = UDim2.new(1, -38, 0, 39)
+        preview.BackgroundColor3 = draftColor
         preview.BorderSizePixel = 0
         preview.ZIndex = 82
         preview.Parent = picker
@@ -3297,7 +3320,7 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", hueMarker).CornerRadius = UDim.new(1, 0)
 
         local hexLabel = Instance.new("TextLabel")
-        hexLabel.Size = UDim2.new(1, -20, 0, 22)
+        hexLabel.Size = UDim2.new(1, -20, 0, 20)
         hexLabel.Position = UDim2.new(0, 10, 0, 184)
         hexLabel.BackgroundTransparency = 1
         hexLabel.TextColor3 = Color3.fromRGB(155, 180, 205)
@@ -3307,62 +3330,65 @@ function LZNLib:CreateWindow(options)
         hexLabel.ZIndex = 82
         hexLabel.Parent = picker
 
-        local function applyColor(fire)
-            current = Color3.fromHSV(hue, saturation, value)
-            swatch.BackgroundColor3 = current
-            preview.BackgroundColor3 = current
+        local resetBtn = Instance.new("TextButton")
+        resetBtn.Size = UDim2.new(0, 104, 0, 30)
+        resetBtn.Position = UDim2.new(0, 10, 1, -40)
+        resetBtn.BackgroundColor3 = Color3.fromRGB(27, 36, 52)
+        resetBtn.Text = "Resetar"
+        resetBtn.TextColor3 = Color3.fromRGB(220, 232, 246)
+        resetBtn.Font = Enum.Font.GothamBold
+        resetBtn.TextSize = 10
+        resetBtn.AutoButtonColor = false
+        resetBtn.ZIndex = 84
+        resetBtn.Parent = picker
+        Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 8)
+
+        local okBtn = Instance.new("TextButton")
+        okBtn.Size = UDim2.new(0, 104, 0, 30)
+        okBtn.Position = UDim2.new(1, -114, 1, -40)
+        okBtn.BackgroundColor3 = Color3.fromRGB(0, 145, 210)
+        okBtn.Text = "OK"
+        okBtn.TextColor3 = Color3.new(1, 1, 1)
+        okBtn.Font = Enum.Font.GothamBold
+        okBtn.TextSize = 10
+        okBtn.AutoButtonColor = false
+        okBtn.ZIndex = 84
+        okBtn.Parent = picker
+        Instance.new("UICorner", okBtn).CornerRadius = UDim.new(0, 8)
+
+        local function updateDraft()
+            draftColor = Color3.fromHSV(hue, saturation, value)
+            preview.BackgroundColor3 = draftColor
             sv.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
             whiteGradient.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(hue, 1, 1))
             selector.Position = UDim2.new(saturation, 0, 1 - value, 0)
             hueMarker.Position = UDim2.new(0.5, 0, hue, 0)
-            hexLabel.Text = string.format("#%02X%02X%02X", math.floor(current.R * 255 + 0.5), math.floor(current.G * 255 + 0.5), math.floor(current.B * 255 + 0.5))
-            if fire then SafeCallback(cfg.Callback, current, current:ToHSV()) end
+            hexLabel.Text = string.format("#%02X%02X%02X", math.floor(draftColor.R * 255 + 0.5), math.floor(draftColor.G * 255 + 0.5), math.floor(draftColor.B * 255 + 0.5))
         end
-        applyColor(false)
-
-        local draggingSV = false
-        local draggingHue = false
-        local activePickerInput = nil
-        local function updateSV(pos)
-            local x = math.clamp((pos.X - sv.AbsolutePosition.X) / math.max(sv.AbsoluteSize.X, 1), 0, 1)
-            local y = math.clamp((pos.Y - sv.AbsolutePosition.Y) / math.max(sv.AbsoluteSize.Y, 1), 0, 1)
-            saturation = x
-            value = 1 - y
-            applyColor(true)
+        local function animatePopup(open)
+            if popupTween then popupTween:Cancel() end
+            popupOpen = open
+            if open then
+                local p = picker.Position
+                picker.Visible = true
+                picker.BackgroundTransparency = 1
+                picker.Size = UDim2.new(0, 238, 0, 250)
+                picker.Position = p + UDim2.fromOffset(0, 8)
+                popupTween = TweenService:Create(picker, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(0, 252, 0, 264), Position = p, BackgroundTransparency = 0
+                })
+                popupTween:Play()
+            else
+                local p = picker.Position
+                popupTween = TweenService:Create(picker, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Size = UDim2.new(0, 238, 0, 250), Position = p + UDim2.fromOffset(0, 7), BackgroundTransparency = 1
+                })
+                popupTween:Play()
+                popupTween.Completed:Once(function()
+                    if not popupOpen then picker.Visible = false end
+                end)
+            end
         end
-        local function updateHue(pos)
-            hue = math.clamp((pos.Y - hueBar.AbsolutePosition.Y) / math.max(hueBar.AbsoluteSize.Y, 1), 0, 1)
-            applyColor(true)
-        end
-        sv.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                draggingSV = true
-                activePickerInput = input
-                updateSV(input.Position)
-            end
-        end)
-        hueBar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                draggingHue = true
-                activePickerInput = input
-                updateHue(input.Position)
-            end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            local isActiveMove = input.UserInputType == Enum.UserInputType.MouseMovement or input == activePickerInput
-            if draggingSV and isActiveMove then updateSV(input.Position) end
-            if draggingHue and isActiveMove then updateHue(input.Position) end
-        end)
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input == activePickerInput then
-                draggingSV = false
-                draggingHue = false
-                activePickerInput = nil
-            end
-        end)
-        row.Destroying:Connect(function()
-            if picker and picker.Parent then picker:Destroy() end
-        end)
         local function placePopup()
             local pos = MainFrame.AbsolutePosition
             local size = MainFrame.AbsoluteSize
@@ -3372,22 +3398,97 @@ function LZNLib:CreateWindow(options)
             local y = math.clamp(pos.Y + 95, 6, math.max(ScreenGui.AbsoluteSize.Y - picker.AbsoluteSize.Y - 6, 6))
             picker.Position = UDim2.fromOffset(x, y)
         end
-        swatch.MouseButton1Click:Connect(function()
-            picker.Visible = not picker.Visible
-            if picker.Visible then placePopup() end
+        local function openPicker()
+            hue, saturation, value = committedColor:ToHSV()
+            updateDraft()
+            placePopup()
+            animatePopup(true)
             PlaySFX(DropdownSFX, 1)
+        end
+        local function closePicker()
+            hue, saturation, value = committedColor:ToHSV()
+            updateDraft()
+            animatePopup(false)
+        end
+        local draggingSV = false
+        local draggingHue = false
+        local activePickerInput = nil
+        local activePickerType = nil
+        local function updateSV(pos)
+            saturation = math.clamp((pos.X - sv.AbsolutePosition.X) / math.max(sv.AbsoluteSize.X, 1), 0, 1)
+            value = 1 - math.clamp((pos.Y - sv.AbsolutePosition.Y) / math.max(sv.AbsoluteSize.Y, 1), 0, 1)
+            updateDraft()
+        end
+        local function updateHue(pos)
+            hue = math.clamp((pos.Y - hueBar.AbsolutePosition.Y) / math.max(hueBar.AbsoluteSize.Y, 1), 0, 1)
+            updateDraft()
+        end
+        sv.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                draggingSV = true
+                activePickerInput = input
+                activePickerType = input.UserInputType
+                updateSV(input.Position)
+            end
         end)
-        local handle = MakeComponentHandle(row, function() return current end, function(v)
+        hueBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                draggingHue = true
+                activePickerInput = input
+                activePickerType = input.UserInputType
+                updateHue(input.Position)
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if not activePickerInput then return end
+            local move = activePickerType == Enum.UserInputType.Touch and input == activePickerInput
+                or activePickerType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement
+            if move then
+                if draggingSV then updateSV(input.Position) end
+                if draggingHue then updateHue(input.Position) end
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(input)
+            if activePickerInput and (input == activePickerInput or (activePickerType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1)) then
+                draggingSV = false
+                draggingHue = false
+                activePickerInput = nil
+                activePickerType = nil
+            end
+        end)
+        swatch.MouseButton1Click:Connect(function()
+            if popupOpen then closePicker() else openPicker() end
+        end)
+        closeBtn.MouseButton1Click:Connect(closePicker)
+        resetBtn.MouseButton1Click:Connect(function()
+            hue, saturation, value = defaultColor:ToHSV()
+            updateDraft()
+        end)
+        okBtn.MouseButton1Click:Connect(function()
+            committedColor = draftColor
+            swatch.BackgroundColor3 = committedColor
+            SafeCallback(cfg.Callback, committedColor, committedColor:ToHSV())
+            animatePopup(false)
+        end)
+        row.Destroying:Connect(function()
+            if picker and picker.Parent then picker:Destroy() end
+        end)
+        updateDraft()
+        local handle = MakeComponentHandle(row, function() return committedColor end, function(v)
             if typeof(v) == "Color3" then
-                current = v
+                committedColor = v
+                draftColor = v
                 hue, saturation, value = v:ToHSV()
-                applyColor(true)
+                swatch.BackgroundColor3 = committedColor
+                updateDraft()
+                SafeCallback(cfg.Callback, committedColor, committedColor:ToHSV())
             end
         end)
         local oldDestroy = handle.Destroy
         function handle:Destroy()
             draggingSV = false
             draggingHue = false
+            activePickerInput = nil
             if picker and picker.Parent then picker:Destroy() end
             if oldDestroy then oldDestroy(self) end
         end
@@ -3742,9 +3843,17 @@ function LZNLib:CreateWindow(options)
         cardB.LayoutOrder = order
         cardB.Parent = PlayerPage
         Instance.new("UICorner", cardB).CornerRadius = UDim.new(0, 10)
-        local st = AddGlow(cardB, initialVal and Color3.fromRGB(0, 255, 170) or accentColor, initialVal and 1.7 or 1.1, 0.4)
+        local st = AddGlow(cardB, initialVal and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(0, 170, 255), initialVal and 1.8 or 1.2, initialVal and 0.15 or 0.4)
+        local accentMark = Instance.new("Frame")
+        accentMark.Size = UDim2.new(0, 4, 0.65, 0)
+        accentMark.Position = UDim2.new(0, 4, 0.175, 0)
+        accentMark.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
+        accentMark.BackgroundTransparency = initialVal and 0 or 1
+        accentMark.BorderSizePixel = 0
+        accentMark.Parent = cardB
+        Instance.new("UICorner", accentMark).CornerRadius = UDim.new(1, 0)
 
-        local ic = CreateCustomIcon(cardB, iconName, initialVal and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(185, 205, 225), 13)
+        local ic = CreateCustomIcon(cardB, iconName, initialVal and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220), 13)
         ic.Position = UDim2.new(0, 12, 0.5, -6)
 
         local tx = Instance.new("TextLabel")
@@ -3761,10 +3870,11 @@ function LZNLib:CreateWindow(options)
 
         local pillB = Instance.new("Frame")
         pillB.Size = UDim2.new(0, 42, 0, 22)
-        pillB.Position = UDim2.new(1, -50, 0.5, -11)
+        pillB.Position = UDim2.new(1, -52, 0.5, -11)
         pillB.BackgroundColor3 = initialVal and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
         pillB.Parent = cardB
         Instance.new("UICorner", pillB).CornerRadius = UDim.new(1, 0)
+        local pillStrokeB = AddGlow(pillB, initialVal and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110), 1, 0.3)
 
         local dotB = Instance.new("Frame")
         dotB.Size = UDim2.new(0, 16, 0, 16)
@@ -3774,15 +3884,19 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", dotB).CornerRadius = UDim.new(1, 0)
 
         return AttachStrictToggleControl(pillB, dotB, initialVal == true, function(active)
-            st.Color = active and Color3.fromRGB(0, 255, 170) or accentColor
-            st.Thickness = active and 1.7 or 1.1
-            local col = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(185, 205, 225)
+            st.Color = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(0, 170, 255)
+            st.Thickness = active and 1.8 or 1.2
+            st.Transparency = active and 0.15 or 0.4
+            pillStrokeB.Color = active and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110)
+            local col = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220)
             for _, ch in ipairs(ic:GetChildren()) do
                 if ch:IsA("Frame") then ch.BackgroundColor3 = col end
             end
-            TweenService:Create(cardB, TweenInfo.new(0.2), {
-                BackgroundTransparency = active and 0.18 or 0.35
+            TweenService:Create(accentMark, TweenInfo.new(0.22), {BackgroundTransparency = active and 0 or 1}):Play()
+            TweenService:Create(cardB, TweenInfo.new(0.22), {
+                BackgroundTransparency = active and 0.18 or 0.45
             }):Play()
+            tx.TextColor3 = active and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(185, 205, 225)
             if onToggle then onToggle(active) end
         end)
     end
