@@ -818,7 +818,6 @@ function LZNLib:CreateWindow(options)
     end
 
     local function SetPage(page)
-        PlaySFX(ClickSFX, 1.08)
         CurrentPage = page
         ContentContainer.Visible = page == "Home"
         GamePage.Visible = page == "Game"
@@ -847,7 +846,6 @@ function LZNLib:CreateWindow(options)
         SetTabColor(GameTabIcon, GameTabText, page == "Game")
         SetTabColor(PlayerTabIcon, PlayerTabText, page == "Player")
         UpdateHubHeight()
-        if Window.NotifyAction then Window.NotifyAction("Navegação", "Aba aberta: " .. tostring(page), "info") end
     end
 
     SetTabColor(HomeTabIcon, HomeTabText, true)
@@ -2248,8 +2246,10 @@ function LZNLib:CreateWindow(options)
             end
         end
 
+        local dragOffsetX = 0
+
         local function updateFromInput(posX)
-            local rel = math.clamp((posX - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+            local rel = math.clamp((posX - dragOffsetX - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
             applyValue(minV + (rel * (maxV - minV)), true)
         end
 
@@ -2263,6 +2263,7 @@ function LZNLib:CreateWindow(options)
             activeDragInput = nil
             activeDragType = nil
             dragStartPosition = nil
+            dragOffsetX = 0
             dragMoved = false
             setHighlight(false)
             if changedByUser then
@@ -2281,7 +2282,8 @@ function LZNLib:CreateWindow(options)
             setHighlight(true)
             local thumbCenterX = thumb.AbsolutePosition.X + thumb.AbsoluteSize.X * 0.5
             local thumbCenterY = thumb.AbsolutePosition.Y + thumb.AbsoluteSize.Y * 0.5
-            local pressedThumb = math.abs(input.Position.X - thumbCenterX) <= 13 and math.abs(input.Position.Y - thumbCenterY) <= 13
+            local pressedThumb = math.abs(input.Position.X - thumbCenterX) <= 15 and math.abs(input.Position.Y - thumbCenterY) <= 15
+            dragOffsetX = pressedThumb and (input.Position.X - thumbCenterX) or 0
             if not pressedThumb then
                 dragMoved = true
                 updateFromInput(input.Position.X)
@@ -2729,7 +2731,6 @@ function LZNLib:CreateWindow(options)
         SetTabColor(PlayerTabIcon, PlayerTabText, false)
         UpdateTabNavigation(tab.Button)
         CurrentPage = "Public:" .. tab.Name
-        if not silent then Window.NotifyAction("Navegação", "Aba aberta: " .. tab.Name, "info") end
         UpdateHubHeight()
         return true
     end
@@ -5131,7 +5132,7 @@ function LZNLib:CreateWindow(options)
 
         local panel = Instance.new("Frame")
         local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(360, 720)
-        panel.Size = UDim2.new(0, math.min(340, math.max(280, viewport.X - 28)), 0, math.min(560, math.max(500, viewport.Y - 32)))
+        panel.Size = UDim2.new(0, 340, 0, 560)
         panel.AnchorPoint = Vector2.new(0.5, 0.5)
         panel.Position = UDim2.new(0.5, 0, 0.5, 0)
         panel.BackgroundColor3 = Color3.fromRGB(9, 13, 22)
@@ -5142,6 +5143,22 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 18)
         AddGlow(panel, accentColor, 1.8, 0.16)
         AddGradient(panel, Color3.fromRGB(17, 25, 41), Color3.fromRGB(7, 10, 18), 135)
+
+        local fitScale = Instance.new("UIScale")
+        fitScale.Name = "ViewportFit"
+        fitScale.Parent = panel
+        local function updateIntroScale()
+            local camera = workspace.CurrentCamera
+            local size = camera and camera.ViewportSize or Vector2.new(360, 720)
+            local scaleX = math.max(0.55, (size.X - 24) / 340)
+            local scaleY = math.max(0.45, (size.Y - 24) / 560)
+            fitScale.Scale = math.min(1, scaleX, scaleY)
+        end
+        updateIntroScale()
+        local viewportConnection
+        if workspace.CurrentCamera then
+            viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateIntroScale)
+        end
 
         local panelScale = Instance.new("UIScale")
         panelScale.Scale = 0.88
@@ -5185,6 +5202,7 @@ function LZNLib:CreateWindow(options)
         byline.Font = Enum.Font.GothamBold
         byline.TextSize = 11
         byline.TextTransparency = 1
+        byline.Visible = false
         byline.TextXAlignment = Enum.TextXAlignment.Center
         byline.ZIndex = 302
         byline.Parent = panel
@@ -5302,7 +5320,6 @@ function LZNLib:CreateWindow(options)
         TweenService:Create(image1, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
         TweenService:Create(image1Scale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
         TweenService:Create(thankText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-        TweenService:Create(byline, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
 
         languageButton.MouseButton1Click:Connect(function()
             local open = not languageList.Visible
@@ -5395,6 +5412,8 @@ function LZNLib:CreateWindow(options)
             if completed then return end
             completed = true
             applyLanguage()
+            byline.Visible = true
+            TweenService:Create(byline, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
             languageButton.Active = false
             continueButton.Active = false
             languageTitle.Visible = false
@@ -5454,6 +5473,7 @@ function LZNLib:CreateWindow(options)
             end
             TweenService:Create(introBlur, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0}):Play()
             task.wait(0.45)
+            if viewportConnection then viewportConnection:Disconnect() end
             if overlay and overlay.Parent then overlay:Destroy() end
             if introBlur and introBlur.Parent then introBlur:Destroy() end
             if ScreenGui and ScreenGui.Parent then
