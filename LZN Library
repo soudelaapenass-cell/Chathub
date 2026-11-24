@@ -319,7 +319,7 @@ function LZNLib:CreateWindow(options)
 
     local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://4499400560"
     local toggleOffSoundId = options.ToggleOffSound or "rbxassetid://101735926591481"
-    local dropdownSoundId = options.DropdownSound or "rbxassetid://111174530730534"
+    local dropdownSoundId = options.DropdownSound or "rbxassetid://12221967"
     local clickSoundId = options.ClickSound or "rbxassetid://6895079853"
     local sfxEnabled = options.SoundEffects ~= false
 
