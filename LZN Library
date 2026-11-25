@@ -311,7 +311,7 @@ function LZNLib:CreateWindow(options)
     local hubName = options.Name or "LZNUltraHub"
     local titleText = options.Title or "LZN // ULTIMATE ENGINE"
     local bgImage = options.BackgroundImage or "rbxassetid://78521393913034"
-    local floatImage = options.FloatingImage or "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png"
+    local floatImage = options.FloatingImage or "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png"
     local musicId = options.MusicId or "rbxassetid://132631534724831"
     local musicVolume = options.MusicVolume or 0.12
     local accentColor = options.AccentColor or Color3.fromRGB(255, 196, 0)
@@ -5168,13 +5168,12 @@ function LZNLib:CreateWindow(options)
         "https://i.ibb.co/d4cv5BCf/junoelise161-Manhattan-Cafe-umamusume-9137539.jpg",
         "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png",
         "https://i.ibb.co/XfKzm6Pm/LZN-1795598058085.webp",
-        "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png",
         "https://i.ibb.co/3yvdQvxf/herohero-higashi-no-dou-Manhattan-Cafe-umamusume-9158949.jpg"
     }
     local function LoadCachedImage(url, fileName)
         return Window.LoadIntroImage(url, fileName, "")
     end
-    local floatingAsset = LoadCachedImage("https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png", "LZN_floating_manhattan.png")
+    local floatingAsset = LoadCachedImage("https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png", "LZN_floating_manhattan.png")
     if floatingAsset ~= "" then FloatingButtonImage.Image = floatingAsset end
     local loadedBackgrounds = {}
     for i, url in ipairs(backgroundUrls) do
