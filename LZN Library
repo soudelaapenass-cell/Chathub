@@ -12,7 +12,6 @@ local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalizationService = game:GetService("LocalizationService")
 
 local Player = Players.LocalPlayer
 
@@ -74,7 +73,7 @@ end
 
 local function AddGlow(parent, color, size, transparency)
     local glow = Instance.new("UIStroke")
-    glow.Color = color or Color3.fromRGB(255, 196, 0)
+    glow.Color = color or Color3.fromRGB(0, 190, 255)
     glow.Thickness = size or 1.8
     glow.Transparency = transparency or 0.25
     glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -373,6 +372,20 @@ function LZNLib:CreateWindow(options)
     local ToggleOffSFX = CreateSFX("ToggleOff", toggleOffSoundId, 0.42, 0.88)
     local DropdownSFX = CreateSFX("Dropdown", dropdownSoundId, 0.4, 1.05)
     local ClickSFX = CreateSFX("Click", clickSoundId, 0.35, 1)
+    local ActionSFX = {
+        Select = CreateSFX("Select", "rbxassetid://2029831027", 0.42, 1),
+        MultiSelect = CreateSFX("MultiSelect", "rbxassetid://7060363375", 0.42, 1),
+        Tab = CreateSFX("Tab", "rbxassetid://139746569667955", 0.42, 1),
+        Error = CreateSFX("Error", "rbxassetid://98797174600699", 0.48, 1),
+        Failure = CreateSFX("Failure", "rbxassetid://90577351513883", 0.48, 1),
+        Success = CreateSFX("Success", "rbxassetid://110217765141398", 0.48, 1),
+        Warning = CreateSFX("Warning", "rbxassetid://107089652181213", 0.48, 1),
+        ColorPicker = CreateSFX("ColorPicker", "rbxassetid://111223777734727", 0.42, 1),
+        Popup = CreateSFX("Popup", "rbxassetid://96219687807442", 0.42, 1),
+        Destroy = CreateSFX("Destroy", "rbxassetid://97972687450528", 0.48, 1),
+        HubClose = CreateSFX("HubClose", "rbxassetid://4835664238", 0.45, 1),
+        HubOpen = CreateSFX("HubOpen", "rbxassetid://119393948345399", 0.45, 1)
+    }
     Window.IntroThankSFX = CreateSFX("IntroThank", "rbxassetid://7116606826", 0.62, 1)
     Window.IntroWelcomeSFX = CreateSFX("IntroWelcome", "rbxassetid://117409737658405", 0.62, 1)
     Window.NotificationSFX = {}
@@ -386,41 +399,6 @@ function LZNLib:CreateWindow(options)
         Window.NotificationSFX[i] = CreateSFX("Notification" .. tostring(i), soundId, 0.42, 1)
     end
     Window.NotificationSoundIndex = 0
-
-    local ActionSoundIds = {
-        ToggleOn = "rbxassetid://131390520971848",
-        ToggleOff = "rbxassetid://17208361335",
-        DropdownOpen = "rbxassetid://2389339814",
-        DropdownSelect = "rbxassetid://2029831027",
-        MultiSelect = "rbxassetid://7060363375",
-        Tab = "rbxassetid://139746569667955",
-        Button = "rbxassetid://82845990304289",
-        Error = "rbxassetid://98797174600699",
-        Failure = "rbxassetid://90577351513883",
-        Success = "rbxassetid://110217765141398",
-        Warning = "rbxassetid://107089652181213",
-        ColorPicker = "rbxassetid://111223777734727",
-        Popup = "rbxassetid://96219687807442",
-        Destroy = "rbxassetid://97972687450528",
-        HubClose = "rbxassetid://4835664238",
-        HubOpen = "rbxassetid://119393948345399"
-    }
-    local ActionSounds = {}
-    for action, soundId in pairs(ActionSoundIds) do
-        ActionSounds[action] = CreateSFX("Action_" .. action, soundId, 0.48, 1)
-    end
-
-    local function PlayActionSFX(action)
-        local sound = ActionSounds[action]
-        if not sound or not sfxEnabled then return end
-        for _, other in pairs(ActionSounds) do
-            if other ~= sound then pcall(function() other:Stop() end) end
-        end
-        for _, other in ipairs({ToggleOnSFX, ToggleOffSFX, DropdownSFX, ClickSFX}) do
-            pcall(function() other:Stop() end)
-        end
-        pcall(function() sound:Stop(); sound.TimePosition = 0; sound:Play() end)
-    end
 
     local function PlaySFX(sfxObj, pitchOverride)
         if not sfxEnabled or not sfxObj then return end
@@ -468,31 +446,6 @@ function LZNLib:CreateWindow(options)
     NotifLayout.Padding = UDim.new(0, 8)
     NotifLayout.Parent = NotifHolder
 
-    local function resolveRemoteImage(url, fileName)
-        if type(url) ~= "string" or not url:match("^https?://") then return url end
-        local assetGetter = type(getcustomasset) == "function" and getcustomasset or getsynasset
-        if type(assetGetter) ~= "function" or type(writefile) ~= "function" then return url end
-        local requestFunction
-        if type(request) == "function" then requestFunction = request
-        elseif type(http_request) == "function" then requestFunction = http_request
-        elseif type(syn) == "table" and type(syn.request) == "function" then requestFunction = syn.request end
-        local body
-        if requestFunction then
-            local ok, response = pcall(requestFunction, {Url = url, Method = "GET"})
-            if ok and type(response) == "table" and response.Success ~= false then body = response.Body end
-        end
-        if type(body) ~= "string" or #body < 100 then
-            local ok, response = pcall(function() return game:HttpGet(url) end)
-            if ok and type(response) == "string" and #response > 100 then body = response end
-        end
-        if type(body) ~= "string" or #body < 100 then return url end
-        local saved = pcall(writefile, fileName, body)
-        if not saved then return url end
-        local ok, asset = pcall(assetGetter, fileName)
-        if ok and type(asset) == "string" then return asset end
-        return url
-    end
-
     local baseHubW = 368
     local baseHubH = 390
     local minHubW = 310
@@ -505,7 +458,7 @@ function LZNLib:CreateWindow(options)
     MainFrame.Size = UDim2.new(0, baseHubW, 0, baseHubH)
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(8, 10, 15)
     MainFrame.BorderSizePixel = 0
     MainFrame.ClipsDescendants = true
     MainFrame.ZIndex = 20
@@ -517,48 +470,31 @@ function LZNLib:CreateWindow(options)
     HubBackground.Position = UDim2.new(0, 0, 0, 0)
     HubBackground.BackgroundTransparency = 1
     HubBackground.Image = bgImage
-    HubBackground.ScaleType = Enum.ScaleType.Crop
-    HubBackground.ZIndex = MainFrame.ZIndex
-    HubBackground.Parent = MainFrame
-    Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
-    local hubBackgroundImages = {
+    local HubBackgroundImages = {
         "https://i.ibb.co/d4cv5BCf/junoelise161-Manhattan-Cafe-umamusume-9137539.jpg",
         "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png",
         "https://i.ibb.co/XfKzm6Pm/LZN-1795598058085.webp",
         "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png",
         "https://i.ibb.co/3yvdQvxf/herohero-higashi-no-dou-Manhattan-Cafe-umamusume-9158949.jpg"
     }
-    local hubBackgroundAssets = {}
     task.spawn(function()
-        for index, url in ipairs(hubBackgroundImages) do
-            local extension = url:match("%.([%w]+)") or "png"
-            hubBackgroundAssets[index] = resolveRemoteImage(url, "LZN_Hub_Background_" .. tostring(index) .. "." .. extension)
-        end
-        if HubBackground and HubBackground.Parent and hubBackgroundAssets[1] then
-            HubBackground.Image = hubBackgroundAssets[1]
-        end
-    end)
-    task.spawn(function()
-        local imageIndex = 1
+        local index = 1
         while HubBackground and HubBackground.Parent do
+            HubBackground.Image = HubBackgroundImages[index]
+            index = (index % #HubBackgroundImages) + 1
             task.wait(10)
-            if not HubBackground or not HubBackground.Parent then break end
-            imageIndex = imageIndex % #hubBackgroundImages + 1
-            local fadeOut = TweenService:Create(HubBackground, TweenInfo.new(0.45, Enum.EasingStyle.Quad), {ImageTransparency = 1})
-            fadeOut:Play()
-            fadeOut.Completed:Wait()
-            if HubBackground and HubBackground.Parent then
-                HubBackground.Image = hubBackgroundAssets[imageIndex] or hubBackgroundImages[imageIndex]
-                TweenService:Create(HubBackground, TweenInfo.new(0.55, Enum.EasingStyle.Quad), {ImageTransparency = 0.22}):Play()
-            end
         end
     end)
-
+    HubBackground.ScaleType = Enum.ScaleType.Stretch
+    HubBackground.ImageTransparency = 0
+    HubBackground.ZIndex = MainFrame.ZIndex
+    HubBackground.Parent = MainFrame
+    Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
     MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
     AddGlow(MainFrame, accentColor, 2, 0.1)
-    AddGradient(MainFrame, Color3.fromRGB(18, 16, 8), Color3.fromRGB(6, 7, 11), 135)
+    AddGradient(MainFrame, Color3.fromRGB(14, 18, 28), Color3.fromRGB(6, 7, 11), 135)
 
     local HubScale = Instance.new("UIScale")
     HubScale.Scale = 1
@@ -644,7 +580,7 @@ function LZNLib:CreateWindow(options)
     BGMText.Parent = MusicButton
 
     MusicButton.MouseButton1Click:Connect(function()
-        PlayActionSFX("Button")
+        PlaySFX(ClickSFX, 1.05)
         if BackgroundMusic.IsPlaying then
             BackgroundMusic:Pause()
             BGMText.Text = "OFF"
@@ -659,7 +595,7 @@ function LZNLib:CreateWindow(options)
     local ProfileCard = Instance.new("Frame")
     ProfileCard.Size = UDim2.new(0, 176, 0, 56)
     ProfileCard.Position = UDim2.new(1, -188, 0.5, -28)
-    ProfileCard.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+    ProfileCard.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
     ProfileCard.BackgroundTransparency = 0.35
     ProfileCard.ZIndex = 25
     ProfileCard.Parent = HeaderFrame
@@ -670,7 +606,7 @@ function LZNLib:CreateWindow(options)
     Avatar.Name = "PlayerAvatar"
     Avatar.Size = UDim2.new(0, 38, 0, 38)
     Avatar.Position = UDim2.new(0, 8, 0.5, -19)
-    Avatar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+    Avatar.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
     Avatar.Image = ""
     Avatar.Parent = ProfileCard
     Instance.new("UICorner", Avatar).CornerRadius = UDim.new(1, 0)
@@ -679,11 +615,11 @@ function LZNLib:CreateWindow(options)
     local StatusDot = Instance.new("Frame")
     StatusDot.Size = UDim2.new(0, 9, 0, 9)
     StatusDot.Position = UDim2.new(0, 37, 0, 37)
-    StatusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
+    StatusDot.BackgroundColor3 = Color3.fromRGB(255, 196, 0)
     StatusDot.ZIndex = 26
     StatusDot.Parent = ProfileCard
     Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
-    AddGlow(StatusDot, Color3.fromRGB(8, 8, 8), 1.5, 0)
+    AddGlow(StatusDot, Color3.fromRGB(10, 14, 22), 1.5, 0)
 
     local DisplayName = Instance.new("TextLabel")
     DisplayName.Size = UDim2.new(1, -56, 0, 15)
@@ -879,7 +815,7 @@ function LZNLib:CreateWindow(options)
         local b = Instance.new("TextButton")
         b.Size = UDim2.new(0, 108, 1, 0)
         b.LayoutOrder = order
-        b.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+        b.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
         b.BackgroundTransparency = 0.5
         b.Text = ""
         b.Parent = PageNav
@@ -949,9 +885,9 @@ function LZNLib:CreateWindow(options)
     end
 
     SetTabColor(HomeTabIcon, HomeTabText, true)
-    HomeTab.MouseButton1Click:Connect(function() PlayActionSFX("Tab"); SetPage("Home") end)
-    GameTab.MouseButton1Click:Connect(function() PlayActionSFX("Tab"); SetPage("Game") end)
-    PlayerTab.MouseButton1Click:Connect(function() PlayActionSFX("Tab"); SetPage("Player") end)
+    HomeTab.MouseButton1Click:Connect(function() SetPage("Home") end)
+    GameTab.MouseButton1Click:Connect(function() SetPage("Game") end)
+    PlayerTab.MouseButton1Click:Connect(function() SetPage("Player") end)
 
     local resizingCorner = false
     local resizeStartPos = nil
@@ -964,7 +900,7 @@ function LZNLib:CreateWindow(options)
     ResizeHandle.BackgroundColor3 = Color3.fromRGB(12, 18, 30)
     ResizeHandle.BackgroundTransparency = 0.25
     ResizeHandle.Text = "⤡"
-    ResizeHandle.TextColor3 = Color3.fromRGB(255, 196, 0)
+    ResizeHandle.TextColor3 = Color3.fromRGB(0, 230, 255)
     ResizeHandle.Font = Enum.Font.GothamBlack
     ResizeHandle.TextSize = 13
     ResizeHandle.ZIndex = 45
@@ -1003,7 +939,7 @@ function LZNLib:CreateWindow(options)
     GameTopCard.LayoutOrder = 1
     GameTopCard.Parent = GamePage
     Instance.new("UICorner", GameTopCard).CornerRadius = UDim.new(0, 10)
-    AddGlow(GameTopCard, Color3.fromRGB(255, 196, 0), 1, 0.45)
+    AddGlow(GameTopCard, Color3.fromRGB(0, 190, 255), 1, 0.45)
 
     local GameIcon = Instance.new("ImageLabel")
     GameIcon.Size = UDim2.new(0, 62, 0, 62)
@@ -1050,10 +986,10 @@ function LZNLib:CreateWindow(options)
         b.TextSize = 11
         b.Parent = GamePage
         Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-        AddGlow(b, Color3.fromRGB(255, 196, 0), 1, 0.45)
+        AddGlow(b, Color3.fromRGB(0, 190, 255), 1, 0.45)
         AddClickEffect(b)
         b.MouseButton1Click:Connect(function()
-            PlayActionSFX("Button")
+            PlaySFX(ClickSFX, 1)
             if callback then callback() end
             if Window.NotifyAction then Window.NotifyAction("Jogo", textValue, "info") end
         end)
@@ -1174,7 +1110,7 @@ function LZNLib:CreateWindow(options)
     local ToggleHubBtn = Instance.new("TextButton")
     ToggleHubBtn.Size = UDim2.new(0, 46, 0, 46)
     ToggleHubBtn.Position = UDim2.new(0, 16, 0, 16)
-    ToggleHubBtn.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+    ToggleHubBtn.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
     ToggleHubBtn.Text = ""
     ToggleHubBtn.ZIndex = 30
     ToggleHubBtn.Parent = ScreenGui
@@ -1186,52 +1122,14 @@ function LZNLib:CreateWindow(options)
     FloatingButtonImage.Position = UDim2.new(0, 0, 0, 0)
     FloatingButtonImage.BackgroundTransparency = 1
     FloatingButtonImage.Image = floatImage
-    if type(floatImage) == "string" and floatImage:match("^https?://") then
-        task.spawn(function()
-            local asset = resolveRemoteImage(floatImage, "LZN_FloatingButton_Image.png")
-            if FloatingButtonImage and asset then FloatingButtonImage.Image = asset end
-        end)
-    end
     FloatingButtonImage.ScaleType = Enum.ScaleType.Stretch
     FloatingButtonImage.ZIndex = ToggleHubBtn.ZIndex + 1
     FloatingButtonImage.Parent = ToggleHubBtn
     Instance.new("UICorner", FloatingButtonImage).CornerRadius = UDim.new(1, 0)
     AddGlow(ToggleHubBtn, accentColor, 2, 0.1)
-    AddGradient(ToggleHubBtn, Color3.fromRGB(18, 25, 40), Color3.fromRGB(5, 5, 5), 135)
+    AddGradient(ToggleHubBtn, Color3.fromRGB(18, 25, 40), Color3.fromRGB(8, 10, 15), 135)
     MakeDraggable(ToggleHubBtn)
     AddClickEffect(ToggleHubBtn)
-
-    local animatedGradients = {}
-    local function createShineEffect(uiStroke, baseColor)
-        local gradient = Instance.new("UIGradient")
-        gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, baseColor),
-            ColorSequenceKeypoint.new(0.35, baseColor),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(0.65, baseColor),
-            ColorSequenceKeypoint.new(1, baseColor)
-        })
-        gradient.Parent = uiStroke
-        table.insert(animatedGradients, gradient)
-        return gradient
-    end
-    for _, object in ipairs(ScreenGui:GetDescendants()) do
-        if object:IsA("UIStroke") then createShineEffect(object, Color3.fromRGB(255, 190, 0)) end
-    end
-    local shineConnection = RunService.RenderStepped:Connect(function()
-        local rotation = (os.clock() * 160) % 360
-        for index = #animatedGradients, 1, -1 do
-            local gradient = animatedGradients[index]
-            if gradient and gradient.Parent then gradient.Rotation = rotation else table.remove(animatedGradients, index) end
-        end
-    end)
-    ScreenGui.DescendantAdded:Connect(function(object)
-        if object:IsA("UIStroke") then
-            task.defer(function()
-                if object.Parent then createShineEffect(object, Color3.fromRGB(255, 190, 0)) end
-            end)
-        end
-    end)
 
     local HubOpen = true
     local IsAnimatingHub = false
@@ -1240,7 +1138,7 @@ function LZNLib:CreateWindow(options)
         if IsAnimatingHub then return end
         IsAnimatingHub = true
         HubOpen = not HubOpen
-        PlayActionSFX(HubOpen and "HubOpen" or "HubClose")
+        PlaySFX(HubOpen and ActionSFX.HubOpen or ActionSFX.HubClose, 1)
 
         if HubOpen then
             MainFrame.Visible = true
@@ -1289,7 +1187,6 @@ function LZNLib:CreateWindow(options)
     end
 
     local function DestroyAllUI()
-        if shineConnection then pcall(function() shineConnection:Disconnect() end) end
         pcall(function()
             StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true)
         end)
@@ -1335,7 +1232,7 @@ function LZNLib:CreateWindow(options)
     end
 
     DestroyHubBtn.MouseButton1Click:Connect(function()
-        PlayActionSFX("Destroy")
+        PlaySFX(ToggleOffSFX, 0.85)
         DestroyAllUI()
     end)
 
@@ -1347,6 +1244,7 @@ function LZNLib:CreateWindow(options)
     end
 
     function Window:Destroy()
+        PlaySFX(ActionSFX.Destroy, 1)
         DestroyAllUI()
     end
 
@@ -1376,16 +1274,16 @@ function LZNLib:CreateWindow(options)
             local prevState = state
             state = newState
             TweenService:Create(pillFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundColor3 = state and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
+                BackgroundColor3 = state and Color3.fromRGB(190, 145, 0) or Color3.fromRGB(28, 36, 52)
             }):Play()
             TweenService:Create(dotFrame, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                 Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
             }):Play()
             if fire and prevState ~= state then
                 if state then
-                    PlayActionSFX("ToggleOn")
+                    PlaySFX(ToggleOnSFX, 1.15)
                 else
-                    PlayActionSFX("ToggleOff")
+                    PlaySFX(ToggleOffSFX, 0.88)
                 end
             end
             if fire and onStateChanged then
@@ -1437,12 +1335,17 @@ function LZNLib:CreateWindow(options)
 
     function Window:Notify(cfg)
         cfg = cfg or {}
+        local notificationSound = ({
+            error = ActionSFX.Error, failure = ActionSFX.Failure,
+            success = ActionSFX.Success, warning = ActionSFX.Warning
+        })[string.lower(tostring(cfg.Type or "info"))]
+        if notificationSound then
+            PlaySFX(notificationSound, 1)
+        elseif #Window.NotificationSFX > 0 then
+            Window.NotificationSoundIndex = (Window.NotificationSoundIndex % #Window.NotificationSFX) + 1
+            PlaySFX(Window.NotificationSFX[Window.NotificationSoundIndex], 1)
+        end
         local nType = string.lower(cfg.Type or "sucesso")
-        local notificationAction = "Success"
-        if nType == "error" or nType == "erro" then notificationAction = "Error"
-        elseif nType == "falhou" or nType == "falha" or nType == "fail" or nType == "failure" then notificationAction = "Failure"
-        elseif nType == "warning" or nType == "aviso" or nType == "warn" then notificationAction = "Warning" end
-        if nType ~= "info" then PlayActionSFX(notificationAction) end
         local titleStr = cfg.Title or (nType == "error" and "ERRO" or (nType == "falhou" and "FALHOU" or "SUCESSO!"))
         local msgStr = cfg.Message or ""
         local duration = cfg.Duration or 3.5
@@ -1452,24 +1355,21 @@ function LZNLib:CreateWindow(options)
         if nType == "error" or nType == "erro" then
             mainCol = Color3.fromRGB(255, 70, 95)
             iconType = "error"
-        elseif nType == "falhou" or nType == "falha" or nType == "fail" or nType == "failure" then
+        elseif nType == "falhou" or nType == "fail" then
             mainCol = Color3.fromRGB(255, 175, 45)
             iconType = "fail"
-        elseif nType == "warning" or nType == "aviso" or nType == "warn" then
-            mainCol = Color3.fromRGB(255, 190, 55)
-            iconType = "warning"
         end
 
         local card = Instance.new("Frame")
         card.Size = UDim2.new(1, 0, 0, 56)
-        card.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+        card.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
         card.BackgroundTransparency = 0.08
         card.ClipsDescendants = true
         card.ZIndex = 201
         card.Parent = NotifHolder
         Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
         AddGlow(card, mainCol, 1.5, 0.2)
-        AddGradient(card, Color3.fromRGB(18, 16, 8), Color3.fromRGB(8, 10, 16), 135)
+        AddGradient(card, Color3.fromRGB(16, 22, 34), Color3.fromRGB(8, 10, 16), 135)
 
         local cScale = Instance.new("UIScale")
         cScale.Scale = 0.75
@@ -1563,13 +1463,13 @@ function LZNLib:CreateWindow(options)
         popup.Size = UDim2.new(0, 264, 0, height)
         popup.Position = UDim2.new(0.5, 0, 0.5, 0)
         popup.AnchorPoint = Vector2.new(0.5, 0.5)
-        popup.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+        popup.BackgroundColor3 = Color3.fromRGB(10, 13, 20)
         popup.Visible = false
         popup.ZIndex = 10
         popup.Parent = FullScreenBlurGui
         Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 14)
         AddGlow(popup, accentColor, 2, 0.1)
-        AddGradient(popup, Color3.fromRGB(16, 21, 33), Color3.fromRGB(5, 5, 5), 135)
+        AddGradient(popup, Color3.fromRGB(16, 21, 33), Color3.fromRGB(8, 10, 15), 135)
         MakeDraggable(popup)
 
         local pScale = Instance.new("UIScale")
@@ -1580,7 +1480,7 @@ function LZNLib:CreateWindow(options)
         popup:GetPropertyChangedSignal("Visible"):Connect(function()
             RefreshPopupOverlay()
             if popup.Visible then
-                PlayActionSFX("Popup")
+                PlaySFX(DropdownSFX, 1.12)
                 pScale.Scale = 0.82
                 TweenService:Create(pScale, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
             end
@@ -1608,12 +1508,12 @@ function LZNLib:CreateWindow(options)
             Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
             AddGlow(b, i == 1 and Color3.fromRGB(120, 220, 255) or Color3.fromRGB(0, 180, 255), 1.2, i == 1 and 0.3 or 0.4)
             if i == 1 then
-                AddGradient(b, Color3.fromRGB(255, 190, 0), Color3.fromRGB(0, 110, 210), 90)
+                AddGradient(b, Color3.fromRGB(120, 100, 35), Color3.fromRGB(0, 110, 210), 90)
             end
             AddClickEffect(b)
 
             b.MouseButton1Click:Connect(function()
-                PlayActionSFX("Button")
+                PlaySFX(ClickSFX, 1.05)
                 popup.Visible = false
                 if opt.Callback then opt.Callback() end
                 Window.NotifyAction(cfg.Title or "Opções", "Selecionado: " .. tostring(opt.Text or "Opção"), "info")
@@ -1621,7 +1521,7 @@ function LZNLib:CreateWindow(options)
         end
 
         local obj = {}
-        function obj:Show() popup.Visible = true end
+        function obj:Show() PlaySFX(ActionSFX.Popup, 1); popup.Visible = true end
         function obj:Hide() popup.Visible = false end
         return obj
     end
@@ -1664,7 +1564,7 @@ function LZNLib:CreateWindow(options)
         end)
 
         btn.MouseButton1Click:Connect(function()
-            PlayActionSFX("Button")
+            PlaySFX(ClickSFX, 1)
             if cfg.Callback then cfg.Callback() end
             Window.NotifyAction(cfg.Text or "Botão", "Ação executada", "info")
         end)
@@ -1679,24 +1579,24 @@ function LZNLib:CreateWindow(options)
 
         local rowFrame = Instance.new("Frame")
         rowFrame.Size = UDim2.new(1, 0, 0, 38)
-        rowFrame.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+        rowFrame.BackgroundColor3 = Color3.fromRGB(14, 19, 30)
         rowFrame.BackgroundTransparency = state and 0.18 or 0.45
         rowFrame.LayoutOrder = NextOrder()
         rowFrame.ZIndex = 24
         rowFrame.Parent = ActiveContainer
         Instance.new("UICorner", rowFrame).CornerRadius = UDim.new(0, 10)
-        local stroke = AddGlow(rowFrame, state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(255, 190, 0), state and 1.8 or 1.2, state and 0.15 or 0.4)
+        local stroke = AddGlow(rowFrame, state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(120, 100, 35), state and 1.8 or 1.2, state and 0.15 or 0.4)
 
         local highlight = Instance.new("Frame")
         highlight.Size = UDim2.new(0, 4, 0.65, 0)
         highlight.Position = UDim2.new(0, 4, 0.175, 0)
-        highlight.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
+        highlight.BackgroundColor3 = Color3.fromRGB(255, 196, 0)
         highlight.BackgroundTransparency = state and 0 or 1
         highlight.BorderSizePixel = 0
         highlight.Parent = rowFrame
         Instance.new("UICorner", highlight).CornerRadius = UDim.new(1, 0)
 
-        local ic = CreateCustomIcon(rowFrame, cfg.Icon or "success", state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220), 13)
+        local ic = CreateCustomIcon(rowFrame, cfg.Icon or "success", state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(180, 200, 220), 13)
         ic.Position = UDim2.new(0, 14, 0.5, -6)
 
         local lbl = Instance.new("TextLabel")
@@ -1714,10 +1614,10 @@ function LZNLib:CreateWindow(options)
         local pill = Instance.new("Frame")
         pill.Size = UDim2.new(0, 42, 0, 22)
         pill.Position = UDim2.new(1, -52, 0.5, -11)
-        pill.BackgroundColor3 = state and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
+        pill.BackgroundColor3 = state and Color3.fromRGB(190, 145, 0) or Color3.fromRGB(28, 36, 52)
         pill.Parent = rowFrame
         Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
-        local pillStroke = AddGlow(pill, state and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110), 1, 0.3)
+        local pillStroke = AddGlow(pill, state and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(60, 80, 110), 1, 0.3)
 
         local dot = Instance.new("Frame")
         dot.Size = UDim2.new(0, 16, 0, 16)
@@ -1735,16 +1635,16 @@ function LZNLib:CreateWindow(options)
                 BackgroundTransparency = state and 0 or 1
             }):Play()
             lbl.TextColor3 = state and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(185, 205, 225)
-            stroke.Color = state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(255, 190, 0)
+            stroke.Color = state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(120, 100, 35)
             stroke.Thickness = state and 1.8 or 1.2
             stroke.Transparency = state and 0.15 or 0.4
-            pillStroke.Color = state and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110)
-            local col = state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220)
+            pillStroke.Color = state and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(60, 80, 110)
+            local col = state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(180, 200, 220)
             for _, ch in ipairs(ic:GetChildren()) do
                 if ch:IsA("Frame") then ch.BackgroundColor3 = col end
             end
             if cfg.Callback then cfg.Callback(state) end
-            Window.NotifyAction(baseText, state and "Ativado" or "Desativado", "info")
+            Window.NotifyAction(baseText, state and "Ativado" or "Desativado", state and "success" or "info")
         end)
 
         local obj = {}
@@ -1863,7 +1763,7 @@ function LZNLib:CreateWindow(options)
 
         local card = Instance.new("Frame")
         card.Size = UDim2.new(1, 0, 0, 178)
-        card.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+        card.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
         card.BackgroundTransparency = 0.22
         card.LayoutOrder = NextOrder()
         card.ClipsDescendants = true
@@ -1903,7 +1803,7 @@ function LZNLib:CreateWindow(options)
 
         local dropBtn = Instance.new("TextButton")
         dropBtn.Size = UDim2.new(1, 0, 0, 30)
-        dropBtn.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+        dropBtn.BackgroundColor3 = Color3.fromRGB(14, 19, 30)
         dropBtn.BackgroundTransparency = 0.1
         dropBtn.Text = "  " .. tracks[1].Name .. "  ▾"
         dropBtn.TextColor3 = Color3.fromRGB(235, 245, 255)
@@ -1942,7 +1842,7 @@ function LZNLib:CreateWindow(options)
         local function SyncPlayPauseVisual()
             if not playPauseIcon then return end
             if AudioSound.IsPlaying then
-                SetCustomIconType(playPauseIcon, "pause", Color3.fromRGB(255, 196, 0), 14)
+                SetCustomIconType(playPauseIcon, "pause", Color3.fromRGB(0, 230, 255), 14)
             else
                 SetCustomIconType(playPauseIcon, "play", Color3.fromRGB(0, 255, 175), 14)
             end
@@ -1997,7 +1897,7 @@ function LZNLib:CreateWindow(options)
             AddClickEffect(item)
 
             item.MouseButton1Click:Connect(function()
-                PlayActionSFX("DropdownSelect")
+                PlaySFX(ClickSFX, 1.08)
                 dropOpen = false
                 selectTrack(i, true)
                 refreshLayout()
@@ -2014,7 +1914,7 @@ function LZNLib:CreateWindow(options)
         curTimeLbl.Size = UDim2.new(0, 34, 1, 0)
         curTimeLbl.BackgroundTransparency = 1
         curTimeLbl.Text = "0:00"
-        curTimeLbl.TextColor3 = Color3.fromRGB(0, 225, 255)
+        curTimeLbl.TextColor3 = Color3.fromRGB(255, 196, 0)
         curTimeLbl.Font = Enum.Font.GothamBold
         curTimeLbl.TextSize = 10
         curTimeLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -2119,11 +2019,11 @@ function LZNLib:CreateWindow(options)
             AddGlow(b, accentColor, 1.1, 0.4)
             AddClickEffect(b)
 
-            local ic = CreateCustomIcon(b, iconName, Color3.fromRGB(255, 196, 0), 14)
+            local ic = CreateCustomIcon(b, iconName, Color3.fromRGB(0, 230, 255), 14)
             ic.Position = UDim2.new(0.5, -7, 0.5, -7)
 
             b.MouseButton1Click:Connect(function()
-                PlayActionSFX("Button")
+                PlaySFX(ClickSFX, 1)
                 if callback then callback() end
                 if Window.NotifyAction then Window.NotifyAction("Reprodutor", iconName == "prev" and "Faixa anterior" or (iconName == "next" and "Próxima faixa" or "Reprodução alterada"), "info") end
             end)
@@ -2319,7 +2219,7 @@ function LZNLib:CreateWindow(options)
         valLbl.Position = UDim2.new(0.62, 0, 0, 0)
         valLbl.BackgroundTransparency = 1
         valLbl.Text = fmt(currentV)
-        valLbl.TextColor3 = Color3.fromRGB(255, 196, 0)
+        valLbl.TextColor3 = Color3.fromRGB(0, 230, 255)
         valLbl.Font = Enum.Font.GothamBlack
         valLbl.TextSize = 10
         valLbl.TextXAlignment = Enum.TextXAlignment.Right
@@ -2468,7 +2368,7 @@ function LZNLib:CreateWindow(options)
             local resetBtn = Instance.new("TextButton")
             resetBtn.Size = UDim2.new(0, 38, 1, 0)
             resetBtn.Position = UDim2.new(1, -38, 0, 0)
-            resetBtn.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+            resetBtn.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
             resetBtn.BackgroundTransparency = 0.25
             resetBtn.Text = ""
             resetBtn.Parent = row
@@ -2480,7 +2380,7 @@ function LZNLib:CreateWindow(options)
             ric.Position = UDim2.new(0.5, -7, 0.5, -7)
 
             resetBtn.MouseButton1Click:Connect(function()
-                PlayActionSFX("Button")
+                PlaySFX(ClickSFX, 0.95)
                 applyValue(cfg.ResetValue, true)
                 Window.NotifyAction(cfg.Text or "Slider", "Valor restaurado para " .. fmt(currentV), "info")
                 setHighlight(true)
@@ -2519,7 +2419,7 @@ function LZNLib:CreateWindow(options)
 
         local dropBtn = Instance.new("TextButton")
         dropBtn.Size = UDim2.new(1, 0, 0, 38)
-        dropBtn.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+        dropBtn.BackgroundColor3 = Color3.fromRGB(14, 18, 28)
         dropBtn.BackgroundTransparency = 0.25
         dropBtn.Text = label .. ": " .. tostring(current) .. "  ▾"
         dropBtn.TextColor3 = Color3.fromRGB(220, 235, 255)
@@ -2528,24 +2428,24 @@ function LZNLib:CreateWindow(options)
         dropBtn.ZIndex = 25
         dropBtn.Parent = wrapper
         Instance.new("UICorner", dropBtn).CornerRadius = UDim.new(0, 10)
-        AddGlow(dropBtn, Color3.fromRGB(255, 190, 0), 1, 0.5)
+        AddGlow(dropBtn, Color3.fromRGB(120, 100, 35), 1, 0.5)
         AddClickEffect(dropBtn)
 
         local list = Instance.new("Frame")
         list.Size = UDim2.new(1, 0, 0, #items * 30)
         list.Position = UDim2.new(0, 0, 0, 42)
-        list.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+        list.BackgroundColor3 = Color3.fromRGB(10, 13, 20)
         list.ZIndex = 25
         list.Parent = wrapper
         Instance.new("UICorner", list).CornerRadius = UDim.new(0, 10)
-        AddGlow(list, Color3.fromRGB(255, 196, 0), 1.2, 0.3)
+        AddGlow(list, Color3.fromRGB(0, 190, 255), 1.2, 0.3)
 
         local function toggle(forceClose)
             if forceClose then
                 isOpen = false
             else
                 isOpen = not isOpen
-                PlayActionSFX("DropdownOpen")
+                PlaySFX(DropdownSFX, 1)
             end
             local targetH = isOpen and (42 + (#items * 30)) or 38
             dropBtn.Text = label .. ": " .. tostring(current) .. (isOpen and "  ▴" or "  ▾")
@@ -2568,7 +2468,7 @@ function LZNLib:CreateWindow(options)
             AddClickEffect(itemBtn)
 
             itemBtn.MouseButton1Click:Connect(function()
-                PlayActionSFX("DropdownSelect")
+                PlaySFX(ActionSFX.Select, 1)
                 current = item
                 toggle(true)
                 if cfg.Callback then cfg.Callback(item) end
@@ -2629,7 +2529,7 @@ function LZNLib:CreateWindow(options)
 
         local dropBtn = Instance.new("TextButton")
         dropBtn.Size = UDim2.new(1, 0, 0, 38)
-        dropBtn.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+        dropBtn.BackgroundColor3 = Color3.fromRGB(14, 18, 28)
         dropBtn.BackgroundTransparency = 0.25
         dropBtn.Text = formatHeader()
         dropBtn.TextColor3 = Color3.fromRGB(220, 235, 255)
@@ -2645,7 +2545,7 @@ function LZNLib:CreateWindow(options)
         local list = Instance.new("Frame")
         list.Size = UDim2.new(1, 0, 0, #items * 30)
         list.Position = UDim2.new(0, 0, 0, 42)
-        list.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+        list.BackgroundColor3 = Color3.fromRGB(10, 13, 20)
         list.ZIndex = 25
         list.Parent = wrapper
         Instance.new("UICorner", list).CornerRadius = UDim.new(0, 10)
@@ -2656,10 +2556,10 @@ function LZNLib:CreateWindow(options)
         local function refreshOptionsVisual()
             for _, entry in ipairs(optionButtons) do
                 local active = selectedMap[entry.key] == true
-                entry.btn.BackgroundColor3 = active and Color3.fromRGB(0, 120, 175) or Color3.fromRGB(18, 16, 8)
+                entry.btn.BackgroundColor3 = active and Color3.fromRGB(0, 120, 175) or Color3.fromRGB(14, 19, 30)
                 entry.btn.BackgroundTransparency = active and 0.25 or 0.9
                 entry.lbl.TextColor3 = active and Color3.fromRGB(0, 255, 185) or Color3.fromRGB(215, 232, 250)
-                entry.box.BackgroundColor3 = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(28, 36, 52)
+                entry.box.BackgroundColor3 = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(28, 36, 52)
             end
             dropBtn.Text = formatHeader()
         end
@@ -2669,7 +2569,7 @@ function LZNLib:CreateWindow(options)
             local itemBtn = Instance.new("TextButton")
             itemBtn.Size = UDim2.new(1, -8, 0, 28)
             itemBtn.Position = UDim2.new(0, 4, 0, (i - 1) * 30 + 1)
-            itemBtn.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+            itemBtn.BackgroundColor3 = Color3.fromRGB(14, 19, 30)
             itemBtn.BackgroundTransparency = 0.9
             itemBtn.Text = ""
             itemBtn.ZIndex = 26
@@ -2708,7 +2608,7 @@ function LZNLib:CreateWindow(options)
             itemBtn.MouseButton1Click:Connect(function()
                 selectedMap[key] = not selectedMap[key]
                 local nowSel = selectedMap[key] == true
-                PlayActionSFX("MultiSelect")
+                PlaySFX(ActionSFX.MultiSelect, 1)
                 refreshOptionsVisual()
                 if cfg.Callback then
                     cfg.Callback(getSelectedList(), item, nowSel)
@@ -2721,7 +2621,7 @@ function LZNLib:CreateWindow(options)
 
         dropBtn.MouseButton1Click:Connect(function()
             isOpen = not isOpen
-            PlayActionSFX("DropdownOpen")
+            PlaySFX(DropdownSFX, 1)
             dropBtn.Text = formatHeader()
             local targetH = isOpen and (42 + (#items * 30)) or 38
             TweenService:Create(wrapper, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
@@ -2853,6 +2753,7 @@ function LZNLib:CreateWindow(options)
 
     local function SelectPublicTab(tab, silent)
         if type(tab) == "string" then tab = TabRegistry[tab] end
+        if not silent then PlaySFX(ActionSFX.Tab, 1) end
         if not tab or not tab.Page or not tab.Page.Parent then return false end
         ActiveTabName = tab.Name
         ActiveContainer = tab.Page
@@ -2864,7 +2765,7 @@ function LZNLib:CreateWindow(options)
             if entry.Button then
                 entry.Button.BackgroundTransparency = entry == tab and 0.12 or 0.55
                 if entry.Label then
-                    entry.Label.TextColor3 = entry == tab and Color3.fromRGB(0, 225, 255) or Color3.fromRGB(190, 210, 230)
+                    entry.Label.TextColor3 = entry == tab and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(190, 210, 230)
                 end
             end
         end
@@ -2896,7 +2797,7 @@ function LZNLib:CreateWindow(options)
         local button = Instance.new("TextButton")
         button.Name = "TabButton_" .. name:gsub("[^%w_%-]", "")
         button.Size = UDim2.new(0, math.clamp(34 + (#name * 6), 84, 150), 1, 0)
-        button.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+        button.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
         button.BackgroundTransparency = 0.55
         button.BorderSizePixel = 0
         button.Text = ""
@@ -2931,7 +2832,7 @@ function LZNLib:CreateWindow(options)
             tabLabel.Size = UDim2.new(1, -18, 1, 0)
         end
         AddClickEffect(button)
-        button.MouseButton1Click:Connect(function() PlayActionSFX("Tab"); SelectPublicTab(name, false) end)
+        button.MouseButton1Click:Connect(function() SelectPublicTab(name, false) end)
         local tab = {Name = name, Icon = icon, Page = page, Layout = layout, Button = button, Label = tabLabel, IconObject = tabIcon, Sections = {}}
         TabRegistry[name] = tab
         table.insert(TabOrder, name)
@@ -3301,7 +3202,7 @@ function LZNLib:CreateWindow(options)
         if theme.Background then MainFrame.BackgroundColor3 = theme.Background end
         return true
     end
-    ThemeManager:Register("Default", {Accent = accentColor, Background = Color3.fromRGB(5, 5, 5)})
+    ThemeManager:Register("Default", {Accent = accentColor, Background = Color3.fromRGB(8, 10, 15)})
     ThemeManager:Register("Ocean", {Accent = Color3.fromRGB(0, 174, 255), Background = Color3.fromRGB(7, 16, 27)})
     ThemeManager:Register("Crimson", {Accent = Color3.fromRGB(255, 65, 90), Background = Color3.fromRGB(20, 8, 13)})
     Window.ThemeManager = ThemeManager
@@ -3650,7 +3551,7 @@ function LZNLib:CreateWindow(options)
             updateDraft()
             placePopup()
             animatePopup(true)
-            PlayActionSFX("ColorPicker")
+            PlaySFX(DropdownSFX, 1)
         end
         local function closePicker()
             hue, saturation, value = committedColor:ToHSV()
@@ -3797,7 +3698,7 @@ function LZNLib:CreateWindow(options)
     PlayerCard.LayoutOrder = 1
     PlayerCard.Parent = PlayerPage
     Instance.new("UICorner", PlayerCard).CornerRadius = UDim.new(0, 10)
-    AddGlow(PlayerCard, Color3.fromRGB(255, 196, 0), 1, 0.45)
+    AddGlow(PlayerCard, Color3.fromRGB(0, 190, 255), 1, 0.45)
 
     local PAvatar = Instance.new("ImageLabel")
     PAvatar.Size = UDim2.new(0, 48, 0, 48)
@@ -4116,22 +4017,22 @@ function LZNLib:CreateWindow(options)
     local function makeStrictPlayerToggle(textStr, iconName, order, initialVal, onToggle)
         local cardB = Instance.new("Frame")
         cardB.Size = UDim2.new(1, 0, 0, 38)
-        cardB.BackgroundColor3 = Color3.fromRGB(18, 16, 8)
+        cardB.BackgroundColor3 = Color3.fromRGB(14, 19, 30)
         cardB.BackgroundTransparency = initialVal and 0.18 or 0.35
         cardB.LayoutOrder = order
         cardB.Parent = PlayerPage
         Instance.new("UICorner", cardB).CornerRadius = UDim.new(0, 10)
-        local st = AddGlow(cardB, initialVal and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(255, 190, 0), initialVal and 1.8 or 1.2, initialVal and 0.15 or 0.4)
+        local st = AddGlow(cardB, initialVal and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(120, 100, 35), initialVal and 1.8 or 1.2, initialVal and 0.15 or 0.4)
         local accentMark = Instance.new("Frame")
         accentMark.Size = UDim2.new(0, 4, 0.65, 0)
         accentMark.Position = UDim2.new(0, 4, 0.175, 0)
-        accentMark.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
+        accentMark.BackgroundColor3 = Color3.fromRGB(255, 196, 0)
         accentMark.BackgroundTransparency = initialVal and 0 or 1
         accentMark.BorderSizePixel = 0
         accentMark.Parent = cardB
         Instance.new("UICorner", accentMark).CornerRadius = UDim.new(1, 0)
 
-        local ic = CreateCustomIcon(cardB, iconName, initialVal and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220), 13)
+        local ic = CreateCustomIcon(cardB, iconName, initialVal and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(180, 200, 220), 13)
         ic.Position = UDim2.new(0, 12, 0.5, -6)
 
         local tx = Instance.new("TextLabel")
@@ -4149,10 +4050,10 @@ function LZNLib:CreateWindow(options)
         local pillB = Instance.new("Frame")
         pillB.Size = UDim2.new(0, 42, 0, 22)
         pillB.Position = UDim2.new(1, -52, 0.5, -11)
-        pillB.BackgroundColor3 = initialVal and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
+        pillB.BackgroundColor3 = initialVal and Color3.fromRGB(190, 145, 0) or Color3.fromRGB(28, 36, 52)
         pillB.Parent = cardB
         Instance.new("UICorner", pillB).CornerRadius = UDim.new(1, 0)
-        local pillStrokeB = AddGlow(pillB, initialVal and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110), 1, 0.3)
+        local pillStrokeB = AddGlow(pillB, initialVal and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(60, 80, 110), 1, 0.3)
 
         local dotB = Instance.new("Frame")
         dotB.Size = UDim2.new(0, 16, 0, 16)
@@ -4162,11 +4063,11 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", dotB).CornerRadius = UDim.new(1, 0)
 
         return AttachStrictToggleControl(pillB, dotB, initialVal == true, function(active)
-            st.Color = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(255, 190, 0)
+            st.Color = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(120, 100, 35)
             st.Thickness = active and 1.8 or 1.2
             st.Transparency = active and 0.15 or 0.4
-            pillStrokeB.Color = active and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110)
-            local col = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220)
+            pillStrokeB.Color = active and Color3.fromRGB(255, 220, 90) or Color3.fromRGB(60, 80, 110)
+            local col = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(180, 200, 220)
             for _, ch in ipairs(ic:GetChildren()) do
                 if ch:IsA("Frame") then ch.BackgroundColor3 = col end
             end
@@ -4176,394 +4077,9 @@ function LZNLib:CreateWindow(options)
             }):Play()
             tx.TextColor3 = active and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(185, 205, 225)
             if onToggle then onToggle(active) end
-            Window.NotifyAction(textStr, active and "Ativado" or "Desativado", "info")
+            Window.NotifyAction(textStr, active and "Ativado" or "Desativado", active and "success" or "info")
         end)
     end
-
-    local LZNShaderSource = [=[
-local Lighting = game:GetService("Lighting")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Terrain = workspace:FindFirstChildOfClass("Terrain")
-
-local PREFIX = "LZNRTX_"
-if type(getgenv) == "function" then getgenv().LZN_SetShadersEnabled = nil end
-
-local Config = {
-    Preset = "ULTRA",
-    Enabled = true,
-    Adaptive = true,
-    Water = true,
-    RealisticLighting = true,
-    Shadows = true,
-    Bloom = true,
-    SunRays = true,
-    ColorGrading = true,
-    DepthOfField = false,
-    DayToNightSeconds = 480,
-    ShowClock = true,
-    LockedSaturation = 0.36
-}
-
-local Presets = {
-    ULTRA = {
-        Bloom = 0.27,
-        SunRays = 0.17,
-        Contrast = 0.18,
-        Shadow = 0.18,
-        Saturation = 0.36
-    },
-    HIGH = {
-        Bloom = 0.21,
-        SunRays = 0.12,
-        Contrast = 0.13,
-        Shadow = 0.32,
-        Saturation = 0.30
-    },
-    MEDIUM = {
-        Bloom = 0.12,
-        SunRays = 0.07,
-        Contrast = 0.09,
-        Shadow = 0.48,
-        Saturation = 0.24
-    },
-    LOW = {
-        Bloom = 0.06,
-        SunRays = 0.025,
-        Contrast = 0.05,
-        Shadow = 0.72,
-        Saturation = 0.16
-    }
-}
-
-local Original = {
-    GlobalShadows = Lighting.GlobalShadows,
-    ShadowSoftness = Lighting.ShadowSoftness,
-    EnvironmentDiffuseScale = Lighting.EnvironmentDiffuseScale,
-    EnvironmentSpecularScale = Lighting.EnvironmentSpecularScale,
-    ClockTime = Lighting.ClockTime,
-    Brightness = Lighting.Brightness,
-    ExposureCompensation = Lighting.ExposureCompensation
-}
-
-local WaterOriginal = {}
-
-if Terrain then
-    pcall(function()
-        WaterOriginal.WaterColor = Terrain.WaterColor
-        WaterOriginal.WaterTransparency = Terrain.WaterTransparency
-        WaterOriginal.WaterReflectance = Terrain.WaterReflectance
-        WaterOriginal.WaterWaveSize = Terrain.WaterWaveSize
-        WaterOriginal.WaterWaveSpeed = Terrain.WaterWaveSpeed
-    end)
-end
-
-for _, obj in ipairs(Lighting:GetChildren()) do
-    if obj.Name:sub(1, #PREFIX) == PREFIX then
-        obj:Destroy()
-    end
-end
-
-local function CreateEffect(class, name)
-    local obj = Instance.new(class)
-    obj.Name = PREFIX .. name
-    obj.Parent = Lighting
-    return obj
-end
-
-local Effects = {
-    Bloom = CreateEffect("BloomEffect", "Bloom"),
-    Color = CreateEffect("ColorCorrectionEffect", "Color"),
-    Rays = CreateEffect("SunRaysEffect", "Rays"),
-    DOF = CreateEffect("DepthOfFieldEffect", "DOF"),
-    Atmosphere = CreateEffect("Atmosphere", "Atmosphere")
-}
-
-local function SafeSet(object, property, value)
-    pcall(function()
-        object[property] = value
-    end)
-end
-
-local function ConfigurePipeline()
-    SafeSet(Lighting, "LightingStyle", Enum.LightingStyle.Realistic)
-    SafeSet(Lighting, "Technology", Enum.Technology.Future)
-    SafeSet(Lighting, "PrioritizeLightingQuality", true)
-    SafeSet(Lighting, "GlobalShadows", true)
-    SafeSet(Effects.Atmosphere, "Density", 0.28)
-    SafeSet(Effects.Atmosphere, "Offset", 0.25)
-    SafeSet(Effects.Atmosphere, "Glare", 0.12)
-    SafeSet(Effects.Atmosphere, "Haze", 0.45)
-end
-
-ConfigurePipeline()
-
-local localPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local playerGui = localPlayer:WaitForChild("PlayerGui")
-
-for _, gui in ipairs(playerGui:GetChildren()) do
-    if gui.Name == PREFIX .. "ClockHud" then
-        gui:Destroy()
-    end
-end
-
-local clockLabel = nil
-
-if Config.ShowClock then
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = PREFIX .. "ClockHud"
-    screenGui.ResetOnSpawn = false
-    screenGui.IgnoreGuiInset = false
-    screenGui.DisplayOrder = 50
-    screenGui.Parent = playerGui
-
-    local label = Instance.new("TextLabel")
-    label.Name = PREFIX .. "ClockText"
-    label.AnchorPoint = Vector2.new(0, 0)
-    label.Position = UDim2.new(0, 14, 0, 255)
-    label.Size = UDim2.new(0, 130, 0, 28)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 18
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextStrokeTransparency = 0.25
-    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    label.Text = "08:00"
-    label.Parent = screenGui
-
-    clockLabel = label
-end
-
-local currentFPS = 60
-local qualityMultiplier = 1
-local enabled = Config.Enabled
-
-local function GetTimePhaseColor(clockTime)
-    local white = Color3.fromRGB(255, 255, 255)
-    local orange = Color3.fromRGB(255, 130, 20)
-    local deepPurple = Color3.fromRGB(115, 0, 225)
-
-    if clockTime >= 6 and clockTime < 15.5 then
-        return white
-    elseif clockTime >= 15.5 and clockTime < 18.5 then
-        local t = (clockTime - 15.5) / 3
-        return white:Lerp(orange, t)
-    elseif clockTime >= 18.5 and clockTime < 20.2 then
-        local t = (clockTime - 18.5) / 1.7
-        return orange:Lerp(deepPurple, t)
-    elseif clockTime >= 20.2 or clockTime < 5 then
-        return deepPurple
-    else
-        local t = (clockTime - 5) / 1
-        return deepPurple:Lerp(white, t)
-    end
-end
-
-local function FormatClock(clockTime)
-    local totalMinutes = math.floor((clockTime % 24) * 60)
-    local hours = math.floor(totalMinutes / 60) % 24
-    local minutes = totalMinutes % 60
-    return string.format("%02d:%02d", hours, minutes)
-end
-
-local function ApplySaturationOnly()
-    if not Effects.Color then
-        return
-    end
-    Effects.Color.Enabled = enabled and Config.ColorGrading
-    if enabled and Config.ColorGrading then
-        Effects.Color.Saturation = Config.LockedSaturation
-    else
-        Effects.Color.Saturation = 0
-    end
-end
-
-local function ApplyShader()
-    local P = Presets[Config.Preset] or Presets.ULTRA
-    local multiplier = enabled and qualityMultiplier or 0
-
-    ConfigurePipeline()
-
-    SafeSet(Lighting, "GlobalShadows", enabled and Config.Shadows or Original.GlobalShadows)
-    SafeSet(Lighting, "ShadowSoftness", enabled and P.Shadow or Original.ShadowSoftness)
-    SafeSet(Lighting, "EnvironmentDiffuseScale", enabled and 1.15 or Original.EnvironmentDiffuseScale)
-    SafeSet(Lighting, "EnvironmentSpecularScale", enabled and 1.25 or Original.EnvironmentSpecularScale)
-
-    Effects.Bloom.Enabled = enabled and Config.Bloom
-    Effects.Bloom.Intensity = P.Bloom * multiplier
-    Effects.Bloom.Size = 37
-    Effects.Bloom.Threshold = 1.06
-
-    Effects.Color.Enabled = enabled and Config.ColorGrading
-    Effects.Color.Brightness = 0.01 * multiplier
-    Effects.Color.Contrast = P.Contrast * multiplier
-    Effects.Color.Saturation = enabled and Config.LockedSaturation or 0
-    Effects.Color.TintColor = Color3.fromRGB(255, 251, 244)
-
-    Effects.Rays.Enabled = enabled and Config.SunRays
-    Effects.Rays.Intensity = P.SunRays * multiplier
-    Effects.Rays.Spread = 0.85
-
-    Effects.DOF.Enabled = enabled and Config.DepthOfField
-    Effects.DOF.FarIntensity = 0.12
-    Effects.DOF.NearIntensity = 0.04
-    Effects.DOF.FocusDistance = 35
-    Effects.DOF.InFocusRadius = 25
-
-    if Terrain and Config.Water then
-        if enabled then
-            SafeSet(Terrain, "WaterColor", Color3.fromRGB(24, 128, 168))
-            SafeSet(Terrain, "WaterTransparency", 0.16)
-            SafeSet(Terrain, "WaterReflectance", 0.55)
-            SafeSet(Terrain, "WaterWaveSize", 0.16)
-            SafeSet(Terrain, "WaterWaveSpeed", 11)
-        else
-            for property, value in pairs(WaterOriginal) do
-                SafeSet(Terrain, property, value)
-            end
-        end
-    end
-end
-
-ApplyShader()
-
-Effects.Color:GetPropertyChangedSignal("Saturation"):Connect(function()
-    if enabled and Config.ColorGrading and Effects.Color.Saturation ~= Config.LockedSaturation then
-        Effects.Color.Saturation = Config.LockedSaturation
-    end
-end)
-
-local cyclePhase = "DAY_TO_NIGHT"
-local cycleElapsed = 0
-local currentClockTime = 9.0
-local fullCycleDuration = Config.DayToNightSeconds * 2
-
-local frameCount = 0
-local elapsed = 0
-local adaptiveTimer = 0
-
-RunService.RenderStepped:Connect(function(dt)
-    frameCount += 1
-    elapsed += dt
-    adaptiveTimer += dt
-
-    if enabled then
-        if cyclePhase == "DAY_TO_NIGHT" then
-            cycleElapsed += dt
-            local progress = math.clamp(cycleElapsed / Config.DayToNightSeconds, 0, 1)
-            currentClockTime = 9 + (progress * 12)
-            if progress >= 1 then
-                cyclePhase = "CONTINUOUS"
-                cycleElapsed = 0
-            end
-        else
-            cycleElapsed += dt
-            local progress = (cycleElapsed % fullCycleDuration) / fullCycleDuration
-            currentClockTime = (21 + (progress * 24)) % 24
-        end
-
-        SafeSet(Lighting, "ClockTime", currentClockTime)
-
-        local isNight = (currentClockTime >= 19.5 or currentClockTime < 5.5)
-        local targetBrightness = isNight and 0.65 or (currentClockTime >= 16 and 1.85 or 2.6)
-        SafeSet(Lighting, "Brightness", targetBrightness * math.max(0.4, qualityMultiplier))
-
-        ApplySaturationOnly()
-
-        if clockLabel then
-            clockLabel.Text = FormatClock(currentClockTime)
-            clockLabel.TextColor3 = GetTimePhaseColor(currentClockTime)
-        end
-    end
-
-    if elapsed >= 1 then
-        currentFPS = math.floor(frameCount / elapsed)
-        frameCount = 0
-        elapsed = 0
-    end
-
-    if Config.Adaptive and adaptiveTimer >= 3 then
-        adaptiveTimer = 0
-
-        if currentFPS < 25 then
-            qualityMultiplier = math.max(0.35, qualityMultiplier - 0.2)
-        elseif currentFPS < 35 then
-            qualityMultiplier = math.max(0.55, qualityMultiplier - 0.1)
-        elseif currentFPS > 50 then
-            qualityMultiplier = math.min(1, qualityMultiplier + 0.1)
-        end
-
-        ApplyShader()
-    end
-end)
-
-local function SetLZNShaderEnabled(value)
-    enabled = value == true
-    Config.Enabled = enabled
-    ApplyShader()
-    if not enabled then
-        for property, originalValue in pairs(Original) do
-            SafeSet(Lighting, property, originalValue)
-        end
-        if Terrain then
-            for property, originalValue in pairs(WaterOriginal) do
-                SafeSet(Terrain, property, originalValue)
-            end
-        end
-        if clockLabel and clockLabel.Parent then
-            clockLabel.Parent:Destroy()
-            clockLabel = nil
-        end
-    elseif Config.ShowClock and (not clockLabel or not clockLabel.Parent) then
-        local clockGui = Instance.new("ScreenGui")
-        clockGui.Name = PREFIX .. "ClockHud"
-        clockGui.ResetOnSpawn = false
-        clockGui.DisplayOrder = 50
-        clockGui.Parent = playerGui
-        local clock = Instance.new("TextLabel")
-        clock.Name = PREFIX .. "ClockText"
-        clock.Position = UDim2.new(0, 14, 0, 255)
-        clock.Size = UDim2.new(0, 130, 0, 28)
-        clock.BackgroundTransparency = 1
-        clock.Font = Enum.Font.GothamBold
-        clock.TextSize = 18
-        clock.TextColor3 = Color3.new(1, 1, 1)
-        clock.TextStrokeTransparency = 0.25
-        clock.Parent = clockGui
-        clockLabel = clock
-    end
-end
-
-if type(getgenv) == "function" then
-    getgenv().LZN_SetShadersEnabled = SetLZNShaderEnabled
-end
-
-]=]
-    local shaderLoaded = false
-    local function setLZNShaders(state)
-        if state then
-            if not shaderLoaded then
-                local compiler = loadstring or (type(getgenv) == "function" and getgenv().loadstring)
-                if type(compiler) == "function" then
-                    local ok, chunk = pcall(compiler, LZNShaderSource)
-                    if ok and type(chunk) == "function" then
-                        local ran = pcall(chunk)
-                        shaderLoaded = ran
-                    end
-                end
-            else
-                local env = type(getgenv) == "function" and getgenv() or _G
-                if type(env.LZN_SetShadersEnabled) == "function" then pcall(env.LZN_SetShadersEnabled, true) end
-            end
-        else
-            local env = type(getgenv) == "function" and getgenv() or _G
-            if type(env.LZN_SetShadersEnabled) == "function" then pcall(env.LZN_SetShadersEnabled, false) end
-        end
-    end
-    setLZNShaders(true)
-    makeStrictPlayerToggle("LZN shaders", "success", 4, true, setLZNShaders)
 
     customInvToggleObj = makeStrictPlayerToggle("INVENTÁRIO CUSTOMIZADO", "backpack", 5, customInventoryEnabled, function(state)
         SetCustomInventoryEnabled(state)
@@ -4629,7 +4145,7 @@ end
                 platformPart.CanCollide = true
                 platformPart.Transparency = 0.82
                 platformPart.Material = Enum.Material.SmoothPlastic
-                platformPart.Color = Color3.fromRGB(255, 196, 0)
+                platformPart.Color = Color3.fromRGB(0, 210, 255)
             end
             local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
@@ -4673,7 +4189,7 @@ end
     EquippedActionBar.Size = UDim2.new(0, 172, 0, 28)
     EquippedActionBar.Position = UDim2.new(0.5, 0, 1, -86)
     EquippedActionBar.AnchorPoint = Vector2.new(0.5, 1)
-    EquippedActionBar.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+    EquippedActionBar.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
     EquippedActionBar.BackgroundTransparency = 0.2
     EquippedActionBar.Visible = false
     EquippedActionBar.ZIndex = 12
@@ -4688,7 +4204,7 @@ end
     QtyBox.Text = "1"
     QtyBox.PlaceholderText = "Qtd"
     QtyBox.PlaceholderColor3 = Color3.fromRGB(115, 135, 160)
-    QtyBox.TextColor3 = Color3.fromRGB(255, 196, 0)
+    QtyBox.TextColor3 = Color3.fromRGB(0, 230, 255)
     QtyBox.Font = Enum.Font.GothamBold
     QtyBox.TextSize = 10
     QtyBox.ClearTextOnFocus = false
@@ -4716,7 +4232,7 @@ end
     StoreMiniBtn.Position = UDim2.new(0, 110, 0.5, -10)
     StoreMiniBtn.BackgroundColor3 = Color3.fromRGB(12, 24, 36)
     StoreMiniBtn.Text = "MOCHILA"
-    StoreMiniBtn.TextColor3 = Color3.fromRGB(0, 225, 255)
+    StoreMiniBtn.TextColor3 = Color3.fromRGB(255, 196, 0)
     StoreMiniBtn.Font = Enum.Font.GothamBold
     StoreMiniBtn.TextSize = 9
     StoreMiniBtn.ZIndex = 13
@@ -4782,7 +4298,7 @@ end
     DragGhost.ZIndex = 50
     DragGhost.Parent = InvGui
     Instance.new("UICorner", DragGhost).CornerRadius = UDim.new(0, 8)
-    AddGlow(DragGhost, Color3.fromRGB(0, 225, 255), 2, 0.05)
+    AddGlow(DragGhost, Color3.fromRGB(255, 196, 0), 2, 0.05)
 
     local GhostImg = Instance.new("ImageLabel")
     GhostImg.Size = UDim2.new(0, 32, 0, 32)
@@ -4942,7 +4458,7 @@ end
         local hum = char and char:FindFirstChildOfClass("Humanoid")
         if not itemName or not hum or not char then return end
 
-        PlayActionSFX("Button")
+        PlaySFX(ClickSFX, 1.05)
 
         if equippedSlotIdx == slotIdx then
             equippedSlotIdx = nil
@@ -5025,7 +4541,7 @@ end
         if not equippedSlotIdx then return end
         local itemName = hotbarSlots[equippedSlotIdx]
         if not itemName then return end
-        PlayActionSFX("Button")
+        PlaySFX(ClickSFX, 0.95)
         local qty = math.max(1, math.floor(tonumber(QtyBox.Text) or 1))
         local tools = FindToolsByName(itemName)
         local char = Player.Character
@@ -5077,7 +4593,7 @@ end
         if not equippedSlotIdx then return end
         local itemName = hotbarSlots[equippedSlotIdx]
         if not itemName then return end
-        PlayActionSFX("Button")
+        PlaySFX(ClickSFX, 1.05)
         local qty = math.max(1, math.floor(tonumber(QtyBox.Text) or 1))
         local tools = FindToolsByName(itemName)
         if #tools == 0 then return end
@@ -5124,7 +4640,7 @@ end
             btn.BackgroundTransparency = 0.55
             local st = btn:FindFirstChildOfClass("UIStroke")
             if st then
-                st.Color = Color3.fromRGB(0, 225, 255)
+                st.Color = Color3.fromRGB(255, 196, 0)
                 st.Transparency = 0.05
                 st.Thickness = 2
             end
@@ -5179,7 +4695,7 @@ end
                     end
                 end
                 if emptySlot then
-                    PlayActionSFX("DropdownSelect")
+                    PlaySFX(ClickSFX, 1.08)
                     RemoveBackpackCount(src.name, 1)
                     hotbarSlots[emptySlot] = src.name
                     GiveRealToolToPlayer(src.name, src.image, false)
@@ -5191,7 +4707,7 @@ end
         end
 
         isDraggingItem = false
-        PlayActionSFX("Button")
+        PlaySFX(ClickSFX, 1.02)
         local droppedOnHotbarIdx = nil
         for i = 1, 10 do
             local sObj = slotButtons[i]
@@ -5340,7 +4856,7 @@ end
     AddGlow(BackpackToggleBtn, accentColor, 1.4, 0.3)
     AddClickEffect(BackpackToggleBtn)
 
-    local bpIcon = CreateCustomIcon(BackpackToggleBtn, "backpack", Color3.fromRGB(0, 225, 255), 18)
+    local bpIcon = CreateCustomIcon(BackpackToggleBtn, "backpack", Color3.fromRGB(255, 196, 0), 18)
     bpIcon.Position = UDim2.new(0.5, -9, 0.5, -9)
 
     BackpackToggleBtn.MouseButton1Click:Connect(function()
@@ -5668,59 +5184,397 @@ end
         return fallback or ""
     end
 
-    local function applyLZNBlackYellowPalette(object)
-        if not object or not object.Parent or object:IsDescendantOf(NotifHolder) then return end
-        local function convert(color)
-            if typeof(color) ~= "Color3" then return color end
-            local r, g, b = color.R, color.G, color.B
-            if b > r * 1.12 and b > g * 1.04 and (b - r) > 0.08 then
-                local brightness = math.clamp((r + g + b) / 3, 0.12, 0.92)
-                return Color3.fromRGB(255, math.floor(150 + brightness * 95), math.floor(8 + brightness * 22))
-            end
-            return color
-        end
-        pcall(function()
-            if object:IsA("GuiObject") then object.BackgroundColor3 = convert(object.BackgroundColor3) end
-            if object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then object.TextColor3 = convert(object.TextColor3) end
-            if object:IsA("ImageLabel") or object:IsA("ImageButton") then object.ImageColor3 = convert(object.ImageColor3) end
-            if object:IsA("UIStroke") then object.Color = convert(object.Color) end
-        end)
-    end
-    for _, object in ipairs(ScreenGui:GetDescendants()) do applyLZNBlackYellowPalette(object) end
-    ScreenGui.DescendantAdded:Connect(function(object) task.defer(applyLZNBlackYellowPalette, object) end)
-
-    local locale = string.lower(tostring(Player.LocaleId or LocalizationService.RobloxLocaleId or "en-us"))
-    local languageCode = string.sub(locale, 1, 2)
-    local languageMap = {pt = "pt", en = "en", ru = "ru", es = "es", fr = "fr", de = "de", it = "it", ja = "ja", ko = "ko", zh = "zh"}
-    Window.Language = languageMap[languageCode] or "en"
-    Window.LanguageName = Window.Language
     task.spawn(function()
-        local translator
-        local ok, result = pcall(function()
-            return LocalizationService:GetTranslatorForPlayerAsync(Player)
+        MainFrame.Visible = false
+        ToggleHubBtn.Visible = false
+        HubOpen = true
+        if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
+
+        local introBlur = Instance.new("BlurEffect")
+        introBlur.Name = hubName .. "_IntroBlur"
+        introBlur.Size = 0
+        introBlur.Parent = Lighting
+        TweenService:Create(introBlur, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 24}):Play()
+
+        local overlay = Instance.new("Frame")
+        overlay.Name = "LZNLanguageIntro"
+        overlay.Size = UDim2.new(1, 0, 1, 0)
+        overlay.BackgroundColor3 = Color3.fromRGB(3, 5, 10)
+        overlay.BackgroundTransparency = 0.22
+        overlay.BorderSizePixel = 0
+        overlay.ZIndex = 300
+        overlay.Parent = FullScreenBlurGui
+
+        local panel = Instance.new("Frame")
+        local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(360, 720)
+        panel.Size = UDim2.new(0, 340, 0, 560)
+        panel.AnchorPoint = Vector2.new(0.5, 0.5)
+        panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+        panel.BackgroundColor3 = Color3.fromRGB(9, 13, 22)
+        panel.BackgroundTransparency = 0.06
+        panel.BorderSizePixel = 0
+        panel.ZIndex = 301
+        panel.Parent = overlay
+        Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 18)
+        AddGlow(panel, accentColor, 1.8, 0.16)
+        AddGradient(panel, Color3.fromRGB(17, 25, 41), Color3.fromRGB(7, 10, 18), 135)
+
+        local fitScale = Instance.new("UIScale")
+        fitScale.Name = "ViewportFit"
+        fitScale.Parent = panel
+        local function updateIntroScale()
+            local camera = workspace.CurrentCamera
+            local size = camera and camera.ViewportSize or Vector2.new(360, 720)
+            local scaleX = math.max(0.55, (size.X - 24) / 340)
+            local scaleY = math.max(0.45, (size.Y - 24) / 560)
+            fitScale.Scale = math.min(1, scaleX, scaleY)
+        end
+        updateIntroScale()
+        local viewportConnection
+        if workspace.CurrentCamera then
+            viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateIntroScale)
+        end
+
+        local panelScale = Instance.new("UIScale")
+        panelScale.Scale = 0.88
+        panelScale.Parent = panel
+        TweenService:Create(panelScale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+        local image1 = Instance.new("ImageLabel")
+        image1.Name = "ThankYouImage"
+        image1.Size = UDim2.new(0, 122, 0, 122)
+        image1.Position = UDim2.new(0.5, -61, 0, 18)
+        image1.BackgroundTransparency = 1
+        image1.Image = Window.LoadIntroImage("https://i.ibb.co/Lhz8DG4k/IMG-20261122-065924.png", "LZN_intro_thank.png", options.IntroImage1)
+        image1.ScaleType = Enum.ScaleType.Fit
+        image1.ImageTransparency = 1
+        image1.ZIndex = 302
+        image1.Parent = panel
+        local image1Scale = Instance.new("UIScale")
+        image1Scale.Scale = 0.72
+        image1Scale.Parent = image1
+
+        local thankText = Instance.new("TextLabel")
+        thankText.Size = UDim2.new(1, -28, 0, 34)
+        thankText.Position = UDim2.new(0, 14, 0, 145)
+        thankText.BackgroundTransparency = 1
+        thankText.Text = "obrigado por usar minha library cute cute:3"
+        thankText.TextColor3 = Color3.fromRGB(245, 248, 255)
+        thankText.Font = Enum.Font.GothamBold
+        thankText.TextSize = 13
+        thankText.TextWrapped = true
+        thankText.TextTransparency = 1
+        thankText.TextXAlignment = Enum.TextXAlignment.Center
+        thankText.ZIndex = 302
+        thankText.Parent = panel
+
+        local byline = Instance.new("TextLabel")
+        byline.Size = UDim2.new(1, -28, 0, 20)
+        byline.Position = UDim2.new(0, 14, 0, 179)
+        byline.BackgroundTransparency = 1
+        byline.Text = "Library by LZN (Lezin)"
+        byline.TextColor3 = Color3.fromRGB(0, 215, 255)
+        byline.Font = Enum.Font.GothamBold
+        byline.TextSize = 11
+        byline.TextTransparency = 1
+        byline.Visible = false
+        byline.TextXAlignment = Enum.TextXAlignment.Center
+        byline.ZIndex = 302
+        byline.Parent = panel
+
+        local image2 = Instance.new("ImageLabel")
+        image2.Name = "IntroSecondaryImage"
+        image2.Size = UDim2.new(0, 148, 0, 96)
+        image2.Position = UDim2.new(0.5, -74, 0, 207)
+        image2.BackgroundTransparency = 1
+        image2.Image = Window.LoadIntroImage("https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png", "LZN_intro_secondary.png", options.IntroImage2)
+        image2.ScaleType = Enum.ScaleType.Fit
+        image2.ImageTransparency = 1
+        image2.ZIndex = 302
+        image2.Parent = panel
+        local image2Scale = Instance.new("UIScale")
+        image2Scale.Scale = 0.58
+        image2Scale.Parent = image2
+
+        local languageTitle = Instance.new("TextLabel")
+        languageTitle.Size = UDim2.new(1, -28, 0, 24)
+        languageTitle.Position = UDim2.new(0, 14, 0, 318)
+        languageTitle.BackgroundTransparency = 1
+        languageTitle.Text = "escolha seu idioma"
+        languageTitle.TextColor3 = Color3.fromRGB(235, 245, 255)
+        languageTitle.Font = Enum.Font.GothamBold
+        languageTitle.TextSize = 12
+        languageTitle.TextXAlignment = Enum.TextXAlignment.Left
+        languageTitle.ZIndex = 302
+        languageTitle.Parent = panel
+
+        local languages = {
+            {Name = "Português (Brasil)", Code = "pt"},
+            {Name = "English", Code = "en"},
+            {Name = "Русский", Code = "ru"},
+            {Name = "Español", Code = "es"},
+            {Name = "Français", Code = "fr"},
+            {Name = "Deutsch", Code = "de"},
+            {Name = "日本語", Code = "ja"},
+            {Name = "한국어", Code = "ko"},
+            {Name = "中文", Code = "zh"},
+            {Name = "Türkçe", Code = "tr"},
+            {Name = "العربية", Code = "ar"},
+            {Name = "हिन्दी", Code = "hi"}
+        }
+        local selectedLanguage = languages[1]
+
+        local languageButton = Instance.new("TextButton")
+        languageButton.Size = UDim2.new(1, -28, 0, 36)
+        languageButton.Position = UDim2.new(0, 14, 0, 344)
+        languageButton.BackgroundColor3 = Color3.fromRGB(13, 22, 36)
+        languageButton.Text = selectedLanguage.Name .. "   ▾"
+        languageButton.TextColor3 = Color3.fromRGB(225, 240, 255)
+        languageButton.Font = Enum.Font.GothamBold
+        languageButton.TextSize = 11
+        languageButton.AutoButtonColor = false
+        languageButton.ZIndex = 303
+        languageButton.Parent = panel
+        Instance.new("UICorner", languageButton).CornerRadius = UDim.new(0, 9)
+        AddGlow(languageButton, accentColor, 1.2, 0.28)
+
+        local languageList = Instance.new("ScrollingFrame")
+        languageList.Size = UDim2.new(1, -28, 0, 0)
+        languageList.Position = UDim2.new(0, 14, 0, 384)
+        languageList.BackgroundColor3 = Color3.fromRGB(8, 12, 20)
+        languageList.BorderSizePixel = 0
+        languageList.ScrollBarThickness = 3
+        languageList.ScrollBarImageColor3 = accentColor
+        languageList.CanvasSize = UDim2.new(0, 0, 0, #languages * 30)
+        languageList.Visible = false
+        languageList.ZIndex = 304
+        languageList.Parent = panel
+        Instance.new("UICorner", languageList).CornerRadius = UDim.new(0, 8)
+        local langLayout = Instance.new("UIListLayout")
+        langLayout.Padding = UDim.new(0, 2)
+        langLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        langLayout.Parent = languageList
+
+        for i, language in ipairs(languages) do
+            local option = Instance.new("TextButton")
+            option.Size = UDim2.new(1, -6, 0, 28)
+            option.BackgroundColor3 = Color3.fromRGB(16, 23, 36)
+            option.BackgroundTransparency = 0.2
+            option.Text = language.Name
+            option.TextColor3 = Color3.fromRGB(220, 235, 250)
+            option.Font = Enum.Font.GothamMedium
+            option.TextSize = 11
+            option.LayoutOrder = i
+            option.AutoButtonColor = false
+            option.ZIndex = 305
+            option.Parent = languageList
+            Instance.new("UICorner", option).CornerRadius = UDim.new(0, 6)
+            option.MouseButton1Click:Connect(function()
+                selectedLanguage = language
+                languageButton.Text = language.Name .. "   ▾"
+                languageList.Visible = false
+                TweenService:Create(languageList, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -28, 0, 0)}):Play()
+            end)
+        end
+
+        local continueButton = Instance.new("TextButton")
+        continueButton.Size = UDim2.new(1, -28, 0, 38)
+        continueButton.Position = UDim2.new(0, 14, 1, -52)
+        continueButton.BackgroundColor3 = Color3.fromRGB(0, 145, 210)
+        continueButton.Text = "Continuar"
+        continueButton.TextColor3 = Color3.new(1, 1, 1)
+        continueButton.Font = Enum.Font.GothamBold
+        continueButton.TextSize = 12
+        continueButton.AutoButtonColor = false
+        continueButton.ZIndex = 303
+        continueButton.Parent = panel
+        Instance.new("UICorner", continueButton).CornerRadius = UDim.new(0, 9)
+        AddGlow(continueButton, Color3.fromRGB(90, 220, 255), 1.2, 0.18)
+
+        PlaySFX(Window.IntroThankSFX, 1)
+        TweenService:Create(image1, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+        TweenService:Create(image1Scale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(thankText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+
+        languageButton.MouseButton1Click:Connect(function()
+            local open = not languageList.Visible
+            languageList.Visible = true
+            TweenService:Create(languageList, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, -28, 0, open and 108 or 0)
+            }):Play()
+            if not open then
+                task.delay(0.18, function()
+                    if languageList and languageList.Parent then languageList.Visible = false end
+                end)
+            end
         end)
-        if ok then translator = result end
-        if not translator then return end
-        local translatedCache = {}
-        local function translateObject(object)
-            if not object or not object.Parent then return end
+
+        local function buildTranslator()
+            local moduleRef = options.AutoTranslateModule
+            if not moduleRef then
+                moduleRef = ReplicatedStorage:FindFirstChild("AutoTranslate", true)
+            end
+            if not moduleRef and type(getgenv) == "function" then
+                pcall(function()
+                    local env = getgenv()
+                    moduleRef = env.AutoTranslateModule or env.LZN_AutoTranslateModule
+                end)
+            end
+            if type(moduleRef) == "string" then
+                local numericRef = tonumber(moduleRef)
+                if numericRef then
+                    moduleRef = numericRef
+                else
+                    local path = moduleRef:gsub("^game%.ReplicatedStorage%.?", "")
+                    local current = ReplicatedStorage
+                    for segment in string.gmatch(path, "[^%.]+") do
+                        current = current and current:FindFirstChild(segment)
+                    end
+                    if current then moduleRef = current end
+                end
+            end
+            local moduleObject = options.AutoTranslate
+            if not moduleObject and moduleRef then
+                local ok, result = pcall(require, moduleRef)
+                if ok then moduleObject = result end
+            end
+            if type(moduleObject) ~= "table" or type(moduleObject.new) ~= "function" then
+                return nil
+            end
+            local ok, instance = pcall(function()
+                return moduleObject.new({
+                    TargetLang = selectedLanguage.Code,
+                    SourceLang = "auto",
+                    DelayBetweenRequests = 0.08
+                })
+            end)
+            if ok then return instance end
+            return nil
+        end
+
+        local translator = nil
+        local translatedTextCache = {}
+        local function translateGuiObject(object)
+            if not translator or not object or not object.Parent then return end
             if not (object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")) then return end
             local original = object.Text
-            if type(original) ~= "string" or original == "" or original:match("^rbxassetid://") then return end
-            if translatedCache[original] then object.Text = translatedCache[original]; return end
-            local translated
-            local translatedOk = pcall(function()
-                translated = translator:Translate(game, original)
-            end)
-            if translatedOk and type(translated) == "string" and translated ~= "" then
-                translatedCache[original] = translated
-                object.Text = translated
+            if type(original) ~= "string" or original == "" or translatedTextCache[original] ~= nil then
+                if translatedTextCache[original] and object.Parent then object.Text = translatedTextCache[original] end
+                return
             end
+            if original:match("^rbxassetid://") or original:match("^#%x%x%x%x%x%x$") then return end
+            local ok = pcall(function()
+                translator:TranslateAsync(original, function(translatedText, err)
+                    if not err and type(translatedText) == "string" and object.Parent then
+                        translatedTextCache[original] = translatedText
+                        object.Text = translatedText
+                    end
+                end)
+            end)
+            if not ok then return end
         end
-        for _, object in ipairs(ScreenGui:GetDescendants()) do translateObject(object) end
-        for _, object in ipairs(FullScreenBlurGui:GetDescendants()) do translateObject(object) end
-        ScreenGui.DescendantAdded:Connect(function(object) task.defer(translateObject, object) end)
-        FullScreenBlurGui.DescendantAdded:Connect(function(object) task.defer(translateObject, object) end)
+
+        local translateConnections = {}
+        local function applyLanguage()
+            translator = buildTranslator()
+            Window.Language = selectedLanguage.Code
+            Window.LanguageName = selectedLanguage.Name
+            if not translator then
+                warn("[LZN Library] Idioma selecionado: " .. tostring(selectedLanguage.Code) .. ". Para traduzir os textos, forneça options.AutoTranslateModule com o ModuleScript/ID ou publique um ModuleScript chamado AutoTranslate em ReplicatedStorage.")
+                return
+            end
+            for _, object in ipairs(ScreenGui:GetDescendants()) do
+                translateGuiObject(object)
+            end
+            for _, object in ipairs(FullScreenBlurGui:GetDescendants()) do
+                translateGuiObject(object)
+            end
+            table.insert(translateConnections, ScreenGui.DescendantAdded:Connect(function(object)
+                task.defer(function() translateGuiObject(object) end)
+            end))
+            table.insert(translateConnections, FullScreenBlurGui.DescendantAdded:Connect(function(object)
+                task.defer(function() translateGuiObject(object) end)
+            end))
+        end
+
+        local completed = false
+        continueButton.MouseButton1Click:Connect(function()
+            if completed then return end
+            completed = true
+            applyLanguage()
+            byline.Visible = true
+            TweenService:Create(byline, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            languageButton.Active = false
+            continueButton.Active = false
+            languageTitle.Visible = false
+            languageButton.Visible = false
+            languageList.Visible = false
+            continueButton.Visible = false
+
+            TweenService:Create(image2, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+            TweenService:Create(image2Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+            task.wait(2.7)
+            if not overlay.Parent then return end
+            local fadeSecond = TweenService:Create(image2, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1})
+            fadeSecond:Play()
+            TweenService:Create(image2Scale, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.65}):Play()
+            fadeSecond.Completed:Wait()
+
+            if not overlay.Parent then return end
+            image2.Visible = false
+            local image3 = Instance.new("ImageLabel")
+            image3.Name = "WelcomeImage"
+            image3.Size = UDim2.new(0, 148, 0, 96)
+            image3.Position = UDim2.new(0.5, -74, 0, 207)
+            image3.BackgroundTransparency = 1
+            image3.Image = Window.LoadIntroImage("https://i.ibb.co/jFJt92F/file-000000003304820eb37d3ad0b97ead96.png", "LZN_intro_welcome.png", options.IntroImage3)
+            image3.ScaleType = Enum.ScaleType.Fit
+            image3.ImageTransparency = 1
+            image3.ZIndex = 302
+            image3.Parent = panel
+            local image3Scale = Instance.new("UIScale")
+            image3Scale.Scale = 0.58
+            image3Scale.Parent = image3
+
+            local welcomeText = Instance.new("TextLabel")
+            welcomeText.Size = UDim2.new(1, -28, 0, 32)
+            welcomeText.Position = UDim2.new(0, 14, 0, 310)
+            welcomeText.BackgroundTransparency = 1
+            welcomeText.Text = "Bem-vindo(a) " .. tostring(Player.DisplayName)
+            welcomeText.TextColor3 = Color3.fromRGB(245, 248, 255)
+            welcomeText.Font = Enum.Font.GothamBold
+            welcomeText.TextSize = 13
+            welcomeText.TextWrapped = true
+            welcomeText.TextTransparency = 1
+            welcomeText.TextXAlignment = Enum.TextXAlignment.Center
+            welcomeText.ZIndex = 302
+            welcomeText.Parent = panel
+
+            PlaySFX(Window.IntroWelcomeSFX, 1)
+            TweenService:Create(image3, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+            TweenService:Create(image3Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            TweenService:Create(welcomeText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            task.wait(2.6)
+
+            if overlay.Parent then
+                TweenService:Create(overlay, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+                TweenService:Create(panelScale, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.92}):Play()
+            end
+            TweenService:Create(introBlur, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0}):Play()
+            task.wait(0.45)
+            if viewportConnection then viewportConnection:Disconnect() end
+            if overlay and overlay.Parent then overlay:Destroy() end
+            if introBlur and introBlur.Parent then introBlur:Destroy() end
+            if ScreenGui and ScreenGui.Parent then
+                MainFrame.Visible = true
+                ToggleHubBtn.Visible = true
+                HubOpen = true
+                HubScale.Scale = 0.72
+                TweenService:Create(HubScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+                if BackgroundMusic and BGMText.Text ~= "OFF" then BackgroundMusic:Resume() end
+            end
+        end)
     end)
 
     UpdateHubHeight()
