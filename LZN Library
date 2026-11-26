@@ -829,15 +829,7 @@ function LZNLib:CreateWindow(options)
         end
     end
 
-    local openColorPickers = {}
-    local function CloseAllColorPickers()
-        for closeFn in pairs(openColorPickers) do
-            pcall(closeFn)
-        end
-    end
-
     local function SetPage(page)
-        CloseAllColorPickers()
         CurrentPage = page
         ContentContainer.Visible = page == "Home"
         GamePage.Visible = page == "Game"
@@ -1146,11 +1138,6 @@ function LZNLib:CreateWindow(options)
 
     local HubOpen = true
     local IsAnimatingHub = false
-    MainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
-        if not MainFrame.Visible and CloseAllColorPickers then
-            CloseAllColorPickers()
-        end
-    end)
 
     ToggleHubBtn.MouseButton1Click:Connect(function()
         if IsAnimatingHub then return end
@@ -1169,7 +1156,6 @@ function LZNLib:CreateWindow(options)
                 IsAnimatingHub = false
             end)
         else
-            CloseAllColorPickers()
             local tween = TweenService:Create(HubScale, TweenInfo.new(0.24, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
                 Scale = 0.01
             })
@@ -2774,7 +2760,6 @@ function LZNLib:CreateWindow(options)
     end
 
     local function SelectPublicTab(tab, silent)
-        CloseAllColorPickers()
         if type(tab) == "string" then tab = TabRegistry[tab] end
         if not tab or not tab.Page or not tab.Page.Parent then return false end
         ActiveTabName = tab.Name
@@ -3229,14 +3214,8 @@ function LZNLib:CreateWindow(options)
     ThemeManager:Register("Crimson", {Accent = Color3.fromRGB(255, 65, 90), Background = Color3.fromRGB(20, 8, 13)})
     Window.ThemeManager = ThemeManager
     Window.UIManager = {
-        SetVisible = function(_, value)
-            if value ~= true then CloseAllColorPickers() end
-            MainFrame.Visible = value == true
-        end,
-        Toggle = function()
-            if MainFrame.Visible then CloseAllColorPickers() end
-            MainFrame.Visible = not MainFrame.Visible
-        end,
+        SetVisible = function(_, value) MainFrame.Visible = value == true end,
+        Toggle = function() MainFrame.Visible = not MainFrame.Visible end,
         SetSize = function(_, size) if typeof(size) == "UDim2" then MainFrame.Size = size end end,
         SetPosition = function(_, position) if typeof(position) == "UDim2" then MainFrame.Position = position end end
     }
@@ -3413,8 +3392,8 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 7)
 
         local preview = Instance.new("Frame")
-        preview.Size = UDim2.new(0, 18, 0, 18)
-        preview.Position = UDim2.new(1, -28, 0, 181)
+        preview.Size = UDim2.new(0, 26, 0, 20)
+        preview.Position = UDim2.new(1, -38, 0, 39)
         preview.BackgroundColor3 = draftColor
         preview.BorderSizePixel = 0
         preview.ZIndex = 82
@@ -3496,8 +3475,8 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", hueMarker).CornerRadius = UDim.new(1, 0)
 
         local hexLabel = Instance.new("TextLabel")
-        hexLabel.Size = UDim2.new(1, -52, 0, 20)
-        hexLabel.Position = UDim2.new(0, 10, 0, 180)
+        hexLabel.Size = UDim2.new(1, -20, 0, 20)
+        hexLabel.Position = UDim2.new(0, 10, 0, 184)
         hexLabel.BackgroundTransparency = 1
         hexLabel.TextColor3 = Color3.fromRGB(155, 180, 205)
         hexLabel.Font = Enum.Font.GothamMedium
@@ -3576,13 +3555,6 @@ function LZNLib:CreateWindow(options)
         end
         local function openPicker()
             hue, saturation, value = committedColor:ToHSV()
-            picker.BackgroundColor3 = MainFrame.BackgroundColor3
-            local themeAccent = accentColor
-            header.TextColor3 = Color3.fromRGB(230, 242, 255)
-            closeBtn.BackgroundColor3 = themeAccent:Lerp(Color3.fromRGB(20, 25, 36), 0.72)
-            resetBtn.BackgroundColor3 = themeAccent:Lerp(Color3.fromRGB(15, 20, 30), 0.78)
-            okBtn.BackgroundColor3 = themeAccent
-            AddGlow(picker, themeAccent, 1.5, 0.18)
             updateDraft()
             placePopup()
             animatePopup(true)
@@ -3593,10 +3565,6 @@ function LZNLib:CreateWindow(options)
             updateDraft()
             animatePopup(false)
         end
-        openColorPickers[closePicker] = true
-        picker.Destroying:Connect(function()
-            openColorPickers[closePicker] = nil
-        end)
         local draggingSV = false
         local draggingHue = false
         local activePickerInput = nil
@@ -3766,7 +3734,6 @@ function LZNLib:CreateWindow(options)
     PInfo.Parent = PlayerCard
 
     local defaultGravity = workspace.Gravity
-    local gravityTarget = defaultGravity
     local defaultWalkSpeed = 16
     local defaultJumpPower = 50
     local savedMaxHealth = 100
@@ -3783,7 +3750,6 @@ function LZNLib:CreateWindow(options)
     local hookedHazardParts = {}
     local godHealthConn = nil
     local godDiedConn = nil
-    local movementBindings = {}
 
     local function CaptureDefaultCharStats(char)
         local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -3837,7 +3803,6 @@ function LZNLib:CreateWindow(options)
         Default = defaultGravity,
         ResetValue = defaultGravity,
         Callback = function(v)
-            gravityTarget = v
             workspace.Gravity = v
         end
     }, 4)
@@ -3867,48 +3832,8 @@ function LZNLib:CreateWindow(options)
         enforceJumpPower()
     end
 
-    local function BindMovementPersistence(hum)
-        if not hum then return end
-        local enforcing = false
-        local function enforceMovement()
-            if enforcing or not hum.Parent then return end
-            enforcing = true
-            pcall(function()
-                local targetSpeed = speedSlider:GetValue()
-                local targetJump = jumpSlider:GetValue()
-                if math.abs(hum.WalkSpeed - targetSpeed) > 0.01 then
-                    hum.WalkSpeed = targetSpeed
-                end
-                hum.UseJumpPower = true
-                if math.abs(hum.JumpPower - targetJump) > 0.01 then
-                    hum.JumpPower = targetJump
-                end
-            end)
-            enforcing = false
-        end
-        table.insert(movementBindings, hum:GetPropertyChangedSignal("WalkSpeed"):Connect(enforceMovement))
-        table.insert(movementBindings, hum:GetPropertyChangedSignal("JumpPower"):Connect(enforceMovement))
-        table.insert(movementBindings, hum:GetPropertyChangedSignal("UseJumpPower"):Connect(enforceMovement))
-        task.defer(enforceMovement)
-    end
-
-    gravityTarget = gravitySlider:GetValue()
-    local gravityEnforcing = false
-    workspace:GetPropertyChangedSignal("Gravity"):Connect(function()
-        if gravityEnforcing then return end
-        gravityEnforcing = true
-        task.defer(function()
-            if math.abs(workspace.Gravity - gravityTarget) > 0.001 then
-                workspace.Gravity = gravityTarget
-            end
-            gravityEnforcing = false
-        end)
-    end)
-
     if Player.Character then
-        local initialHum = Player.Character:FindFirstChildOfClass("Humanoid")
-        BindJumpPowerPersistence(initialHum)
-        BindMovementPersistence(initialHum)
+        BindJumpPowerPersistence(Player.Character:FindFirstChildOfClass("Humanoid"))
     end
 
     local function SetCharacterNonCollide(enabled)
@@ -3965,8 +3890,8 @@ function LZNLib:CreateWindow(options)
                         if hum:GetState() == Enum.HumanoidStateType.Dead then
                             hum:ChangeState(Enum.HumanoidStateType.Running)
                         end
-                        hum.MaxHealth = math.max(savedMaxHealth, 1000000)
-                        hum.Health = hum.MaxHealth
+                        hum.MaxHealth = math.huge
+                        hum.Health = math.huge
                     end)
                 end
                 if hrp and lastSavedPos and hrp.Position.Y <= workspace.FallenPartsDestroyHeight + 22 then
@@ -4013,8 +3938,8 @@ function LZNLib:CreateWindow(options)
             hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
             hum.BreakJointsOnDeath = false
-            hum.MaxHealth = math.max(savedMaxHealth, 1000000)
-            hum.Health = hum.MaxHealth
+            hum.MaxHealth = math.huge
+            hum.Health = math.huge
         end)
     end
 
@@ -4027,9 +3952,10 @@ function LZNLib:CreateWindow(options)
             EnforceGodOnHumanoid(hum)
             godHealthConn = hum:GetPropertyChangedSignal("Health"):Connect(function()
                 if godModeActive and hum and hum.Parent then
-                    if hum.Health < hum.MaxHealth then
+                    if hum.Health < math.huge then
                         pcall(function()
-                            hum.Health = hum.MaxHealth
+                            hum.MaxHealth = math.huge
+                            hum.Health = math.huge
                         end)
                     end
                 end
@@ -4038,8 +3964,8 @@ function LZNLib:CreateWindow(options)
                 if godModeActive and hum and hum.Parent then
                     pcall(function()
                         hum:ChangeState(Enum.HumanoidStateType.Running)
-                        hum.MaxHealth = math.max(savedMaxHealth, 1000000)
-                        hum.Health = hum.MaxHealth
+                        hum.MaxHealth = math.huge
+                        hum.Health = math.huge
                     end)
                 end
             end)
@@ -4087,14 +4013,6 @@ function LZNLib:CreateWindow(options)
             hum.UseJumpPower = true
             hum.JumpPower = jumpSlider:GetValue()
             BindJumpPowerPersistence(hum)
-            BindMovementPersistence(hum)
-            task.delay(0.5, function()
-                if hum.Parent then
-                    hum.WalkSpeed = speedSlider:GetValue()
-                    hum.UseJumpPower = true
-                    hum.JumpPower = jumpSlider:GetValue()
-                end
-            end)
         end
         if godModeActive then
             BindGodModeToCharacter(newChar)
@@ -6102,4 +6020,4 @@ end
     return Window
 end
 
-return LZNLib
+return LZNLi
