@@ -311,10 +311,10 @@ function LZNLib:CreateWindow(options)
     local hubName = options.Name or "LZNUltraHub"
     local titleText = options.Title or "LZN // ULTIMATE ENGINE"
     local bgImage = options.BackgroundImage or "rbxassetid://78521393913034"
-    local floatImage = "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png"
+    local floatImage = options.FloatingImage or "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png"
     local musicId = options.MusicId or "rbxassetid://132631534724831"
     local musicVolume = options.MusicVolume or 0.12
-    local accentColor = Color3.fromRGB(255, 196, 0)
+    local accentColor = options.AccentColor or Color3.fromRGB(255, 196, 0)
     local customInventoryEnabled = options.CustomInventory ~= false
 
     local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://131390520971848"
@@ -3170,16 +3170,19 @@ function LZNLib:CreateWindow(options)
         return handle
     end
 
-    local ThemeManager = {Current = "Black & Yellow", Themes = {}}
+    local ThemeManager = {Current = "Default", Themes = {}}
     function ThemeManager:Register(name, theme) self.Themes[name] = theme end
     function ThemeManager:Apply(name)
-        self.Current = "Black & Yellow"
-        accentColor = Color3.fromRGB(255, 196, 0)
-        MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        local theme = self.Themes[name]
+        if not theme then return false end
+        self.Current = name
+        if theme.Accent then accentColor = theme.Accent end
+        if theme.Background then MainFrame.BackgroundColor3 = theme.Background end
         return true
     end
-    ThemeManager:Register("Black & Yellow", {Accent = Color3.fromRGB(255, 196, 0), Background = Color3.fromRGB(0, 0, 0)})
-    ThemeManager:Register("Default", {Accent = Color3.fromRGB(255, 196, 0), Background = Color3.fromRGB(0, 0, 0)})
+    ThemeManager:Register("Default", {Accent = accentColor, Background = Color3.fromRGB(8, 10, 15)})
+    ThemeManager:Register("Ocean", {Accent = Color3.fromRGB(255, 196, 0), Background = Color3.fromRGB(7, 16, 27)})
+    ThemeManager:Register("Crimson", {Accent = Color3.fromRGB(255, 65, 90), Background = Color3.fromRGB(20, 8, 13)})
     Window.ThemeManager = ThemeManager
     Window.UIManager = {
         SetVisible = function(_, value) MainFrame.Visible = value == true end,
@@ -5160,70 +5163,32 @@ function LZNLib:CreateWindow(options)
         return fallback or ""
     end
 
-    -- Imagens solicitadas: botão flutuante e somente os quatro fundos escolhidos.
+    -- Assets externos: cache local com getcustomasset para imagens de fundo e botão flutuante.
     local backgroundUrls = {
+        "https://i.ibb.co/d4cv5BCf/junoelise161-Manhattan-Cafe-umamusume-9137539.jpg",
         "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png",
         "https://i.ibb.co/XfKzm6Pm/LZN-1795598058085.webp",
-        "https://i.ibb.co/3yvdQvxf/herohero-higashi-no-dou-Manhattan-Cafe-umamusume-9158949.jpg",
-        "https://i.ibb.co/d4cv5BCf/junoelise161-Manhattan-Cafe-umamusume-9137539.jpg"
+        "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png",
+        "https://i.ibb.co/3yvdQvxf/herohero-higashi-no-dou-Manhattan-Cafe-umamusume-9158949.jpg"
     }
     local function LoadCachedImage(url, fileName)
         return Window.LoadIntroImage(url, fileName, "")
     end
-
-    -- Botão flutuante: thumb-1920-1284078.png (cache via getcustomasset).
-    local floatingAsset = LoadCachedImage(
-        "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png",
-        "LZN_floating_thumb_1920_1284078.png"
-    )
-    if floatingAsset ~= "" then
-        FloatingButtonImage.Image = floatingAsset
-    else
-        FloatingButtonImage.Image = "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png"
-    end
-
+    local floatingAsset = LoadCachedImage("https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png", "LZN_floating_manhattan.png")
+    if floatingAsset ~= "" then FloatingButtonImage.Image = floatingAsset end
     local loadedBackgrounds = {}
     for i, url in ipairs(backgroundUrls) do
         local extension = url:match("%.([%w]+)$") or "png"
-        loadedBackgrounds[i] = LoadCachedImage(url, "LZN_hub_background_requested_" .. tostring(i) .. "." .. extension)
-        if loadedBackgrounds[i] == "" then
-            loadedBackgrounds[i] = url
-        end
+        loadedBackgrounds[i] = LoadCachedImage(url, "LZN_hub_background_" .. tostring(i) .. "." .. extension)
     end
-
-    -- Segunda camada para crossfade suave entre os fundos.
-    local HubBackgroundFade = Instance.new("ImageLabel")
-    HubBackgroundFade.Name = "HubBackgroundFade"
-    HubBackgroundFade.Size = HubBackground.Size
-    HubBackgroundFade.Position = HubBackground.Position
-    HubBackgroundFade.AnchorPoint = HubBackground.AnchorPoint
-    HubBackgroundFade.BackgroundTransparency = 1
-    HubBackgroundFade.ImageTransparency = 1
-    HubBackgroundFade.ScaleType = HubBackground.ScaleType
-    HubBackgroundFade.ZIndex = HubBackground.ZIndex
-    HubBackgroundFade.Parent = HubBackground.Parent
-    local bgCorner = Instance.new("UICorner")
-    bgCorner.CornerRadius = UDim.new(0, 18)
-    bgCorner.Parent = HubBackgroundFade
-
     task.spawn(function()
-        local activeLayer = HubBackground
-        local nextLayer = HubBackgroundFade
         local index = 1
-        activeLayer.Image = loadedBackgrounds[index]
-        activeLayer.ImageTransparency = 0
         while ScreenGui.Parent do
+            if loadedBackgrounds[index] and loadedBackgrounds[index] ~= "" then
+                HubBackground.Image = loadedBackgrounds[index]
+            end
+            index = (index % #backgroundUrls) + 1
             task.wait(10)
-            if not ScreenGui.Parent then break end
-            index = (index % #loadedBackgrounds) + 1
-            nextLayer.Image = loadedBackgrounds[index]
-            nextLayer.ImageTransparency = 1
-            local fadeIn = TweenService:Create(nextLayer, TweenInfo.new(1.15, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {ImageTransparency = 0})
-            local fadeOut = TweenService:Create(activeLayer, TweenInfo.new(1.15, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {ImageTransparency = 1})
-            fadeIn:Play()
-            fadeOut:Play()
-            fadeIn.Completed:Wait()
-            activeLayer, nextLayer = nextLayer, activeLayer
         end
     end)
 
@@ -6049,62 +6014,6 @@ end
         ToggleHubBtn.Visible = true
         HubOpen = true
     end
-
-    -- Tema global obrigatório: preto + amarelo em toda a interface da Library.
-    local LZN_BLACK = Color3.fromRGB(0, 0, 0)
-    local LZN_YELLOW = Color3.fromRGB(255, 196, 0)
-    local function ApplyBlackYellow(root)
-        if not root then return end
-        for _, obj in ipairs(root:GetDescendants()) do
-            pcall(function()
-                if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                    obj.TextColor3 = LZN_YELLOW
-                    obj.TextStrokeColor3 = LZN_BLACK
-                    if obj:IsA("TextButton") then
-                        local c = obj.BackgroundColor3
-                        local brightness = math.max(c.R, c.G, c.B)
-                        obj.BackgroundColor3 = brightness > 0.72 and LZN_YELLOW or LZN_BLACK
-                    end
-                elseif obj:IsA("GuiObject") and not obj:IsA("ImageLabel") and not obj:IsA("ImageButton") then
-                    local c = obj.BackgroundColor3
-                    local maxC = math.max(c.R, c.G, c.B)
-                    local minC = math.min(c.R, c.G, c.B)
-                    local saturation = maxC > 0 and ((maxC - minC) / maxC) or 0
-                    if obj.BackgroundTransparency < 1 then
-                        if saturation > 0.35 and maxC > 0.28 then
-                            obj.BackgroundColor3 = LZN_YELLOW
-                        else
-                            obj.BackgroundColor3 = LZN_BLACK
-                        end
-                    end
-                end
-                if obj:IsA("UIStroke") then
-                    obj.Color = LZN_YELLOW
-                elseif obj:IsA("UIGradient") then
-                    local parentName = obj.Parent and string.lower(obj.Parent.Name) or ""
-                    if not string.find(parentName, "hue", 1, true) and not string.find(parentName, "saturation", 1, true) then
-                        obj.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0, LZN_BLACK),
-                            ColorSequenceKeypoint.new(1, LZN_YELLOW)
-                        })
-                    end
-                end
-            end)
-        end
-        pcall(function() MainFrame.BackgroundColor3 = LZN_BLACK end)
-    end
-
-    ApplyBlackYellow(ScreenGui)
-    ApplyBlackYellow(FullScreenBlurGui)
-    ApplyBlackYellow(InvGui)
-    task.spawn(function()
-        while ScreenGui.Parent do
-            task.wait(0.75)
-            ApplyBlackYellow(ScreenGui)
-            ApplyBlackYellow(FullScreenBlurGui)
-            ApplyBlackYellow(InvGui)
-        end
-    end)
 
     UpdateHubHeight()
     return Window
