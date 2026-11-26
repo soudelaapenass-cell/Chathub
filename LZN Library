@@ -310,8 +310,8 @@ function LZNLib:CreateWindow(options)
     options = options or {}
     local hubName = options.Name or "LZNUltraHub"
     local titleText = options.Title or "LZN // ULTIMATE ENGINE"
-    local bgImage = options.BackgroundImage or ""
-    local floatImage = options.FloatingImage or "rbxassetid://75283846905375"
+    local bgImage = "https://i.ibb.co/TD5SQyGY/manhattan-cafe-umamusume-drawn-by-gwinggwing-sample-467edfd96009dfffca371a679c9c95bb.jpg"
+    local floatImage = "rbxassetid://75283846905375"
     local musicId = options.MusicId or "rbxassetid://132631534724831"
     local musicVolume = options.MusicVolume or 0.12
     local accentColor = Color3.fromRGB(255, 196, 0)
@@ -5150,12 +5150,13 @@ function LZNLib:CreateWindow(options)
         end
     end)
 
-    Window.LoadIntroImage = function(url, fileName, fallback)
+
+    local function LoadBackgroundAsset(url, fileName)
         if type(getcustomasset) ~= "function" and type(getsynasset) ~= "function" then
-            return fallback or ""
+            return url
         end
         if type(writefile) ~= "function" then
-            return fallback or ""
+            return url
         end
         local assetGetter = type(getcustomasset) == "function" and getcustomasset or getsynasset
         local cached = false
@@ -5171,33 +5172,26 @@ function LZNLib:CreateWindow(options)
             elseif type(syn) == "table" and type(syn.request) == "function" then
                 requestFunction = syn.request
             end
-            local body = nil
+            local body
             if requestFunction then
                 local ok, response = pcall(requestFunction, {Url = url, Method = "GET"})
-                if ok and type(response) == "table" and response.Success ~= false then
-                    body = response.Body
-                end
+                if ok and type(response) == "table" and response.Success ~= false then body = response.Body end
             end
             if type(body) ~= "string" or #body < 100 then
                 local ok, result = pcall(function() return game:HttpGet(url) end)
                 if ok and type(result) == "string" and #result > 100 then body = result end
             end
-            if type(body) == "string" and #body > 100 then
-                pcall(writefile, fileName, body)
-            end
+            if type(body) == "string" and #body > 100 then pcall(writefile, fileName, body) end
         end
         local ok, asset = pcall(assetGetter, fileName)
         if ok and type(asset) == "string" then return asset end
-        return fallback or ""
+        return url
     end
 
-    -- Carregamento local somente para a imagem de fundo.
-    local backgroundUrl = "https://i.ibb.co/TD5SQyGY/manhattan-cafe-umamusume-drawn-by-gwinggwing-sample-467edfd96009dfffca371a679c9c95bb.jpg"
-    local backgroundAsset = Window.LoadIntroImage(backgroundUrl, "LZN_hub_background.jpg", "")
-    if backgroundAsset ~= "" then
-        HubBackground.Image = backgroundAsset
-    end
+    HubBackground.Image = LoadBackgroundAsset(bgImage, "LZN_hub_background.jpg")
     HubBackground.ScaleType = Enum.ScaleType.Stretch
+    FloatingButtonImage.Image = floatImage
+    FloatingButtonImage.ScaleType = Enum.ScaleType.Stretch
 
     -- Shader original do arquivo Shaders by LZN (Lezin), embutido para funcionar como toggle.
     local LZN_SHADER_SOURCE = [=[local Lighting = game:GetService("Lighting")
@@ -5646,7 +5640,7 @@ end
 
         local panel = Instance.new("Frame")
         local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(360, 720)
-        panel.Size = UDim2.new(0, 340, 0, 420)
+        panel.Size = UDim2.new(0, 340, 0, 560)
         panel.AnchorPoint = Vector2.new(0.5, 0.5)
         panel.Position = UDim2.new(0.5, 0, 0.5, 0)
         panel.BackgroundColor3 = Color3.fromRGB(9, 13, 22)
@@ -5665,7 +5659,7 @@ end
             local camera = workspace.CurrentCamera
             local size = camera and camera.ViewportSize or Vector2.new(360, 720)
             local scaleX = math.max(0.55, (size.X - 24) / 340)
-            local scaleY = math.max(0.45, (size.Y - 24) / 420)
+            local scaleY = math.max(0.45, (size.Y - 24) / 560)
             fitScale.Scale = math.min(1, scaleX, scaleY)
         end
         updateIntroScale()
@@ -5678,6 +5672,20 @@ end
         panelScale.Scale = 0.88
         panelScale.Parent = panel
         TweenService:Create(panelScale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+        local image1 = Instance.new("ImageLabel")
+        image1.Name = "ThankYouImage"
+        image1.Size = UDim2.new(0, 122, 0, 122)
+        image1.Position = UDim2.new(0.5, -61, 0, 18)
+        image1.BackgroundTransparency = 1
+        image1.Image = options.IntroImage1 or "https://i.ibb.co/Lhz8DG4k/IMG-20261122-065924.png"
+        image1.ScaleType = Enum.ScaleType.Fit
+        image1.ImageTransparency = 1
+        image1.ZIndex = 302
+        image1.Parent = panel
+        local image1Scale = Instance.new("UIScale")
+        image1Scale.Scale = 0.72
+        image1Scale.Parent = image1
 
         local thankText = Instance.new("TextLabel")
         thankText.Size = UDim2.new(1, -28, 0, 34)
@@ -5706,6 +5714,20 @@ end
         byline.TextXAlignment = Enum.TextXAlignment.Center
         byline.ZIndex = 302
         byline.Parent = panel
+
+        local image2 = Instance.new("ImageLabel")
+        image2.Name = "IntroSecondaryImage"
+        image2.Size = UDim2.new(0, 148, 0, 96)
+        image2.Position = UDim2.new(0.5, -74, 0, 207)
+        image2.BackgroundTransparency = 1
+        image2.Image = options.IntroImage2 or "https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png"
+        image2.ScaleType = Enum.ScaleType.Fit
+        image2.ImageTransparency = 1
+        image2.ZIndex = 302
+        image2.Parent = panel
+        local image2Scale = Instance.new("UIScale")
+        image2Scale.Scale = 0.58
+        image2Scale.Parent = image2
 
         local languageTitle = Instance.new("TextLabel")
         languageTitle.Size = UDim2.new(1, -28, 0, 24)
@@ -5737,7 +5759,7 @@ end
 
         local languageButton = Instance.new("TextButton")
         languageButton.Size = UDim2.new(1, -28, 0, 36)
-        languageButton.Position = UDim2.new(0, 14, 0, 233)
+        languageButton.Position = UDim2.new(0, 14, 0, 344)
         languageButton.BackgroundColor3 = Color3.fromRGB(13, 22, 36)
         languageButton.Text = selectedLanguage.Name .. "   ▾"
         languageButton.TextColor3 = Color3.fromRGB(225, 240, 255)
@@ -5751,7 +5773,7 @@ end
 
         local languageList = Instance.new("ScrollingFrame")
         languageList.Size = UDim2.new(1, -28, 0, 0)
-        languageList.Position = UDim2.new(0, 14, 0, 273)
+        languageList.Position = UDim2.new(0, 14, 0, 384)
         languageList.BackgroundColor3 = Color3.fromRGB(8, 12, 20)
         languageList.BorderSizePixel = 0
         languageList.ScrollBarThickness = 3
@@ -5803,6 +5825,8 @@ end
         AddGlow(continueButton, Color3.fromRGB(255, 210, 65), 1.2, 0.18)
 
         PlaySFX(Window.IntroThankSFX, 1)
+        TweenService:Create(image1, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+        TweenService:Create(image1Scale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
         TweenService:Create(thankText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
 
         languageButton.MouseButton1Click:Connect(function()
@@ -5920,14 +5944,35 @@ end
             languageList.Visible = false
             continueButton.Visible = false
 
+            TweenService:Create(image2, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+            TweenService:Create(image2Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
             task.wait(2.7)
             if not overlay.Parent then return end
+            local fadeSecond = TweenService:Create(image2, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1})
+            fadeSecond:Play()
+            TweenService:Create(image2Scale, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.65}):Play()
+            fadeSecond.Completed:Wait()
 
             if not overlay.Parent then return end
+            image2.Visible = false
+            local image3 = Instance.new("ImageLabel")
+            image3.Name = "WelcomeImage"
+            image3.Size = UDim2.new(0, 148, 0, 96)
+            image3.Position = UDim2.new(0.5, -74, 0, 207)
+            image3.BackgroundTransparency = 1
+            image3.Image = options.IntroImage3 or "https://i.ibb.co/jFJt92F/file-000000003304820eb37d3ad0b97ead96.png"
+            image3.ScaleType = Enum.ScaleType.Fit
+            image3.ImageTransparency = 1
+            image3.ZIndex = 302
+            image3.Parent = panel
+            local image3Scale = Instance.new("UIScale")
+            image3Scale.Scale = 0.58
+            image3Scale.Parent = image3
 
             local welcomeText = Instance.new("TextLabel")
             welcomeText.Size = UDim2.new(1, -28, 0, 32)
-            welcomeText.Position = UDim2.new(0, 14, 0, 220)
+            welcomeText.Position = UDim2.new(0, 14, 0, 310)
             welcomeText.BackgroundTransparency = 1
             welcomeText.Text = "Bem-vindo(a) " .. tostring(Player.DisplayName)
             welcomeText.TextColor3 = Color3.fromRGB(245, 248, 255)
@@ -5940,6 +5985,8 @@ end
             welcomeText.Parent = panel
 
             PlaySFX(Window.IntroWelcomeSFX, 1)
+            TweenService:Create(image3, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+            TweenService:Create(image3Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
             TweenService:Create(welcomeText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
             task.wait(2.6)
 
