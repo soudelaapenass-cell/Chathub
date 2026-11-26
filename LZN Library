@@ -310,11 +310,11 @@ function LZNLib:CreateWindow(options)
     options = options or {}
     local hubName = options.Name or "LZNUltraHub"
     local titleText = options.Title or "LZN // ULTIMATE ENGINE"
-    local bgImage = "https://i.ibb.co/TD5SQyGY/manhattan-cafe-umamusume-drawn-by-gwinggwing-sample-467edfd96009dfffca371a679c9c95bb.jpg"
-    local floatImage = "rbxassetid://75283846905375"
+    local bgImage = options.BackgroundImage or "rbxassetid://78521393913034"
+    local floatImage = options.FloatingImage or "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png"
     local musicId = options.MusicId or "rbxassetid://132631534724831"
     local musicVolume = options.MusicVolume or 0.12
-    local accentColor = Color3.fromRGB(255, 196, 0)
+    local accentColor = options.AccentColor or Color3.fromRGB(255, 196, 0)
     local customInventoryEnabled = options.CustomInventory ~= false
 
     local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://131390520971848"
@@ -1090,9 +1090,7 @@ function LZNLib:CreateWindow(options)
     ToggleHubBtn.Text = ""
     ToggleHubBtn.ZIndex = 30
     ToggleHubBtn.Parent = ScreenGui
-    local FloatingButtonCorner = Instance.new("UICorner")
-    FloatingButtonCorner.CornerRadius = UDim.new(0, 10)
-    FloatingButtonCorner.Parent = ToggleHubBtn
+    Instance.new("UICorner", ToggleHubBtn).CornerRadius = UDim.new(1, 0)
 
     local FloatingButtonImage = Instance.new("ImageLabel")
     FloatingButtonImage.Name = "FloatingButtonImage"
@@ -1108,33 +1106,6 @@ function LZNLib:CreateWindow(options)
     AddGradient(ToggleHubBtn, Color3.fromRGB(18, 25, 40), Color3.fromRGB(8, 10, 15), 135)
     MakeDraggable(ToggleHubBtn)
     AddClickEffect(ToggleHubBtn)
-
-    -- Pulso arredondado somente com sons Roblox externos ao player interno da Library.
-    -- AudioPlayer e BGM da própria Library são ignorados.
-    local pulseTime = 0
-    local pulseActive = false
-    local function HasExternalPlayingSound()
-        for _, obj in ipairs(SoundService:GetDescendants()) do
-            if obj:IsA("Sound") and obj.IsPlaying
-                and obj ~= BackgroundMusic
-                and obj.Name ~= hubName .. "_AudioPlayer" then
-                return true
-            end
-        end
-        return false
-    end
-    RunService.RenderStepped:Connect(function(dt)
-        local active = HasExternalPlayingSound()
-        if active then
-            pulseActive = true
-            pulseTime += dt * 3
-            local radius = 10 + (math.sin(pulseTime) + 1) * 12
-            FloatingButtonCorner.CornerRadius = UDim.new(0, radius)
-        elseif pulseActive then
-            pulseActive = false
-            FloatingButtonCorner.CornerRadius = UDim.new(0, 10)
-        end
-    end)
 
     local HubOpen = true
     local IsAnimatingHub = false
@@ -1852,7 +1823,7 @@ function LZNLib:CreateWindow(options)
             if AudioSound.IsPlaying then
                 SetCustomIconType(playPauseIcon, "pause", Color3.fromRGB(255, 196, 0), 14)
             else
-                SetCustomIconType(playPauseIcon, "play", Color3.fromRGB(255, 196, 0), 14)
+                SetCustomIconType(playPauseIcon, "play", Color3.fromRGB(0, 255, 175), 14)
             end
             playPauseIcon.Position = UDim2.new(0.5, -7, 0.5, -7)
         end
@@ -4832,7 +4803,7 @@ function LZNLib:CreateWindow(options)
         cLbl.Size = UDim2.new(1, -6, 0, 12)
         cLbl.Position = UDim2.new(0, 3, 1, -14)
         cLbl.BackgroundTransparency = 1
-        cLbl.TextColor3 = Color3.fromRGB(255, 196, 0)
+        cLbl.TextColor3 = Color3.fromRGB(0, 255, 175)
         cLbl.Font = Enum.Font.GothamBlack
         cLbl.TextSize = 9
         cLbl.TextXAlignment = Enum.TextXAlignment.Right
@@ -4938,7 +4909,7 @@ function LZNLib:CreateWindow(options)
                 cL.Position = UDim2.new(0, 2, 1, -13)
                 cL.BackgroundTransparency = 1
                 cL.Text = itemData.Count > 1 and ("x" .. tostring(itemData.Count)) or ""
-                cL.TextColor3 = Color3.fromRGB(255, 196, 0)
+                cL.TextColor3 = Color3.fromRGB(0, 255, 175)
                 cL.Font = Enum.Font.GothamBlack
                 cL.TextSize = 8
                 cL.TextXAlignment = Enum.TextXAlignment.Right
@@ -5151,12 +5122,12 @@ function LZNLib:CreateWindow(options)
     end)
 
 
-    local function LoadBackgroundAsset(url, fileName)
+    Window.LoadIntroImage = function(url, fileName, fallback)
         if type(getcustomasset) ~= "function" and type(getsynasset) ~= "function" then
-            return url
+            return fallback or ""
         end
         if type(writefile) ~= "function" then
-            return url
+            return fallback or ""
         end
         local assetGetter = type(getcustomasset) == "function" and getcustomasset or getsynasset
         local cached = false
@@ -5172,26 +5143,54 @@ function LZNLib:CreateWindow(options)
             elseif type(syn) == "table" and type(syn.request) == "function" then
                 requestFunction = syn.request
             end
-            local body
+            local body = nil
             if requestFunction then
                 local ok, response = pcall(requestFunction, {Url = url, Method = "GET"})
-                if ok and type(response) == "table" and response.Success ~= false then body = response.Body end
+                if ok and type(response) == "table" and response.Success ~= false then
+                    body = response.Body
+                end
             end
             if type(body) ~= "string" or #body < 100 then
                 local ok, result = pcall(function() return game:HttpGet(url) end)
                 if ok and type(result) == "string" and #result > 100 then body = result end
             end
-            if type(body) == "string" and #body > 100 then pcall(writefile, fileName, body) end
+            if type(body) == "string" and #body > 100 then
+                pcall(writefile, fileName, body)
+            end
         end
         local ok, asset = pcall(assetGetter, fileName)
         if ok and type(asset) == "string" then return asset end
-        return url
+        return fallback or ""
     end
 
-    HubBackground.Image = LoadBackgroundAsset(bgImage, "LZN_hub_background.jpg")
-    HubBackground.ScaleType = Enum.ScaleType.Stretch
-    FloatingButtonImage.Image = floatImage
-    FloatingButtonImage.ScaleType = Enum.ScaleType.Stretch
+    -- Assets externos: cache local com getcustomasset para imagens de fundo e botão flutuante.
+    local backgroundUrls = {
+        "https://i.ibb.co/d4cv5BCf/junoelise161-Manhattan-Cafe-umamusume-9137539.jpg",
+        "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png",
+        "https://i.ibb.co/XfKzm6Pm/LZN-1795598058085.webp",
+        "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png",
+        "https://i.ibb.co/3yvdQvxf/herohero-higashi-no-dou-Manhattan-Cafe-umamusume-9158949.jpg"
+    }
+    local function LoadCachedImage(url, fileName)
+        return Window.LoadIntroImage(url, fileName, "")
+    end
+    local floatingAsset = LoadCachedImage("https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png", "LZN_floating_manhattan.png")
+    if floatingAsset ~= "" then FloatingButtonImage.Image = floatingAsset end
+    local loadedBackgrounds = {}
+    for i, url in ipairs(backgroundUrls) do
+        local extension = url:match("%.([%w]+)$") or "png"
+        loadedBackgrounds[i] = LoadCachedImage(url, "LZN_hub_background_" .. tostring(i) .. "." .. extension)
+    end
+    task.spawn(function()
+        local index = 1
+        while ScreenGui.Parent do
+            if loadedBackgrounds[index] and loadedBackgrounds[index] ~= "" then
+                HubBackground.Image = loadedBackgrounds[index]
+            end
+            index = (index % #backgroundUrls) + 1
+            task.wait(10)
+        end
+    end)
 
     -- Shader original do arquivo Shaders by LZN (Lezin), embutido para funcionar como toggle.
     local LZN_SHADER_SOURCE = [=[local Lighting = game:GetService("Lighting")
@@ -5678,7 +5677,7 @@ end
         image1.Size = UDim2.new(0, 122, 0, 122)
         image1.Position = UDim2.new(0.5, -61, 0, 18)
         image1.BackgroundTransparency = 1
-        image1.Image = options.IntroImage1 or "https://i.ibb.co/Lhz8DG4k/IMG-20261122-065924.png"
+        image1.Image = Window.LoadIntroImage("https://i.ibb.co/Lhz8DG4k/IMG-20261122-065924.png", "LZN_intro_thank.png", options.IntroImage1)
         image1.ScaleType = Enum.ScaleType.Fit
         image1.ImageTransparency = 1
         image1.ZIndex = 302
@@ -5720,7 +5719,7 @@ end
         image2.Size = UDim2.new(0, 148, 0, 96)
         image2.Position = UDim2.new(0.5, -74, 0, 207)
         image2.BackgroundTransparency = 1
-        image2.Image = options.IntroImage2 or "https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png"
+        image2.Image = Window.LoadIntroImage("https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png", "LZN_intro_secondary.png", options.IntroImage2)
         image2.ScaleType = Enum.ScaleType.Fit
         image2.ImageTransparency = 1
         image2.ZIndex = 302
@@ -5961,7 +5960,7 @@ end
             image3.Size = UDim2.new(0, 148, 0, 96)
             image3.Position = UDim2.new(0.5, -74, 0, 207)
             image3.BackgroundTransparency = 1
-            image3.Image = options.IntroImage3 or "https://i.ibb.co/jFJt92F/file-000000003304820eb37d3ad0b97ead96.png"
+            image3.Image = Window.LoadIntroImage("https://i.ibb.co/jFJt92F/file-000000003304820eb37d3ad0b97ead96.png", "LZN_intro_welcome.png", options.IntroImage3)
             image3.ScaleType = Enum.ScaleType.Fit
             image3.ImageTransparency = 1
             image3.ZIndex = 302
