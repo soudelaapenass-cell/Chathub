@@ -316,6 +316,13 @@ function LZNLib:CreateWindow(options)
     local musicVolume = options.MusicVolume or 0.12
     local accentColor = Color3.fromRGB(255, 196, 0)
     local customInventoryEnabled = options.CustomInventory ~= false
+    local OpenColorPickerClosers = {}
+    local function CloseAllColorPickers()
+        for i = #OpenColorPickerClosers, 1, -1 do
+            local closeFn = OpenColorPickerClosers[i]
+            if closeFn then pcall(closeFn) end
+        end
+    end
 
     local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://131390520971848"
     local toggleOffSoundId = options.ToggleOffSound or "rbxassetid://17208361335"
@@ -830,6 +837,7 @@ function LZNLib:CreateWindow(options)
     end
 
     local function SetPage(page)
+        CloseAllColorPickers()
         CurrentPage = page
         ContentContainer.Visible = page == "Home"
         GamePage.Visible = page == "Game"
@@ -1143,6 +1151,7 @@ function LZNLib:CreateWindow(options)
         if IsAnimatingHub then return end
         IsAnimatingHub = true
         HubOpen = not HubOpen
+        if not HubOpen then CloseAllColorPickers() end
         PlaySFX(HubOpen and SFX.Open or SFX.Close, 1)
 
         if HubOpen then
@@ -2760,6 +2769,7 @@ function LZNLib:CreateWindow(options)
     end
 
     local function SelectPublicTab(tab, silent)
+        CloseAllColorPickers()
         if type(tab) == "string" then tab = TabRegistry[tab] end
         if not tab or not tab.Page or not tab.Page.Parent then return false end
         ActiveTabName = tab.Name
@@ -3207,6 +3217,15 @@ function LZNLib:CreateWindow(options)
         self.Current = name
         if theme.Accent then accentColor = theme.Accent end
         if theme.Background then MainFrame.BackgroundColor3 = theme.Background end
+        for _, gui in ipairs(ScreenGui:GetDescendants()) do
+            if gui.Name == "LZNColorPickerPopup" then
+                gui.BackgroundColor3 = MainFrame.BackgroundColor3
+                local stroke = gui:FindFirstChildOfClass("UIStroke")
+                if stroke then stroke.Color = accentColor end
+                local ok = gui:FindFirstChild("OK", true)
+                if ok and ok:IsA("TextButton") then ok.BackgroundColor3 = accentColor end
+            end
+        end
         return true
     end
     ThemeManager:Register("Default", {Accent = accentColor, Background = Color3.fromRGB(8, 10, 15)})
@@ -3214,8 +3233,15 @@ function LZNLib:CreateWindow(options)
     ThemeManager:Register("Crimson", {Accent = Color3.fromRGB(255, 65, 90), Background = Color3.fromRGB(20, 8, 13)})
     Window.ThemeManager = ThemeManager
     Window.UIManager = {
-        SetVisible = function(_, value) MainFrame.Visible = value == true end,
-        Toggle = function() MainFrame.Visible = not MainFrame.Visible end,
+        SetVisible = function(_, value)
+            if value ~= true then CloseAllColorPickers() end
+            MainFrame.Visible = value == true
+        end,
+        Toggle = function()
+            local nextVisible = not MainFrame.Visible
+            if not nextVisible then CloseAllColorPickers() end
+            MainFrame.Visible = nextVisible
+        end,
         SetSize = function(_, size) if typeof(size) == "UDim2" then MainFrame.Size = size end end,
         SetPosition = function(_, position) if typeof(position) == "UDim2" then MainFrame.Position = position end end
     }
@@ -3392,8 +3418,9 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 7)
 
         local preview = Instance.new("Frame")
-        preview.Size = UDim2.new(0, 26, 0, 20)
-        preview.Position = UDim2.new(1, -38, 0, 39)
+        preview.Name = "SelectedColorMiniPreview"
+        preview.Size = UDim2.new(0, 18, 0, 18)
+        preview.Position = UDim2.new(1, -28, 0, 184)
         preview.BackgroundColor3 = draftColor
         preview.BorderSizePixel = 0
         preview.ZIndex = 82
@@ -3475,7 +3502,7 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", hueMarker).CornerRadius = UDim.new(1, 0)
 
         local hexLabel = Instance.new("TextLabel")
-        hexLabel.Size = UDim2.new(1, -20, 0, 20)
+        hexLabel.Size = UDim2.new(1, -48, 0, 20)
         hexLabel.Position = UDim2.new(0, 10, 0, 184)
         hexLabel.BackgroundTransparency = 1
         hexLabel.TextColor3 = Color3.fromRGB(155, 180, 205)
@@ -3511,6 +3538,15 @@ function LZNLib:CreateWindow(options)
         okBtn.Parent = picker
         Instance.new("UICorner", okBtn).CornerRadius = UDim.new(0, 8)
 
+        local function applyHubTheme()
+            picker.BackgroundColor3 = MainFrame.BackgroundColor3
+            local stroke = picker:FindFirstChildOfClass("UIStroke")
+            if stroke then stroke.Color = accentColor end
+            okBtn.BackgroundColor3 = accentColor
+            resetBtn.BackgroundColor3 = MainFrame.BackgroundColor3:Lerp(Color3.new(1, 1, 1), 0.10)
+            header.TextColor3 = Color3.fromRGB(238, 242, 250)
+            hexLabel.TextColor3 = Color3.fromRGB(185, 198, 216)
+        end
         local function updateDraft()
             draftColor = Color3.fromHSV(hue, saturation, value)
             preview.BackgroundColor3 = draftColor
@@ -3554,6 +3590,7 @@ function LZNLib:CreateWindow(options)
             picker.Position = UDim2.fromOffset(x, y)
         end
         local function openPicker()
+            applyHubTheme()
             hue, saturation, value = committedColor:ToHSV()
             updateDraft()
             placePopup()
@@ -3561,10 +3598,12 @@ function LZNLib:CreateWindow(options)
             PlaySFX(DropdownSFX, 1)
         end
         local function closePicker()
+            if not popupOpen and not picker.Visible then return end
             hue, saturation, value = committedColor:ToHSV()
             updateDraft()
             animatePopup(false)
         end
+        table.insert(OpenColorPickerClosers, closePicker)
         local draggingSV = false
         local draggingHue = false
         local activePickerInput = nil
@@ -3628,6 +3667,12 @@ function LZNLib:CreateWindow(options)
             animatePopup(false)
         end)
         row.Destroying:Connect(function()
+            for i = #OpenColorPickerClosers, 1, -1 do
+                if OpenColorPickerClosers[i] == closePicker then
+                    table.remove(OpenColorPickerClosers, i)
+                    break
+                end
+            end
             if picker and picker.Parent then picker:Destroy() end
         end)
         updateDraft()
@@ -4004,18 +4049,33 @@ function LZNLib:CreateWindow(options)
         SetGodModeState(true)
     end
 
-    Player.CharacterAdded:Connect(function(newChar)
-        CaptureDefaultCharStats(newChar)
-        task.wait(0.2)
-        local hum = newChar:WaitForChildOfClass("Humanoid", 5)
-        if hum then
+    local function ApplyMovementSettings(hum)
+        if not hum or not hum.Parent then return end
+        pcall(function()
             hum.WalkSpeed = speedSlider:GetValue()
             hum.UseJumpPower = true
             hum.JumpPower = jumpSlider:GetValue()
+        end)
+    end
+
+    Player.CharacterAdded:Connect(function(newChar)
+        CaptureDefaultCharStats(newChar)
+        task.spawn(function()
+            local hum = newChar:WaitForChild("Humanoid", 10)
+            if not hum then return end
+            -- Reapply after the server finishes initializing the respawned character.
+            for _, delayTime in ipairs({0.15, 0.5, 1, 2, 4}) do
+                task.wait(delayTime)
+                if Player.Character ~= newChar or not hum.Parent then break end
+                ApplyMovementSettings(hum)
+            end
             BindJumpPowerPersistence(hum)
-        end
+        end)
         if godModeActive then
-            BindGodModeToCharacter(newChar)
+            task.spawn(function()
+                task.wait(0.25)
+                if Player.Character == newChar then BindGodModeToCharacter(newChar) end
+            end)
         end
         platformFixedY = nil
         lastSavedPos = nil
@@ -5094,6 +5154,24 @@ function LZNLib:CreateWindow(options)
         local char = Player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+        if hum then
+            pcall(function()
+                local targetSpeed = speedSlider:GetValue()
+                local targetJump = jumpSlider:GetValue()
+                if math.abs(hum.WalkSpeed - targetSpeed) > 0.05 then
+                    hum.WalkSpeed = targetSpeed
+                end
+                hum.UseJumpPower = true
+                if math.abs(hum.JumpPower - targetJump) > 0.05 then
+                    hum.JumpPower = targetJump
+                end
+            end)
+        end
+        local targetGravity = gravitySlider:GetValue()
+        if math.abs(workspace.Gravity - targetGravity) > 0.01 then
+            workspace.Gravity = targetGravity
+        end
 
         if hrp then
             for dTool, active in pairs(droppedToolRegistry) do
