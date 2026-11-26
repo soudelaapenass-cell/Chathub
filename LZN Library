@@ -356,6 +356,7 @@ function LZNLib:CreateWindow(options)
     end
 
     local Window = {}
+    Window._ColorPickerClosers = {}
 
     local function CreateSFX(suffix, soundId, vol, pitch)
         local s = Instance.new("Sound")
@@ -831,6 +832,12 @@ function LZNLib:CreateWindow(options)
     end
 
     local function SetPage(page)
+        -- Fecha qualquer color picker aberto ao trocar de aba
+        if Window._ColorPickerClosers then
+            for _, closer in ipairs(Window._ColorPickerClosers) do
+                pcall(closer)
+            end
+        end
         CurrentPage = page
         ContentContainer.Visible = false  -- HUB removido
         GamePage.Visible = page == "Game"
@@ -1112,33 +1119,7 @@ function LZNLib:CreateWindow(options)
     MakeDraggable(ToggleHubBtn)
     AddClickEffect(ToggleHubBtn)
 
-    -- Pulso arredondado somente com sons Roblox externos ao player interno da Library.
-    -- AudioPlayer e BGM da própria Library são ignorados.
-    local pulseTime = 0
-    local pulseActive = false
-    local function HasExternalPlayingSound()
-        for _, obj in ipairs(SoundService:GetDescendants()) do
-            if obj:IsA("Sound") and obj.IsPlaying
-                and obj ~= BackgroundMusic
-                and obj.Name ~= hubName .. "_AudioPlayer" then
-                return true
-            end
-        end
-        return false
-    end
-    RunService.RenderStepped:Connect(function(dt)
-        local active = HasExternalPlayingSound()
-        if active then
-            pulseActive = true
-            pulseTime += dt * 3
-            local radius = 10 + (math.sin(pulseTime) + 1) * 12
-            FloatingButtonCorner.CornerRadius = UDim.new(0, radius)
-        elseif pulseActive then
-            pulseActive = false
-            FloatingButtonCorner.CornerRadius = UDim.new(0, 10)
-        end
-    end)
-
+    -- Animação de pulso do botão flutuante removida
     local HubOpen = true
     local IsAnimatingHub = false
 
@@ -3366,7 +3347,7 @@ function LZNLib:CreateWindow(options)
         picker.BorderSizePixel = 0
         picker.Visible = false
         picker.ZIndex = 80
-        picker.Parent = ScreenGui
+        picker.Parent = MainFrame
         picker.ClipsDescendants = true
         Instance.new("UICorner", picker).CornerRadius = UDim.new(0, 12)
         AddGlow(picker, accentColor, 1.5, 0.18)
@@ -3397,13 +3378,14 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 7)
 
         local preview = Instance.new("Frame")
-        preview.Size = UDim2.new(0, 26, 0, 20)
-        preview.Position = UDim2.new(1, -38, 0, 39)
+        preview.Size = UDim2.new(0, 22, 0, 18)
+        preview.Position = UDim2.new(1, -32, 0, 185)
         preview.BackgroundColor3 = draftColor
         preview.BorderSizePixel = 0
-        preview.ZIndex = 82
+        preview.ZIndex = 83
         preview.Parent = picker
         Instance.new("UICorner", preview).CornerRadius = UDim.new(0, 5)
+        AddGlow(preview, Color3.fromRGB(255, 196, 0), 1, 0.25)
 
         local sv = Instance.new("TextButton")
         sv.Size = UDim2.new(1, -54, 0, 142)
@@ -3480,7 +3462,7 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", hueMarker).CornerRadius = UDim.new(1, 0)
 
         local hexLabel = Instance.new("TextLabel")
-        hexLabel.Size = UDim2.new(1, -20, 0, 20)
+        hexLabel.Size = UDim2.new(1, -48, 0, 20)
         hexLabel.Position = UDim2.new(0, 10, 0, 184)
         hexLabel.BackgroundTransparency = 1
         hexLabel.TextColor3 = Color3.fromRGB(155, 180, 205)
@@ -3550,12 +3532,17 @@ function LZNLib:CreateWindow(options)
             end
         end
         local function placePopup()
-            local pos = MainFrame.AbsolutePosition
-            local size = MainFrame.AbsoluteSize
-            local x = pos.X + size.X + 10
-            if x + picker.AbsoluteSize.X > ScreenGui.AbsoluteSize.X then x = pos.X - picker.AbsoluteSize.X - 10 end
-            x = math.clamp(x, 6, math.max(ScreenGui.AbsoluteSize.X - picker.AbsoluteSize.X - 6, 6))
-            local y = math.clamp(pos.Y + 95, 6, math.max(ScreenGui.AbsoluteSize.Y - picker.AbsoluteSize.Y - 6, 6))
+            -- Agora parentado no MainFrame, posiciona relativo ao hub (lado direito ou esquerdo)
+            local hubW = MainFrame.AbsoluteSize.X
+            local hubH = MainFrame.AbsoluteSize.Y
+            local pickW = 252
+            local pickH = 264
+            local x = hubW + 8
+            -- Se não couber à direita, coloca à esquerda
+            if MainFrame.AbsolutePosition.X + hubW + pickW + 12 > (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.X or 1920) then
+                x = -pickW - 8
+            end
+            local y = math.clamp(70, 8, math.max(hubH - pickH - 8, 8))
             picker.Position = UDim2.fromOffset(x, y)
         end
         local function openPicker()
@@ -3570,6 +3557,26 @@ function LZNLib:CreateWindow(options)
             updateDraft()
             animatePopup(false)
         end
+
+        -- Fecha automaticamente ao trocar de aba ou fechar o hub
+        local pageConn = nil
+        local visConn = nil
+        local function bindAutoClose()
+            if pageConn then pageConn:Disconnect() end
+            if visConn then visConn:Disconnect() end
+            pageConn = MainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+                if not MainFrame.Visible and popupOpen then
+                    closePicker()
+                end
+            end)
+            -- Também fecha quando o hub é escondido via escala (HubOpen false)
+            visConn = HubScale:GetPropertyChangedSignal("Scale"):Connect(function()
+                if HubScale.Scale < 0.2 and popupOpen then
+                    closePicker()
+                end
+            end)
+        end
+        bindAutoClose()
         local draggingSV = false
         local draggingHue = false
         local activePickerInput = nil
@@ -3616,6 +3623,7 @@ function LZNLib:CreateWindow(options)
                 activePickerType = nil
             end
         end)
+        table.insert(Window._ColorPickerClosers, closePicker)
         swatch.MouseButton1Click:Connect(function()
             PlaySFX(SFX.ColorPicker, 1)
             if popupOpen then closePicker() else openPicker() end
@@ -3942,7 +3950,9 @@ function LZNLib:CreateWindow(options)
             hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
             hum.BreakJointsOnDeath = false
+            hum.RequiresNeck = false
             hum.MaxHealth = math.huge
             hum.Health = math.huge
         end)
@@ -3990,13 +4000,22 @@ function LZNLib:CreateWindow(options)
         else
             ClearGodConnections()
             lastSavedPos = nil
+            if char then
+                for _, ff in ipairs(char:GetChildren()) do
+                    if ff:IsA("ForceField") then
+                        pcall(function() ff:Destroy() end)
+                    end
+                end
+            end
             if hum then
                 pcall(function()
                     hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
                     hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
                     hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
                     hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, true)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
                     hum.BreakJointsOnDeath = true
+                    hum.RequiresNeck = true
                     local restoreMax = (savedMaxHealth and savedMaxHealth > 0 and savedMaxHealth < 1e6) and savedMaxHealth or 100
                     hum.MaxHealth = restoreMax
                     hum.Health = math.min(hum.Health > 0 and hum.Health or restoreMax, restoreMax)
@@ -4009,15 +4028,52 @@ function LZNLib:CreateWindow(options)
         SetGodModeState(true)
     end
 
+    -- Persistência forte de WalkSpeed (igual ao JumpPower)
+    local function BindWalkSpeedPersistence(hum)
+        if not hum then return end
+        local enforcing = false
+        local function enforceSpeed()
+            if enforcing or not hum.Parent then return end
+            enforcing = true
+            pcall(function()
+                local target = speedSlider:GetValue()
+                if math.abs(hum.WalkSpeed - target) > 0.05 then
+                    hum.WalkSpeed = target
+                end
+            end)
+            enforcing = false
+        end
+        hum:GetPropertyChangedSignal("WalkSpeed"):Connect(enforceSpeed)
+        task.spawn(function()
+            for _ = 1, 12 do
+                if not hum.Parent then break end
+                enforceSpeed()
+                task.wait(0.15)
+            end
+        end)
+        enforceSpeed()
+    end
+
     Player.CharacterAdded:Connect(function(newChar)
         CaptureDefaultCharStats(newChar)
-        task.wait(0.2)
-        local hum = newChar:WaitForChildOfClass("Humanoid", 5)
+        task.wait(0.15)
+        local hum = newChar:WaitForChild("Humanoid", 5)
         if hum then
-            hum.WalkSpeed = speedSlider:GetValue()
+            local targetSpeed = speedSlider:GetValue()
+            local targetJump = jumpSlider:GetValue()
+            hum.WalkSpeed = targetSpeed
             hum.UseJumpPower = true
-            hum.JumpPower = jumpSlider:GetValue()
+            hum.JumpPower = targetJump
             BindJumpPowerPersistence(hum)
+            BindWalkSpeedPersistence(hum)
+            -- Reforça de novo após um pouco (alguns jogos sobrescrevem)
+            task.delay(0.6, function()
+                if hum and hum.Parent then
+                    hum.WalkSpeed = targetSpeed
+                    hum.UseJumpPower = true
+                    hum.JumpPower = targetJump
+                end
+            end)
         end
         if godModeActive then
             BindGodModeToCharacter(newChar)
@@ -5115,26 +5171,44 @@ function LZNLib:CreateWindow(options)
 
         if godModeActive and char and hum and hrp then
             pcall(function()
-                if hum:GetState() == Enum.HumanoidStateType.Dead then
+                local state = hum:GetState()
+                if state == Enum.HumanoidStateType.Dead or state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.FallingDown then
                     hum:ChangeState(Enum.HumanoidStateType.Running)
                 end
                 hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
                 hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
                 hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                 hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+                hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
                 hum.BreakJointsOnDeath = false
-                hum.MaxHealth = math.huge
-                hum.Health = math.huge
-                local vel = hrp.AssemblyLinearVelocity
-                if math.abs(vel.Y) > 110 then
-                    hrp.AssemblyLinearVelocity = Vector3.new(vel.X * 0.4, 0, vel.Z * 0.4)
+                hum.RequiresNeck = false
+                if hum.MaxHealth < 1e9 then
+                    hum.MaxHealth = math.huge
                 end
-                if hrp.Position.Y > workspace.FallenPartsDestroyHeight + 20 then
+                if hum.Health < 1e9 then
+                    hum.Health = math.huge
+                end
+                -- Anti-fling / anti-void mais forte
+                local vel = hrp.AssemblyLinearVelocity
+                if math.abs(vel.Y) > 90 or vel.Magnitude > 220 then
+                    hrp.AssemblyLinearVelocity = Vector3.new(vel.X * 0.25, 0, vel.Z * 0.25)
+                end
+                if hrp.AssemblyAngularVelocity.Magnitude > 20 then
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+                if hrp.Position.Y > workspace.FallenPartsDestroyHeight + 25 then
                     lastSavedPos = hrp.Position
                 elseif lastSavedPos then
-                    hrp.CFrame = CFrame.new(lastSavedPos + Vector3.new(0, 3.5, 0))
+                    hrp.CFrame = CFrame.new(lastSavedPos + Vector3.new(0, 4, 0))
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
+                end
+                -- Remove ForceField antigo e garante um limpo (visual + proteção extra)
+                local oldFF = char:FindFirstChildOfClass("ForceField")
+                if not oldFF then
+                    local ff = Instance.new("ForceField")
+                    ff.Visible = false
+                    ff.Parent = char
                 end
             end)
         end
