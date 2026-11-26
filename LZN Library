@@ -6020,4 +6020,4 @@ end
     return Window
 end
 
-return LZNLi
+return LZNLib
