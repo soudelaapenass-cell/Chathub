@@ -316,13 +316,6 @@ function LZNLib:CreateWindow(options)
     local musicVolume = options.MusicVolume or 0.12
     local accentColor = Color3.fromRGB(255, 196, 0)
     local customInventoryEnabled = options.CustomInventory ~= false
-    local OpenColorPickerClosers = {}
-    local function CloseAllColorPickers()
-        for i = #OpenColorPickerClosers, 1, -1 do
-            local closeFn = OpenColorPickerClosers[i]
-            if closeFn then pcall(closeFn) end
-        end
-    end
 
     local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://131390520971848"
     local toggleOffSoundId = options.ToggleOffSound or "rbxassetid://17208361335"
@@ -836,6 +829,13 @@ function LZNLib:CreateWindow(options)
         end
     end
 
+    local openColorPickers = {}
+    local function CloseAllColorPickers()
+        for closeFn in pairs(openColorPickers) do
+            pcall(closeFn)
+        end
+    end
+
     local function SetPage(page)
         CloseAllColorPickers()
         CurrentPage = page
@@ -1146,12 +1146,16 @@ function LZNLib:CreateWindow(options)
 
     local HubOpen = true
     local IsAnimatingHub = false
+    MainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+        if not MainFrame.Visible and CloseAllColorPickers then
+            CloseAllColorPickers()
+        end
+    end)
 
     ToggleHubBtn.MouseButton1Click:Connect(function()
         if IsAnimatingHub then return end
         IsAnimatingHub = true
         HubOpen = not HubOpen
-        if not HubOpen then CloseAllColorPickers() end
         PlaySFX(HubOpen and SFX.Open or SFX.Close, 1)
 
         if HubOpen then
@@ -1165,6 +1169,7 @@ function LZNLib:CreateWindow(options)
                 IsAnimatingHub = false
             end)
         else
+            CloseAllColorPickers()
             local tween = TweenService:Create(HubScale, TweenInfo.new(0.24, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
                 Scale = 0.01
             })
@@ -3217,15 +3222,6 @@ function LZNLib:CreateWindow(options)
         self.Current = name
         if theme.Accent then accentColor = theme.Accent end
         if theme.Background then MainFrame.BackgroundColor3 = theme.Background end
-        for _, gui in ipairs(ScreenGui:GetDescendants()) do
-            if gui.Name == "LZNColorPickerPopup" then
-                gui.BackgroundColor3 = MainFrame.BackgroundColor3
-                local stroke = gui:FindFirstChildOfClass("UIStroke")
-                if stroke then stroke.Color = accentColor end
-                local ok = gui:FindFirstChild("OK", true)
-                if ok and ok:IsA("TextButton") then ok.BackgroundColor3 = accentColor end
-            end
-        end
         return true
     end
     ThemeManager:Register("Default", {Accent = accentColor, Background = Color3.fromRGB(8, 10, 15)})
@@ -3238,9 +3234,8 @@ function LZNLib:CreateWindow(options)
             MainFrame.Visible = value == true
         end,
         Toggle = function()
-            local nextVisible = not MainFrame.Visible
-            if not nextVisible then CloseAllColorPickers() end
-            MainFrame.Visible = nextVisible
+            if MainFrame.Visible then CloseAllColorPickers() end
+            MainFrame.Visible = not MainFrame.Visible
         end,
         SetSize = function(_, size) if typeof(size) == "UDim2" then MainFrame.Size = size end end,
         SetPosition = function(_, position) if typeof(position) == "UDim2" then MainFrame.Position = position end end
@@ -3418,9 +3413,8 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 7)
 
         local preview = Instance.new("Frame")
-        preview.Name = "SelectedColorMiniPreview"
         preview.Size = UDim2.new(0, 18, 0, 18)
-        preview.Position = UDim2.new(1, -28, 0, 184)
+        preview.Position = UDim2.new(1, -28, 0, 181)
         preview.BackgroundColor3 = draftColor
         preview.BorderSizePixel = 0
         preview.ZIndex = 82
@@ -3502,8 +3496,8 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", hueMarker).CornerRadius = UDim.new(1, 0)
 
         local hexLabel = Instance.new("TextLabel")
-        hexLabel.Size = UDim2.new(1, -48, 0, 20)
-        hexLabel.Position = UDim2.new(0, 10, 0, 184)
+        hexLabel.Size = UDim2.new(1, -52, 0, 20)
+        hexLabel.Position = UDim2.new(0, 10, 0, 180)
         hexLabel.BackgroundTransparency = 1
         hexLabel.TextColor3 = Color3.fromRGB(155, 180, 205)
         hexLabel.Font = Enum.Font.GothamMedium
@@ -3538,15 +3532,6 @@ function LZNLib:CreateWindow(options)
         okBtn.Parent = picker
         Instance.new("UICorner", okBtn).CornerRadius = UDim.new(0, 8)
 
-        local function applyHubTheme()
-            picker.BackgroundColor3 = MainFrame.BackgroundColor3
-            local stroke = picker:FindFirstChildOfClass("UIStroke")
-            if stroke then stroke.Color = accentColor end
-            okBtn.BackgroundColor3 = accentColor
-            resetBtn.BackgroundColor3 = MainFrame.BackgroundColor3:Lerp(Color3.new(1, 1, 1), 0.10)
-            header.TextColor3 = Color3.fromRGB(238, 242, 250)
-            hexLabel.TextColor3 = Color3.fromRGB(185, 198, 216)
-        end
         local function updateDraft()
             draftColor = Color3.fromHSV(hue, saturation, value)
             preview.BackgroundColor3 = draftColor
@@ -3590,20 +3575,28 @@ function LZNLib:CreateWindow(options)
             picker.Position = UDim2.fromOffset(x, y)
         end
         local function openPicker()
-            applyHubTheme()
             hue, saturation, value = committedColor:ToHSV()
+            picker.BackgroundColor3 = MainFrame.BackgroundColor3
+            local themeAccent = accentColor
+            header.TextColor3 = Color3.fromRGB(230, 242, 255)
+            closeBtn.BackgroundColor3 = themeAccent:Lerp(Color3.fromRGB(20, 25, 36), 0.72)
+            resetBtn.BackgroundColor3 = themeAccent:Lerp(Color3.fromRGB(15, 20, 30), 0.78)
+            okBtn.BackgroundColor3 = themeAccent
+            AddGlow(picker, themeAccent, 1.5, 0.18)
             updateDraft()
             placePopup()
             animatePopup(true)
             PlaySFX(DropdownSFX, 1)
         end
         local function closePicker()
-            if not popupOpen and not picker.Visible then return end
             hue, saturation, value = committedColor:ToHSV()
             updateDraft()
             animatePopup(false)
         end
-        table.insert(OpenColorPickerClosers, closePicker)
+        openColorPickers[closePicker] = true
+        picker.Destroying:Connect(function()
+            openColorPickers[closePicker] = nil
+        end)
         local draggingSV = false
         local draggingHue = false
         local activePickerInput = nil
@@ -3667,12 +3660,6 @@ function LZNLib:CreateWindow(options)
             animatePopup(false)
         end)
         row.Destroying:Connect(function()
-            for i = #OpenColorPickerClosers, 1, -1 do
-                if OpenColorPickerClosers[i] == closePicker then
-                    table.remove(OpenColorPickerClosers, i)
-                    break
-                end
-            end
             if picker and picker.Parent then picker:Destroy() end
         end)
         updateDraft()
@@ -3779,6 +3766,7 @@ function LZNLib:CreateWindow(options)
     PInfo.Parent = PlayerCard
 
     local defaultGravity = workspace.Gravity
+    local gravityTarget = defaultGravity
     local defaultWalkSpeed = 16
     local defaultJumpPower = 50
     local savedMaxHealth = 100
@@ -3795,6 +3783,7 @@ function LZNLib:CreateWindow(options)
     local hookedHazardParts = {}
     local godHealthConn = nil
     local godDiedConn = nil
+    local movementBindings = {}
 
     local function CaptureDefaultCharStats(char)
         local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -3848,6 +3837,7 @@ function LZNLib:CreateWindow(options)
         Default = defaultGravity,
         ResetValue = defaultGravity,
         Callback = function(v)
+            gravityTarget = v
             workspace.Gravity = v
         end
     }, 4)
@@ -3877,8 +3867,48 @@ function LZNLib:CreateWindow(options)
         enforceJumpPower()
     end
 
+    local function BindMovementPersistence(hum)
+        if not hum then return end
+        local enforcing = false
+        local function enforceMovement()
+            if enforcing or not hum.Parent then return end
+            enforcing = true
+            pcall(function()
+                local targetSpeed = speedSlider:GetValue()
+                local targetJump = jumpSlider:GetValue()
+                if math.abs(hum.WalkSpeed - targetSpeed) > 0.01 then
+                    hum.WalkSpeed = targetSpeed
+                end
+                hum.UseJumpPower = true
+                if math.abs(hum.JumpPower - targetJump) > 0.01 then
+                    hum.JumpPower = targetJump
+                end
+            end)
+            enforcing = false
+        end
+        table.insert(movementBindings, hum:GetPropertyChangedSignal("WalkSpeed"):Connect(enforceMovement))
+        table.insert(movementBindings, hum:GetPropertyChangedSignal("JumpPower"):Connect(enforceMovement))
+        table.insert(movementBindings, hum:GetPropertyChangedSignal("UseJumpPower"):Connect(enforceMovement))
+        task.defer(enforceMovement)
+    end
+
+    gravityTarget = gravitySlider:GetValue()
+    local gravityEnforcing = false
+    workspace:GetPropertyChangedSignal("Gravity"):Connect(function()
+        if gravityEnforcing then return end
+        gravityEnforcing = true
+        task.defer(function()
+            if math.abs(workspace.Gravity - gravityTarget) > 0.001 then
+                workspace.Gravity = gravityTarget
+            end
+            gravityEnforcing = false
+        end)
+    end)
+
     if Player.Character then
-        BindJumpPowerPersistence(Player.Character:FindFirstChildOfClass("Humanoid"))
+        local initialHum = Player.Character:FindFirstChildOfClass("Humanoid")
+        BindJumpPowerPersistence(initialHum)
+        BindMovementPersistence(initialHum)
     end
 
     local function SetCharacterNonCollide(enabled)
@@ -3935,8 +3965,8 @@ function LZNLib:CreateWindow(options)
                         if hum:GetState() == Enum.HumanoidStateType.Dead then
                             hum:ChangeState(Enum.HumanoidStateType.Running)
                         end
-                        hum.MaxHealth = math.huge
-                        hum.Health = math.huge
+                        hum.MaxHealth = math.max(savedMaxHealth, 1000000)
+                        hum.Health = hum.MaxHealth
                     end)
                 end
                 if hrp and lastSavedPos and hrp.Position.Y <= workspace.FallenPartsDestroyHeight + 22 then
@@ -3983,8 +4013,8 @@ function LZNLib:CreateWindow(options)
             hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
             hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
             hum.BreakJointsOnDeath = false
-            hum.MaxHealth = math.huge
-            hum.Health = math.huge
+            hum.MaxHealth = math.max(savedMaxHealth, 1000000)
+            hum.Health = hum.MaxHealth
         end)
     end
 
@@ -3997,10 +4027,9 @@ function LZNLib:CreateWindow(options)
             EnforceGodOnHumanoid(hum)
             godHealthConn = hum:GetPropertyChangedSignal("Health"):Connect(function()
                 if godModeActive and hum and hum.Parent then
-                    if hum.Health < math.huge then
+                    if hum.Health < hum.MaxHealth then
                         pcall(function()
-                            hum.MaxHealth = math.huge
-                            hum.Health = math.huge
+                            hum.Health = hum.MaxHealth
                         end)
                     end
                 end
@@ -4009,8 +4038,8 @@ function LZNLib:CreateWindow(options)
                 if godModeActive and hum and hum.Parent then
                     pcall(function()
                         hum:ChangeState(Enum.HumanoidStateType.Running)
-                        hum.MaxHealth = math.huge
-                        hum.Health = math.huge
+                        hum.MaxHealth = math.max(savedMaxHealth, 1000000)
+                        hum.Health = hum.MaxHealth
                     end)
                 end
             end)
@@ -4049,33 +4078,26 @@ function LZNLib:CreateWindow(options)
         SetGodModeState(true)
     end
 
-    local function ApplyMovementSettings(hum)
-        if not hum or not hum.Parent then return end
-        pcall(function()
+    Player.CharacterAdded:Connect(function(newChar)
+        CaptureDefaultCharStats(newChar)
+        task.wait(0.2)
+        local hum = newChar:WaitForChildOfClass("Humanoid", 5)
+        if hum then
             hum.WalkSpeed = speedSlider:GetValue()
             hum.UseJumpPower = true
             hum.JumpPower = jumpSlider:GetValue()
-        end)
-    end
-
-    Player.CharacterAdded:Connect(function(newChar)
-        CaptureDefaultCharStats(newChar)
-        task.spawn(function()
-            local hum = newChar:WaitForChild("Humanoid", 10)
-            if not hum then return end
-            -- Reapply after the server finishes initializing the respawned character.
-            for _, delayTime in ipairs({0.15, 0.5, 1, 2, 4}) do
-                task.wait(delayTime)
-                if Player.Character ~= newChar or not hum.Parent then break end
-                ApplyMovementSettings(hum)
-            end
             BindJumpPowerPersistence(hum)
-        end)
-        if godModeActive then
-            task.spawn(function()
-                task.wait(0.25)
-                if Player.Character == newChar then BindGodModeToCharacter(newChar) end
+            BindMovementPersistence(hum)
+            task.delay(0.5, function()
+                if hum.Parent then
+                    hum.WalkSpeed = speedSlider:GetValue()
+                    hum.UseJumpPower = true
+                    hum.JumpPower = jumpSlider:GetValue()
+                end
             end)
+        end
+        if godModeActive then
+            BindGodModeToCharacter(newChar)
         end
         platformFixedY = nil
         lastSavedPos = nil
@@ -5154,24 +5176,6 @@ function LZNLib:CreateWindow(options)
         local char = Player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local hum = char and char:FindFirstChildOfClass("Humanoid")
-
-        if hum then
-            pcall(function()
-                local targetSpeed = speedSlider:GetValue()
-                local targetJump = jumpSlider:GetValue()
-                if math.abs(hum.WalkSpeed - targetSpeed) > 0.05 then
-                    hum.WalkSpeed = targetSpeed
-                end
-                hum.UseJumpPower = true
-                if math.abs(hum.JumpPower - targetJump) > 0.05 then
-                    hum.JumpPower = targetJump
-                end
-            end)
-        end
-        local targetGravity = gravitySlider:GetValue()
-        if math.abs(workspace.Gravity - targetGravity) > 0.01 then
-            workspace.Gravity = targetGravity
-        end
 
         if hrp then
             for dTool, active in pairs(droppedToolRegistry) do
