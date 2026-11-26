@@ -643,7 +643,7 @@ function LZNLib:CreateWindow(options)
         end
     end)
 
-    local CurrentPage = "Home"
+    local CurrentPage = "Game"
 
     local ContentContainer = Instance.new("ScrollingFrame")
     local ActiveContainer = ContentContainer
@@ -815,9 +815,10 @@ function LZNLib:CreateWindow(options)
         return b, tx, ic
     end
 
-    local HomeTab, HomeTabText, HomeTabIcon = MakePageTab("HUB", "home", 1)
-    local GameTab, GameTabText, GameTabIcon = MakePageTab("GAME", "game", 2)
-    local PlayerTab, PlayerTabText, PlayerTabIcon = MakePageTab("PLAYER", "player", 3)
+    -- HUB tab removida conforme pedido
+    local GameTab, GameTabText, GameTabIcon = MakePageTab("GAME", "game", 1)
+    local PlayerTab, PlayerTabText, PlayerTabIcon = MakePageTab("PLAYER", "player", 2)
+    local HomeTab, HomeTabText, HomeTabIcon = nil, nil, nil
 
     local function SetTabColor(iconFrame, labelObj, active)
         local col = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(190, 210, 230)
@@ -831,18 +832,18 @@ function LZNLib:CreateWindow(options)
 
     local function SetPage(page)
         CurrentPage = page
-        ContentContainer.Visible = page == "Home"
+        ContentContainer.Visible = false  -- HUB removido
         GamePage.Visible = page == "Game"
         PlayerPage.Visible = page == "Player"
 
-        if page == "Home" then
-            ActiveContainer = ContentContainer
-            ActiveTabName = nil
-        elseif page == "Game" then
+        if page == "Game" then
             ActiveContainer = GamePage
             ActiveTabName = nil
         elseif page == "Player" then
             ActiveContainer = PlayerPage
+            ActiveTabName = nil
+        else
+            ActiveContainer = GamePage
             ActiveTabName = nil
         end
 
@@ -854,16 +855,18 @@ function LZNLib:CreateWindow(options)
             end
         end
 
-        SetTabColor(HomeTabIcon, HomeTabText, page == "Home")
+        if HomeTabIcon and HomeTabText then
+            SetTabColor(HomeTabIcon, HomeTabText, false)
+        end
         SetTabColor(GameTabIcon, GameTabText, page == "Game")
         SetTabColor(PlayerTabIcon, PlayerTabText, page == "Player")
         UpdateHubHeight()
     end
 
-    SetTabColor(HomeTabIcon, HomeTabText, true)
-    HomeTab.MouseButton1Click:Connect(function() PlaySFX(SFX.Tab, 1); SetPage("Home") end)
+    SetTabColor(GameTabIcon, GameTabText, true)
     GameTab.MouseButton1Click:Connect(function() PlaySFX(SFX.Tab, 1); SetPage("Game") end)
     PlayerTab.MouseButton1Click:Connect(function() PlaySFX(SFX.Tab, 1); SetPage("Player") end)
+    SetPage("Game")
 
     local resizingCorner = false
     local resizeStartPos = nil
@@ -2776,7 +2779,9 @@ function LZNLib:CreateWindow(options)
                 end
             end
         end
-        SetTabColor(HomeTabIcon, HomeTabText, false)
+        if HomeTabIcon and HomeTabText then
+            SetTabColor(HomeTabIcon, HomeTabText, false)
+        end
         SetTabColor(GameTabIcon, GameTabText, false)
         SetTabColor(PlayerTabIcon, PlayerTabText, false)
         UpdateTabNavigation(tab.Button)
@@ -2893,8 +2898,8 @@ function LZNLib:CreateWindow(options)
         end
         if ActiveTabName == name then
             ActiveTabName = nil
-            ActiveContainer = ContentContainer
-            SetPage("Home")
+            ActiveContainer = GamePage
+            SetPage("Game")
             if TabOrder[1] then SelectPublicTab(TabOrder[1]) end
         end
         return true
@@ -5576,14 +5581,14 @@ end
     shaderToggle = Window:AddToggle({
         Text = "LZN shaders",
         Icon = "success",
-        Default = true,
+        Default = false,
         Callback = function(state)
             local ok = SetLZNShadersEnabled(state)
             if not ok and shaderToggle then shaderToggle:Set(false) end
         end
     })
     ActiveContainer = previousContainer
-    SetLZNShadersEnabled(true)
+    SetLZNShadersEnabled(false)
 
     -- Idioma automático: LocaleId é a fonte principal; RobloxLocaleId é fallback.
     local LocalizationService = game:GetService("LocalizationService")
