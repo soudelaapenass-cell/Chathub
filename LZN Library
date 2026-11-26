@@ -310,11 +310,11 @@ function LZNLib:CreateWindow(options)
     options = options or {}
     local hubName = options.Name or "LZNUltraHub"
     local titleText = options.Title or "LZN // ULTIMATE ENGINE"
-    local bgImage = options.BackgroundImage or ""
-    local floatImage = options.FloatingImage or "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png"
+    local bgImage = options.BackgroundImage or "rbxassetid://78521393913034"
+    local floatImage = options.FloatingImage or "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png"
     local musicId = options.MusicId or "rbxassetid://132631534724831"
     local musicVolume = options.MusicVolume or 0.12
-    local accentColor = options.AccentColor or Color3.fromRGB(255, 196, 0)
+    local accentColor = Color3.fromRGB(255, 196, 0)
     local customInventoryEnabled = options.CustomInventory ~= false
 
     local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://131390520971848"
@@ -449,7 +449,7 @@ function LZNLib:CreateWindow(options)
     MainFrame.Size = UDim2.new(0, baseHubW, 0, baseHubH)
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(8, 10, 15)
     MainFrame.BorderSizePixel = 0
     MainFrame.ClipsDescendants = true
     MainFrame.ZIndex = 20
@@ -470,7 +470,7 @@ function LZNLib:CreateWindow(options)
     MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
     AddGlow(MainFrame, accentColor, 2, 0.1)
-    AddGradient(MainFrame, Color3.fromRGB(8, 8, 0), Color3.fromRGB(0, 0, 0), 135)
+    AddGradient(MainFrame, Color3.fromRGB(14, 18, 28), Color3.fromRGB(6, 7, 11), 135)
 
     local HubScale = Instance.new("UIScale")
     HubScale.Scale = 1
@@ -478,7 +478,7 @@ function LZNLib:CreateWindow(options)
 
     local HeaderFrame = Instance.new("Frame")
     HeaderFrame.Size = UDim2.new(1, 0, 0, 82)
-    HeaderFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    HeaderFrame.BackgroundColor3 = Color3.fromRGB(12, 16, 25)
     HeaderFrame.BackgroundTransparency = 0.22
     HeaderFrame.BorderSizePixel = 0
     HeaderFrame.ZIndex = 24
@@ -497,16 +497,16 @@ function LZNLib:CreateWindow(options)
     DestroyHubBtn.Name = "DestroyHubButton"
     DestroyHubBtn.Size = UDim2.new(0, 66, 0, 15)
     DestroyHubBtn.Position = UDim2.new(0, 14, 0, 4)
-    DestroyHubBtn.BackgroundColor3 = Color3.fromRGB(28, 22, 0)
+    DestroyHubBtn.BackgroundColor3 = Color3.fromRGB(36, 12, 18)
     DestroyHubBtn.BackgroundTransparency = 0.15
     DestroyHubBtn.Text = "DESTRUIR"
-    DestroyHubBtn.TextColor3 = Color3.fromRGB(255, 196, 0)
+    DestroyHubBtn.TextColor3 = Color3.fromRGB(255, 85, 110)
     DestroyHubBtn.Font = Enum.Font.GothamBlack
     DestroyHubBtn.TextSize = 8
     DestroyHubBtn.ZIndex = 28
     DestroyHubBtn.Parent = HeaderFrame
     Instance.new("UICorner", DestroyHubBtn).CornerRadius = UDim.new(0, 5)
-    AddGlow(DestroyHubBtn, Color3.fromRGB(255, 196, 0), 1, 0.3)
+    AddGlow(DestroyHubBtn, Color3.fromRGB(255, 70, 95), 1, 0.3)
     AddClickEffect(DestroyHubBtn)
 
     local Title = Instance.new("TextLabel")
@@ -514,7 +514,7 @@ function LZNLib:CreateWindow(options)
     Title.Position = UDim2.new(0, 14, 0, 20)
     Title.BackgroundTransparency = 1
     Title.Text = titleText
-    Title.TextColor3 = Color3.fromRGB(255, 235, 150)
+    Title.TextColor3 = Color3.fromRGB(235, 245, 255)
     Title.Font = Enum.Font.GothamBlack
     Title.TextSize = 13
     Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -532,7 +532,7 @@ function LZNLib:CreateWindow(options)
     local MusicButton = Instance.new("TextButton")
     MusicButton.Size = UDim2.new(0, 68, 0, 24)
     MusicButton.Position = UDim2.new(0, 14, 0, 46)
-    MusicButton.BackgroundColor3 = Color3.fromRGB(8, 8, 0)
+    MusicButton.BackgroundColor3 = Color3.fromRGB(16, 22, 35)
     MusicButton.BackgroundTransparency = 0.35
     MusicButton.Text = ""
     MusicButton.ZIndex = 25
@@ -571,7 +571,7 @@ function LZNLib:CreateWindow(options)
     local ProfileCard = Instance.new("Frame")
     ProfileCard.Size = UDim2.new(0, 176, 0, 56)
     ProfileCard.Position = UDim2.new(1, -188, 0.5, -28)
-    ProfileCard.BackgroundColor3 = Color3.fromRGB(8, 8, 0)
+    ProfileCard.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
     ProfileCard.BackgroundTransparency = 0.35
     ProfileCard.ZIndex = 25
     ProfileCard.Parent = HeaderFrame
@@ -582,7 +582,7 @@ function LZNLib:CreateWindow(options)
     Avatar.Name = "PlayerAvatar"
     Avatar.Size = UDim2.new(0, 38, 0, 38)
     Avatar.Position = UDim2.new(0, 8, 0.5, -19)
-    Avatar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Avatar.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
     Avatar.Image = ""
     Avatar.Parent = ProfileCard
     Instance.new("UICorner", Avatar).CornerRadius = UDim.new(1, 0)
@@ -591,18 +591,18 @@ function LZNLib:CreateWindow(options)
     local StatusDot = Instance.new("Frame")
     StatusDot.Size = UDim2.new(0, 9, 0, 9)
     StatusDot.Position = UDim2.new(0, 37, 0, 37)
-    StatusDot.BackgroundColor3 = Color3.fromRGB(255, 196, 0)
+    StatusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
     StatusDot.ZIndex = 26
     StatusDot.Parent = ProfileCard
     Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
-    AddGlow(StatusDot, Color3.fromRGB(0, 0, 0), 1.5, 0)
+    AddGlow(StatusDot, Color3.fromRGB(10, 14, 22), 1.5, 0)
 
     local DisplayName = Instance.new("TextLabel")
     DisplayName.Size = UDim2.new(1, -56, 0, 15)
     DisplayName.Position = UDim2.new(0, 52, 0, 6)
     DisplayName.BackgroundTransparency = 1
     DisplayName.Text = Player.DisplayName
-    DisplayName.TextColor3 = Color3.fromRGB(255, 240, 170)
+    DisplayName.TextColor3 = Color3.fromRGB(245, 248, 255)
     DisplayName.Font = Enum.Font.GothamBold
     DisplayName.TextSize = 10
     DisplayName.TextXAlignment = Enum.TextXAlignment.Left
@@ -614,7 +614,7 @@ function LZNLib:CreateWindow(options)
     UserName.Position = UDim2.new(0, 52, 0, 21)
     UserName.BackgroundTransparency = 1
     UserName.Text = "@" .. Player.Name
-    UserName.TextColor3 = Color3.fromRGB(200, 170, 45)
+    UserName.TextColor3 = Color3.fromRGB(155, 170, 190)
     UserName.Font = Enum.Font.Gotham
     UserName.TextSize = 9
     UserName.TextXAlignment = Enum.TextXAlignment.Left
@@ -791,14 +791,14 @@ function LZNLib:CreateWindow(options)
         local b = Instance.new("TextButton")
         b.Size = UDim2.new(0, 108, 1, 0)
         b.LayoutOrder = order
-        b.BackgroundColor3 = Color3.fromRGB(8, 8, 0)
+        b.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
         b.BackgroundTransparency = 0.5
         b.Text = ""
         b.Parent = PageNav
         Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
         AddClickEffect(b)
 
-        local ic = CreateCustomIcon(b, iconName, Color3.fromRGB(255, 220, 90), 12)
+        local ic = CreateCustomIcon(b, iconName, Color3.fromRGB(190, 210, 230), 12)
         ic.Position = UDim2.new(0, 14, 0.5, -6)
 
         local tx = Instance.new("TextLabel")
@@ -806,7 +806,7 @@ function LZNLib:CreateWindow(options)
         tx.Position = UDim2.new(0, 30, 0, 0)
         tx.BackgroundTransparency = 1
         tx.Text = label
-        tx.TextColor3 = Color3.fromRGB(255, 220, 90)
+        tx.TextColor3 = Color3.fromRGB(190, 210, 230)
         tx.Font = Enum.Font.GothamBold
         tx.TextSize = 11
         tx.TextXAlignment = Enum.TextXAlignment.Left
@@ -820,7 +820,7 @@ function LZNLib:CreateWindow(options)
     local PlayerTab, PlayerTabText, PlayerTabIcon = MakePageTab("PLAYER", "player", 3)
 
     local function SetTabColor(iconFrame, labelObj, active)
-        local col = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 220, 90)
+        local col = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(190, 210, 230)
         labelObj.TextColor3 = col
         for _, child in ipairs(iconFrame:GetChildren()) do
             if child:IsA("Frame") then
@@ -850,7 +850,7 @@ function LZNLib:CreateWindow(options)
             if entry.Page then entry.Page.Visible = false end
             if entry.Button then
                 entry.Button.BackgroundTransparency = 0.55
-                if entry.Label then entry.Label.TextColor3 = Color3.fromRGB(255, 220, 90) end
+                if entry.Label then entry.Label.TextColor3 = Color3.fromRGB(190, 210, 230) end
             end
         end
 
@@ -873,7 +873,7 @@ function LZNLib:CreateWindow(options)
     ResizeHandle.Name = "ResizeCornerArrows"
     ResizeHandle.Size = UDim2.new(0, 22, 0, 22)
     ResizeHandle.Position = UDim2.new(1, -22, 1, -22)
-    ResizeHandle.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ResizeHandle.BackgroundColor3 = Color3.fromRGB(12, 18, 30)
     ResizeHandle.BackgroundTransparency = 0.25
     ResizeHandle.Text = "⤡"
     ResizeHandle.TextColor3 = Color3.fromRGB(255, 196, 0)
@@ -910,7 +910,7 @@ function LZNLib:CreateWindow(options)
 
     local GameTopCard = Instance.new("Frame")
     GameTopCard.Size = UDim2.new(1, 0, 0, 158)
-    GameTopCard.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    GameTopCard.BackgroundColor3 = Color3.fromRGB(12, 16, 25)
     GameTopCard.BackgroundTransparency = 0.25
     GameTopCard.LayoutOrder = 1
     GameTopCard.Parent = GamePage
@@ -931,7 +931,7 @@ function LZNLib:CreateWindow(options)
     GameName.Position = UDim2.new(0, 76, 0, 8)
     GameName.BackgroundTransparency = 1
     GameName.Text = "Carregando mapa..."
-    GameName.TextColor3 = Color3.fromRGB(255, 240, 170)
+    GameName.TextColor3 = Color3.fromRGB(245, 248, 255)
     GameName.Font = Enum.Font.GothamBold
     GameName.TextSize = 12
     GameName.TextWrapped = true
@@ -943,7 +943,7 @@ function LZNLib:CreateWindow(options)
     GameStats.Position = UDim2.new(0, 8, 0, 76)
     GameStats.BackgroundTransparency = 1
     GameStats.Text = "Jogando neste servidor: " .. tostring(#Players:GetPlayers()) .. "\nJogando no mapa: carregando...\nVisitas: carregando...\nCriado: carregando...\nAtualizado: carregando..."
-    GameStats.TextColor3 = Color3.fromRGB(255, 230, 120)
+    GameStats.TextColor3 = Color3.fromRGB(205, 220, 238)
     GameStats.Font = Enum.Font.Gotham
     GameStats.TextSize = 10
     GameStats.TextXAlignment = Enum.TextXAlignment.Left
@@ -1086,11 +1086,13 @@ function LZNLib:CreateWindow(options)
     local ToggleHubBtn = Instance.new("TextButton")
     ToggleHubBtn.Size = UDim2.new(0, 46, 0, 46)
     ToggleHubBtn.Position = UDim2.new(0, 16, 0, 16)
-    ToggleHubBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ToggleHubBtn.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
     ToggleHubBtn.Text = ""
     ToggleHubBtn.ZIndex = 30
     ToggleHubBtn.Parent = ScreenGui
-    Instance.new("UICorner", ToggleHubBtn).CornerRadius = UDim.new(1, 0)
+    local FloatingButtonCorner = Instance.new("UICorner")
+    FloatingButtonCorner.CornerRadius = UDim.new(0, 10)
+    FloatingButtonCorner.Parent = ToggleHubBtn
 
     local FloatingButtonImage = Instance.new("ImageLabel")
     FloatingButtonImage.Name = "FloatingButtonImage"
@@ -1103,9 +1105,36 @@ function LZNLib:CreateWindow(options)
     FloatingButtonImage.Parent = ToggleHubBtn
     Instance.new("UICorner", FloatingButtonImage).CornerRadius = UDim.new(1, 0)
     AddGlow(ToggleHubBtn, accentColor, 2, 0.1)
-    AddGradient(ToggleHubBtn, Color3.fromRGB(18, 25, 40), Color3.fromRGB(0, 0, 0), 135)
+    AddGradient(ToggleHubBtn, Color3.fromRGB(18, 25, 40), Color3.fromRGB(8, 10, 15), 135)
     MakeDraggable(ToggleHubBtn)
     AddClickEffect(ToggleHubBtn)
+
+    -- Pulso arredondado somente com sons Roblox externos ao player interno da Library.
+    -- AudioPlayer e BGM da própria Library são ignorados.
+    local pulseTime = 0
+    local pulseActive = false
+    local function HasExternalPlayingSound()
+        for _, obj in ipairs(SoundService:GetDescendants()) do
+            if obj:IsA("Sound") and obj.IsPlaying
+                and obj ~= BackgroundMusic
+                and obj.Name ~= hubName .. "_AudioPlayer" then
+                return true
+            end
+        end
+        return false
+    end
+    RunService.RenderStepped:Connect(function(dt)
+        local active = HasExternalPlayingSound()
+        if active then
+            pulseActive = true
+            pulseTime += dt * 3
+            local radius = 10 + (math.sin(pulseTime) + 1) * 12
+            FloatingButtonCorner.CornerRadius = UDim.new(0, radius)
+        elseif pulseActive then
+            pulseActive = false
+            FloatingButtonCorner.CornerRadius = UDim.new(0, 10)
+        end
+    end)
 
     local HubOpen = true
     local IsAnimatingHub = false
@@ -1252,7 +1281,7 @@ function LZNLib:CreateWindow(options)
             local prevState = state
             state = newState
             TweenService:Create(pillFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundColor3 = state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(24, 20, 0)
+                BackgroundColor3 = state and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
             }):Play()
             TweenService:Create(dotFrame, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                 Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
@@ -1330,26 +1359,26 @@ function LZNLib:CreateWindow(options)
         local mainCol = Color3.fromRGB(0, 230, 165)
         local iconType = "success"
         if nType == "error" or nType == "erro" then
-            mainCol = Color3.fromRGB(255, 196, 0)
+            mainCol = Color3.fromRGB(255, 70, 95)
             iconType = "error"
         elseif nType == "falhou" or nType == "fail" then
-            mainCol = Color3.fromRGB(255, 196, 0)
+            mainCol = Color3.fromRGB(255, 175, 45)
             iconType = "fail"
         elseif nType == "warning" or nType == "aviso" then
-            mainCol = Color3.fromRGB(255, 196, 0)
+            mainCol = Color3.fromRGB(255, 190, 55)
             iconType = "fail"
         end
 
         local card = Instance.new("Frame")
         card.Size = UDim2.new(1, 0, 0, 56)
-        card.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        card.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
         card.BackgroundTransparency = 0.08
         card.ClipsDescendants = true
         card.ZIndex = 201
         card.Parent = NotifHolder
         Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
         AddGlow(card, mainCol, 1.5, 0.2)
-        AddGradient(card, Color3.fromRGB(8, 8, 0), Color3.fromRGB(8, 10, 16), 135)
+        AddGradient(card, Color3.fromRGB(16, 22, 34), Color3.fromRGB(8, 10, 16), 135)
 
         local cScale = Instance.new("UIScale")
         cScale.Scale = 0.75
@@ -1395,7 +1424,7 @@ function LZNLib:CreateWindow(options)
         mLbl.Position = UDim2.new(0, 54, 0, 26)
         mLbl.BackgroundTransparency = 1
         mLbl.Text = msgStr
-        mLbl.TextColor3 = Color3.fromRGB(255, 235, 150)
+        mLbl.TextColor3 = Color3.fromRGB(225, 238, 255)
         mLbl.Font = Enum.Font.Gotham
         mLbl.TextSize = 10
         mLbl.TextWrapped = true
@@ -1449,7 +1478,7 @@ function LZNLib:CreateWindow(options)
         popup.Parent = FullScreenBlurGui
         Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 14)
         AddGlow(popup, accentColor, 2, 0.1)
-        AddGradient(popup, Color3.fromRGB(16, 21, 33), Color3.fromRGB(0, 0, 0), 135)
+        AddGradient(popup, Color3.fromRGB(16, 21, 33), Color3.fromRGB(8, 10, 15), 135)
         MakeDraggable(popup)
 
         local pScale = Instance.new("UIScale")
@@ -1470,7 +1499,7 @@ function LZNLib:CreateWindow(options)
         title.Size = UDim2.new(1, 0, 0, 40)
         title.BackgroundTransparency = 1
         title.Text = cfg.Title or "OPÇÕES"
-        title.TextColor3 = Color3.fromRGB(255, 240, 170)
+        title.TextColor3 = Color3.fromRGB(240, 248, 255)
         title.Font = Enum.Font.GothamBold
         title.TextSize = 13
         title.ZIndex = 11
@@ -1481,12 +1510,12 @@ function LZNLib:CreateWindow(options)
             b.Position = UDim2.new(0.07, 0, 0, 46 + ((i - 1) * 44))
             b.BackgroundColor3 = i == 1 and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(22, 28, 42)
             b.Text = opt.Text or "Opção"
-            b.TextColor3 = i == 1 and Color3.new(1, 1, 1) or Color3.fromRGB(255, 235, 150)
+            b.TextColor3 = i == 1 and Color3.new(1, 1, 1) or Color3.fromRGB(220, 235, 255)
             b.Font = Enum.Font.GothamBold
             b.TextSize = 12
             b.ZIndex = 11
             Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
-            AddGlow(b, i == 1 and Color3.fromRGB(255, 220, 60) or Color3.fromRGB(255, 196, 0), 1.2, i == 1 and 0.3 or 0.4)
+            AddGlow(b, i == 1 and Color3.fromRGB(255, 210, 65) or Color3.fromRGB(255, 196, 0), 1.2, i == 1 and 0.3 or 0.4)
             if i == 1 then
                 AddGradient(b, Color3.fromRGB(255, 196, 0), Color3.fromRGB(190, 140, 0), 90)
             end
@@ -1510,7 +1539,7 @@ function LZNLib:CreateWindow(options)
         cfg = cfg or {}
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 38)
-        btn.BackgroundColor3 = cfg.Color or Color3.fromRGB(8, 8, 0)
+        btn.BackgroundColor3 = cfg.Color or Color3.fromRGB(16, 22, 35)
         btn.BackgroundTransparency = 0.35
         btn.Text = ""
         btn.LayoutOrder = NextOrder()
@@ -1565,18 +1594,18 @@ function LZNLib:CreateWindow(options)
         rowFrame.ZIndex = 24
         rowFrame.Parent = ActiveContainer
         Instance.new("UICorner", rowFrame).CornerRadius = UDim.new(0, 10)
-        local stroke = AddGlow(rowFrame, state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 196, 0), state and 1.8 or 1.2, state and 0.15 or 0.4)
+        local stroke = AddGlow(rowFrame, state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(255, 196, 0), state and 1.8 or 1.2, state and 0.15 or 0.4)
 
         local highlight = Instance.new("Frame")
         highlight.Size = UDim2.new(0, 4, 0.65, 0)
         highlight.Position = UDim2.new(0, 4, 0.175, 0)
-        highlight.BackgroundColor3 = Color3.fromRGB(255, 196, 0)
+        highlight.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
         highlight.BackgroundTransparency = state and 0 or 1
         highlight.BorderSizePixel = 0
         highlight.Parent = rowFrame
         Instance.new("UICorner", highlight).CornerRadius = UDim.new(1, 0)
 
-        local ic = CreateCustomIcon(rowFrame, cfg.Icon or "success", state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 220, 90), 13)
+        local ic = CreateCustomIcon(rowFrame, cfg.Icon or "success", state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220), 13)
         ic.Position = UDim2.new(0, 14, 0.5, -6)
 
         local lbl = Instance.new("TextLabel")
@@ -1584,7 +1613,7 @@ function LZNLib:CreateWindow(options)
         lbl.Position = UDim2.new(0, 32, 0, 0)
         lbl.BackgroundTransparency = 1
         lbl.Text = baseText
-        lbl.TextColor3 = state and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(230, 190, 40)
+        lbl.TextColor3 = state and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(185, 205, 225)
         lbl.Font = Enum.Font.GothamBold
         lbl.TextSize = 12
         lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1594,10 +1623,10 @@ function LZNLib:CreateWindow(options)
         local pill = Instance.new("Frame")
         pill.Size = UDim2.new(0, 42, 0, 22)
         pill.Position = UDim2.new(1, -52, 0.5, -11)
-        pill.BackgroundColor3 = state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(24, 20, 0)
+        pill.BackgroundColor3 = state and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
         pill.Parent = rowFrame
         Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
-        local pillStroke = AddGlow(pill, state and Color3.fromRGB(255, 230, 90) or Color3.fromRGB(100, 80, 0), 1, 0.3)
+        local pillStroke = AddGlow(pill, state and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110), 1, 0.3)
 
         local dot = Instance.new("Frame")
         dot.Size = UDim2.new(0, 16, 0, 16)
@@ -1614,12 +1643,12 @@ function LZNLib:CreateWindow(options)
             TweenService:Create(highlight, TweenInfo.new(0.22), {
                 BackgroundTransparency = state and 0 or 1
             }):Play()
-            lbl.TextColor3 = state and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(230, 190, 40)
-            stroke.Color = state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 196, 0)
+            lbl.TextColor3 = state and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(185, 205, 225)
+            stroke.Color = state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(255, 196, 0)
             stroke.Thickness = state and 1.8 or 1.2
             stroke.Transparency = state and 0.15 or 0.4
-            pillStroke.Color = state and Color3.fromRGB(255, 230, 90) or Color3.fromRGB(100, 80, 0)
-            local col = state and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 220, 90)
+            pillStroke.Color = state and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110)
+            local col = state and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220)
             for _, ch in ipairs(ic:GetChildren()) do
                 if ch:IsA("Frame") then ch.BackgroundColor3 = col end
             end
@@ -1639,14 +1668,14 @@ function LZNLib:CreateWindow(options)
         cfg = cfg or {}
         local boxWrap = Instance.new("Frame")
         boxWrap.Size = UDim2.new(1, 0, 0, 56)
-        boxWrap.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        boxWrap.BackgroundColor3 = Color3.fromRGB(11, 15, 24)
         boxWrap.BackgroundTransparency = 0.25
         boxWrap.LayoutOrder = NextOrder()
         boxWrap.ZIndex = 24
         boxWrap.Parent = ActiveContainer
         Instance.new("UICorner", boxWrap).CornerRadius = UDim.new(0, 11)
         local wrapStroke = AddGlow(boxWrap, accentColor, 1.2, 0.45)
-        AddGradient(boxWrap, Color3.fromRGB(8, 8, 0), Color3.fromRGB(0, 0, 0), 135)
+        AddGradient(boxWrap, Color3.fromRGB(16, 22, 35), Color3.fromRGB(9, 12, 19), 135)
 
         local topRow = Instance.new("Frame")
         topRow.Size = UDim2.new(1, -20, 0, 16)
@@ -1662,7 +1691,7 @@ function LZNLib:CreateWindow(options)
         lbl.Position = UDim2.new(0, 18, 0, 0)
         lbl.BackgroundTransparency = 1
         lbl.Text = cfg.Title or "ENTRADA DE TEXTO"
-        lbl.TextColor3 = Color3.fromRGB(230, 190, 40)
+        lbl.TextColor3 = Color3.fromRGB(175, 200, 225)
         lbl.Font = Enum.Font.GothamBold
         lbl.TextSize = 10
         lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1671,7 +1700,7 @@ function LZNLib:CreateWindow(options)
         local inputBg = Instance.new("Frame")
         inputBg.Size = UDim2.new(1, -20, 0, 26)
         inputBg.Position = UDim2.new(0, 10, 0, 24)
-        inputBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        inputBg.BackgroundColor3 = Color3.fromRGB(7, 10, 16)
         inputBg.BackgroundTransparency = 0.15
         inputBg.Parent = boxWrap
         Instance.new("UICorner", inputBg).CornerRadius = UDim.new(0, 7)
@@ -1684,7 +1713,7 @@ function LZNLib:CreateWindow(options)
         tb.Text = cfg.Default or ""
         tb.PlaceholderText = cfg.Placeholder or "Digite aqui..."
         tb.PlaceholderColor3 = Color3.fromRGB(105, 125, 150)
-        tb.TextColor3 = Color3.fromRGB(255, 240, 170)
+        tb.TextColor3 = Color3.fromRGB(240, 248, 255)
         tb.Font = Enum.Font.GothamMedium
         tb.TextSize = 11
         tb.TextXAlignment = Enum.TextXAlignment.Left
@@ -1742,7 +1771,7 @@ function LZNLib:CreateWindow(options)
 
         local card = Instance.new("Frame")
         card.Size = UDim2.new(1, 0, 0, 178)
-        card.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        card.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
         card.BackgroundTransparency = 0.22
         card.LayoutOrder = NextOrder()
         card.ClipsDescendants = true
@@ -1785,7 +1814,7 @@ function LZNLib:CreateWindow(options)
         dropBtn.BackgroundColor3 = Color3.fromRGB(14, 19, 30)
         dropBtn.BackgroundTransparency = 0.1
         dropBtn.Text = "  " .. tracks[1].Name .. "  ▾"
-        dropBtn.TextColor3 = Color3.fromRGB(255, 235, 150)
+        dropBtn.TextColor3 = Color3.fromRGB(235, 245, 255)
         dropBtn.Font = Enum.Font.GothamBold
         dropBtn.TextSize = 11
         dropBtn.TextXAlignment = Enum.TextXAlignment.Left
@@ -1799,7 +1828,7 @@ function LZNLib:CreateWindow(options)
         local dropList = Instance.new("ScrollingFrame")
         dropList.Size = UDim2.new(1, 0, 0, listH)
         dropList.Position = UDim2.new(0, 0, 0, 33)
-        dropList.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        dropList.BackgroundColor3 = Color3.fromRGB(9, 12, 19)
         dropList.BorderSizePixel = 0
         dropList.ScrollBarThickness = 2
         dropList.ScrollBarImageColor3 = accentColor
@@ -1823,7 +1852,7 @@ function LZNLib:CreateWindow(options)
             if AudioSound.IsPlaying then
                 SetCustomIconType(playPauseIcon, "pause", Color3.fromRGB(255, 196, 0), 14)
             else
-                SetCustomIconType(playPauseIcon, "play", Color3.fromRGB(0, 255, 175), 14)
+                SetCustomIconType(playPauseIcon, "play", Color3.fromRGB(255, 196, 0), 14)
             end
             playPauseIcon.Position = UDim2.new(0.5, -7, 0.5, -7)
         end
@@ -1989,7 +2018,7 @@ function LZNLib:CreateWindow(options)
         local function makeControlBtn(iconName, order, callback)
             local b = Instance.new("TextButton")
             b.Size = UDim2.new(0, 46, 0, 30)
-            b.BackgroundColor3 = Color3.fromRGB(8, 8, 0)
+            b.BackgroundColor3 = Color3.fromRGB(16, 22, 35)
             b.BackgroundTransparency = 0.2
             b.Text = ""
             b.LayoutOrder = order
@@ -2064,7 +2093,7 @@ function LZNLib:CreateWindow(options)
             input.Text = defaultTxt
             input.PlaceholderText = placeholderTxt
             input.PlaceholderColor3 = Color3.fromRGB(110, 130, 155)
-            input.TextColor3 = Color3.fromRGB(255, 240, 170)
+            input.TextColor3 = Color3.fromRGB(240, 248, 255)
             input.Font = Enum.Font.GothamBold
             input.TextSize = 11
             input.TextXAlignment = Enum.TextXAlignment.Left
@@ -2167,7 +2196,7 @@ function LZNLib:CreateWindow(options)
 
         local sliderCard = Instance.new("Frame")
         sliderCard.Size = hasReset and UDim2.new(1, -44, 1, 0) or UDim2.new(1, 0, 1, 0)
-        sliderCard.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        sliderCard.BackgroundColor3 = Color3.fromRGB(11, 15, 24)
         sliderCard.BackgroundTransparency = 0.25
         sliderCard.Parent = row
         Instance.new("UICorner", sliderCard).CornerRadius = UDim.new(0, 10)
@@ -2347,7 +2376,7 @@ function LZNLib:CreateWindow(options)
             local resetBtn = Instance.new("TextButton")
             resetBtn.Size = UDim2.new(0, 38, 1, 0)
             resetBtn.Position = UDim2.new(1, -38, 0, 0)
-            resetBtn.BackgroundColor3 = Color3.fromRGB(8, 8, 0)
+            resetBtn.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
             resetBtn.BackgroundTransparency = 0.25
             resetBtn.Text = ""
             resetBtn.Parent = row
@@ -2398,10 +2427,10 @@ function LZNLib:CreateWindow(options)
 
         local dropBtn = Instance.new("TextButton")
         dropBtn.Size = UDim2.new(1, 0, 0, 38)
-        dropBtn.BackgroundColor3 = Color3.fromRGB(8, 8, 0)
+        dropBtn.BackgroundColor3 = Color3.fromRGB(14, 18, 28)
         dropBtn.BackgroundTransparency = 0.25
         dropBtn.Text = label .. ": " .. tostring(current) .. "  ▾"
-        dropBtn.TextColor3 = Color3.fromRGB(255, 235, 150)
+        dropBtn.TextColor3 = Color3.fromRGB(220, 235, 255)
         dropBtn.Font = Enum.Font.GothamBold
         dropBtn.TextSize = 12
         dropBtn.ZIndex = 25
@@ -2439,7 +2468,7 @@ function LZNLib:CreateWindow(options)
             itemBtn.Position = UDim2.new(0, 0, 0, (i - 1) * 30)
             itemBtn.BackgroundTransparency = 1
             itemBtn.Text = tostring(item)
-            itemBtn.TextColor3 = Color3.fromRGB(255, 235, 150)
+            itemBtn.TextColor3 = Color3.fromRGB(220, 235, 255)
             itemBtn.Font = Enum.Font.GothamMedium
             itemBtn.TextSize = 12
             itemBtn.ZIndex = 26
@@ -2508,10 +2537,10 @@ function LZNLib:CreateWindow(options)
 
         local dropBtn = Instance.new("TextButton")
         dropBtn.Size = UDim2.new(1, 0, 0, 38)
-        dropBtn.BackgroundColor3 = Color3.fromRGB(8, 8, 0)
+        dropBtn.BackgroundColor3 = Color3.fromRGB(14, 18, 28)
         dropBtn.BackgroundTransparency = 0.25
         dropBtn.Text = formatHeader()
-        dropBtn.TextColor3 = Color3.fromRGB(255, 235, 150)
+        dropBtn.TextColor3 = Color3.fromRGB(220, 235, 255)
         dropBtn.Font = Enum.Font.GothamBold
         dropBtn.TextSize = 11
         dropBtn.TextTruncate = Enum.TextTruncate.AtEnd
@@ -2538,7 +2567,7 @@ function LZNLib:CreateWindow(options)
                 entry.btn.BackgroundColor3 = active and Color3.fromRGB(190, 145, 0) or Color3.fromRGB(14, 19, 30)
                 entry.btn.BackgroundTransparency = active and 0.25 or 0.9
                 entry.lbl.TextColor3 = active and Color3.fromRGB(0, 255, 185) or Color3.fromRGB(215, 232, 250)
-                entry.box.BackgroundColor3 = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(24, 20, 0)
+                entry.box.BackgroundColor3 = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(28, 36, 52)
             end
             dropBtn.Text = formatHeader()
         end
@@ -2559,7 +2588,7 @@ function LZNLib:CreateWindow(options)
             local checkBox = Instance.new("Frame")
             checkBox.Size = UDim2.new(0, 14, 0, 14)
             checkBox.Position = UDim2.new(0, 8, 0.5, -7)
-            checkBox.BackgroundColor3 = Color3.fromRGB(24, 20, 0)
+            checkBox.BackgroundColor3 = Color3.fromRGB(28, 36, 52)
             checkBox.ZIndex = 27
             checkBox.Parent = itemBtn
             Instance.new("UICorner", checkBox).CornerRadius = UDim.new(0, 4)
@@ -2743,7 +2772,7 @@ function LZNLib:CreateWindow(options)
             if entry.Button then
                 entry.Button.BackgroundTransparency = entry == tab and 0.12 or 0.55
                 if entry.Label then
-                    entry.Label.TextColor3 = entry == tab and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 220, 90)
+                    entry.Label.TextColor3 = entry == tab and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(190, 210, 230)
                 end
             end
         end
@@ -2775,7 +2804,7 @@ function LZNLib:CreateWindow(options)
         local button = Instance.new("TextButton")
         button.Name = "TabButton_" .. name:gsub("[^%w_%-]", "")
         button.Size = UDim2.new(0, math.clamp(34 + (#name * 6), 84, 150), 1, 0)
-        button.BackgroundColor3 = Color3.fromRGB(8, 8, 0)
+        button.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
         button.BackgroundTransparency = 0.55
         button.BorderSizePixel = 0
         button.Text = ""
@@ -2787,7 +2816,7 @@ function LZNLib:CreateWindow(options)
         local tabIcon = nil
         if type(icon) == "string" and icon ~= "" then
             pcall(function()
-                tabIcon = CreateCustomIcon(button, icon, Color3.fromRGB(255, 220, 90), 12)
+                tabIcon = CreateCustomIcon(button, icon, Color3.fromRGB(190, 210, 230), 12)
                 tabIcon.Position = UDim2.new(0, 8, 0.5, -6)
                 tabIcon.ZIndex = button.ZIndex + 1
             end)
@@ -2798,7 +2827,7 @@ function LZNLib:CreateWindow(options)
         tabLabel.Position = UDim2.new(0, 28, 0, 0)
         tabLabel.BackgroundTransparency = 1
         tabLabel.Text = name
-        tabLabel.TextColor3 = Color3.fromRGB(255, 220, 90)
+        tabLabel.TextColor3 = Color3.fromRGB(190, 210, 230)
         tabLabel.Font = Enum.Font.GothamBold
         tabLabel.TextSize = 10
         tabLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -3035,7 +3064,7 @@ function LZNLib:CreateWindow(options)
         box.BorderSizePixel = 0
         box.PlaceholderText = cfg.Placeholder or "Pesquisar..."
         box.Text = ""
-        box.TextColor3 = Color3.fromRGB(255, 235, 150)
+        box.TextColor3 = Color3.fromRGB(235, 245, 255)
         box.PlaceholderColor3 = Color3.fromRGB(130, 145, 165)
         box.Font = Enum.Font.Gotham
         box.TextSize = 12
@@ -3180,7 +3209,7 @@ function LZNLib:CreateWindow(options)
         if theme.Background then MainFrame.BackgroundColor3 = theme.Background end
         return true
     end
-    ThemeManager:Register("Default", {Accent = accentColor, Background = Color3.fromRGB(0, 0, 0)})
+    ThemeManager:Register("Default", {Accent = accentColor, Background = Color3.fromRGB(8, 10, 15)})
     ThemeManager:Register("Ocean", {Accent = Color3.fromRGB(255, 196, 0), Background = Color3.fromRGB(7, 16, 27)})
     ThemeManager:Register("Crimson", {Accent = Color3.fromRGB(255, 65, 90), Background = Color3.fromRGB(20, 8, 13)})
     Window.ThemeManager = ThemeManager
@@ -3328,7 +3357,7 @@ function LZNLib:CreateWindow(options)
         local picker = Instance.new("Frame")
         picker.Name = "LZNColorPickerPopup"
         picker.Size = UDim2.new(0, 252, 0, 264)
-        picker.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        picker.BackgroundColor3 = Color3.fromRGB(11, 15, 24)
         picker.BorderSizePixel = 0
         picker.Visible = false
         picker.ZIndex = 80
@@ -3354,7 +3383,7 @@ function LZNLib:CreateWindow(options)
         closeBtn.Position = UDim2.new(1, -34, 0, 5)
         closeBtn.BackgroundColor3 = Color3.fromRGB(30, 39, 56)
         closeBtn.Text = "×"
-        closeBtn.TextColor3 = Color3.fromRGB(255, 235, 150)
+        closeBtn.TextColor3 = Color3.fromRGB(235, 245, 255)
         closeBtn.Font = Enum.Font.GothamBold
         closeBtn.TextSize = 18
         closeBtn.AutoButtonColor = false
@@ -3641,7 +3670,7 @@ function LZNLib:CreateWindow(options)
             tip.Size = UDim2.new(0, 0, 0, 24)
             tip.BackgroundColor3 = Color3.fromRGB(8, 12, 20)
             tip.BackgroundTransparency = 0.05
-            tip.TextColor3 = Color3.fromRGB(255, 235, 150)
+            tip.TextColor3 = Color3.fromRGB(235, 245, 255)
             tip.Font = Enum.Font.GothamMedium
             tip.TextSize = 10
             tip.Text = "  " .. tostring(message or "") .. "  "
@@ -3672,7 +3701,7 @@ function LZNLib:CreateWindow(options)
 
     local PlayerCard = Instance.new("Frame")
     PlayerCard.Size = UDim2.new(1, 0, 0, 68)
-    PlayerCard.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    PlayerCard.BackgroundColor3 = Color3.fromRGB(12, 16, 25)
     PlayerCard.BackgroundTransparency = 0.25
     PlayerCard.LayoutOrder = 1
     PlayerCard.Parent = PlayerPage
@@ -3697,7 +3726,7 @@ function LZNLib:CreateWindow(options)
     PInfo.Position = UDim2.new(0, 66, 0, 6)
     PInfo.BackgroundTransparency = 1
     PInfo.Text = Player.DisplayName .. " (@" .. Player.Name .. ")\nID: " .. tostring(Player.UserId) .. "\nConta: " .. tostring(Player.AccountAge) .. " dias"
-    PInfo.TextColor3 = Color3.fromRGB(255, 235, 150)
+    PInfo.TextColor3 = Color3.fromRGB(225, 238, 255)
     PInfo.Font = Enum.Font.GothamMedium
     PInfo.TextSize = 11
     PInfo.TextXAlignment = Enum.TextXAlignment.Left
@@ -4001,17 +4030,17 @@ function LZNLib:CreateWindow(options)
         cardB.LayoutOrder = order
         cardB.Parent = PlayerPage
         Instance.new("UICorner", cardB).CornerRadius = UDim.new(0, 10)
-        local st = AddGlow(cardB, initialVal and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 196, 0), initialVal and 1.8 or 1.2, initialVal and 0.15 or 0.4)
+        local st = AddGlow(cardB, initialVal and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(255, 196, 0), initialVal and 1.8 or 1.2, initialVal and 0.15 or 0.4)
         local accentMark = Instance.new("Frame")
         accentMark.Size = UDim2.new(0, 4, 0.65, 0)
         accentMark.Position = UDim2.new(0, 4, 0.175, 0)
-        accentMark.BackgroundColor3 = Color3.fromRGB(255, 196, 0)
+        accentMark.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
         accentMark.BackgroundTransparency = initialVal and 0 or 1
         accentMark.BorderSizePixel = 0
         accentMark.Parent = cardB
         Instance.new("UICorner", accentMark).CornerRadius = UDim.new(1, 0)
 
-        local ic = CreateCustomIcon(cardB, iconName, initialVal and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 220, 90), 13)
+        local ic = CreateCustomIcon(cardB, iconName, initialVal and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220), 13)
         ic.Position = UDim2.new(0, 12, 0.5, -6)
 
         local tx = Instance.new("TextLabel")
@@ -4029,10 +4058,10 @@ function LZNLib:CreateWindow(options)
         local pillB = Instance.new("Frame")
         pillB.Size = UDim2.new(0, 42, 0, 22)
         pillB.Position = UDim2.new(1, -52, 0.5, -11)
-        pillB.BackgroundColor3 = initialVal and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(24, 20, 0)
+        pillB.BackgroundColor3 = initialVal and Color3.fromRGB(0, 200, 145) or Color3.fromRGB(28, 36, 52)
         pillB.Parent = cardB
         Instance.new("UICorner", pillB).CornerRadius = UDim.new(1, 0)
-        local pillStrokeB = AddGlow(pillB, initialVal and Color3.fromRGB(255, 230, 90) or Color3.fromRGB(100, 80, 0), 1, 0.3)
+        local pillStrokeB = AddGlow(pillB, initialVal and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110), 1, 0.3)
 
         local dotB = Instance.new("Frame")
         dotB.Size = UDim2.new(0, 16, 0, 16)
@@ -4042,11 +4071,11 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", dotB).CornerRadius = UDim.new(1, 0)
 
         return AttachStrictToggleControl(pillB, dotB, initialVal == true, function(active)
-            st.Color = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 196, 0)
+            st.Color = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(255, 196, 0)
             st.Thickness = active and 1.8 or 1.2
             st.Transparency = active and 0.15 or 0.4
-            pillStrokeB.Color = active and Color3.fromRGB(255, 230, 90) or Color3.fromRGB(100, 80, 0)
-            local col = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(255, 220, 90)
+            pillStrokeB.Color = active and Color3.fromRGB(120, 255, 210) or Color3.fromRGB(60, 80, 110)
+            local col = active and Color3.fromRGB(0, 255, 170) or Color3.fromRGB(180, 200, 220)
             for _, ch in ipairs(ic:GetChildren()) do
                 if ch:IsA("Frame") then ch.BackgroundColor3 = col end
             end
@@ -4054,7 +4083,7 @@ function LZNLib:CreateWindow(options)
             TweenService:Create(cardB, TweenInfo.new(0.22), {
                 BackgroundTransparency = active and 0.18 or 0.45
             }):Play()
-            tx.TextColor3 = active and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(230, 190, 40)
+            tx.TextColor3 = active and Color3.fromRGB(235, 248, 255) or Color3.fromRGB(185, 205, 225)
             if onToggle then onToggle(active) end
             Window.NotifyAction(textStr, active and "Ativado" or "Desativado", active and "success" or "info")
         end)
@@ -4168,7 +4197,7 @@ function LZNLib:CreateWindow(options)
     EquippedActionBar.Size = UDim2.new(0, 172, 0, 28)
     EquippedActionBar.Position = UDim2.new(0.5, 0, 1, -86)
     EquippedActionBar.AnchorPoint = Vector2.new(0.5, 1)
-    EquippedActionBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    EquippedActionBar.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
     EquippedActionBar.BackgroundTransparency = 0.2
     EquippedActionBar.Visible = false
     EquippedActionBar.ZIndex = 12
@@ -4179,7 +4208,7 @@ function LZNLib:CreateWindow(options)
     local QtyBox = Instance.new("TextBox")
     QtyBox.Size = UDim2.new(0, 42, 0, 20)
     QtyBox.Position = UDim2.new(0, 4, 0.5, -10)
-    QtyBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    QtyBox.BackgroundColor3 = Color3.fromRGB(7, 10, 16)
     QtyBox.Text = "1"
     QtyBox.PlaceholderText = "Qtd"
     QtyBox.PlaceholderColor3 = Color3.fromRGB(115, 135, 160)
@@ -4232,7 +4261,7 @@ function LZNLib:CreateWindow(options)
     BackpackPanel.Parent = InvGui
     Instance.new("UICorner", BackpackPanel).CornerRadius = UDim.new(0, 14)
     AddGlow(BackpackPanel, accentColor, 1.5, 0.25)
-    AddGradient(BackpackPanel, Color3.fromRGB(15, 21, 34), Color3.fromRGB(0, 0, 0), 135)
+    AddGradient(BackpackPanel, Color3.fromRGB(15, 21, 34), Color3.fromRGB(7, 10, 16), 135)
 
     local SearchBox = Instance.new("TextBox")
     SearchBox.Size = UDim2.new(1, -20, 0, 28)
@@ -4241,7 +4270,7 @@ function LZNLib:CreateWindow(options)
     SearchBox.Text = ""
     SearchBox.PlaceholderText = "Pesquisar item na mochila..."
     SearchBox.PlaceholderColor3 = Color3.fromRGB(125, 148, 175)
-    SearchBox.TextColor3 = Color3.fromRGB(255, 240, 170)
+    SearchBox.TextColor3 = Color3.fromRGB(240, 248, 255)
     SearchBox.Font = Enum.Font.GothamBold
     SearchBox.TextSize = 11
     SearchBox.ClearTextOnFocus = false
@@ -4599,7 +4628,7 @@ function LZNLib:CreateWindow(options)
             nameLbl.Text = ""
             imgLbl.Image = ""
             countLbl.Text = ""
-            btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            btn.BackgroundColor3 = Color3.fromRGB(12, 16, 25)
             btn.BackgroundTransparency = 0.35
             local st = btn:FindFirstChildOfClass("UIStroke")
             if st then
@@ -4803,7 +4832,7 @@ function LZNLib:CreateWindow(options)
         cLbl.Size = UDim2.new(1, -6, 0, 12)
         cLbl.Position = UDim2.new(0, 3, 1, -14)
         cLbl.BackgroundTransparency = 1
-        cLbl.TextColor3 = Color3.fromRGB(0, 255, 175)
+        cLbl.TextColor3 = Color3.fromRGB(255, 196, 0)
         cLbl.Font = Enum.Font.GothamBlack
         cLbl.TextSize = 9
         cLbl.TextXAlignment = Enum.TextXAlignment.Right
@@ -4826,7 +4855,7 @@ function LZNLib:CreateWindow(options)
     BackpackToggleBtn.Name = "BackpackToggleBtn"
     BackpackToggleBtn.Size = UDim2.new(0, 44, 0, 44)
     BackpackToggleBtn.Position = UDim2.new(0, 10 * 56 + 4, 0.5, -22)
-    BackpackToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    BackpackToggleBtn.BackgroundColor3 = Color3.fromRGB(12, 18, 30)
     BackpackToggleBtn.BackgroundTransparency = 0.2
     BackpackToggleBtn.Text = ""
     BackpackToggleBtn.ZIndex = 8
@@ -4909,7 +4938,7 @@ function LZNLib:CreateWindow(options)
                 cL.Position = UDim2.new(0, 2, 1, -13)
                 cL.BackgroundTransparency = 1
                 cL.Text = itemData.Count > 1 and ("x" .. tostring(itemData.Count)) or ""
-                cL.TextColor3 = Color3.fromRGB(0, 255, 175)
+                cL.TextColor3 = Color3.fromRGB(255, 196, 0)
                 cL.Font = Enum.Font.GothamBlack
                 cL.TextSize = 8
                 cL.TextXAlignment = Enum.TextXAlignment.Right
@@ -5164,6 +5193,7 @@ function LZNLib:CreateWindow(options)
     end
 
     -- Assets externos: cache local com getcustomasset para imagens de fundo e botão flutuante.
+    -- Apenas as quatro imagens de fundo solicitadas; o ícone flutuante tem asset separado.
     local backgroundUrls = {
         "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png",
         "https://i.ibb.co/XfKzm6Pm/LZN-1795598058085.webp",
@@ -5183,11 +5213,17 @@ function LZNLib:CreateWindow(options)
     task.spawn(function()
         local index = 1
         while ScreenGui.Parent do
-            if loadedBackgrounds[index] and loadedBackgrounds[index] ~= "" then
-                HubBackground.Image = loadedBackgrounds[index]
+            local nextImage = loadedBackgrounds[index]
+            if nextImage and nextImage ~= "" then
+                local fadeOut = TweenService:Create(HubBackground, TweenInfo.new(0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {ImageTransparency = 1})
+                fadeOut:Play()
+                fadeOut.Completed:Wait()
+                if not ScreenGui.Parent then break end
+                HubBackground.Image = nextImage
+                TweenService:Create(HubBackground, TweenInfo.new(0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {ImageTransparency = 0}):Play()
             end
             index = (index % #backgroundUrls) + 1
-            task.wait(10)
+            task.wait(9)
         end
     end)
 
@@ -5690,7 +5726,7 @@ end
         thankText.Position = UDim2.new(0, 14, 0, 145)
         thankText.BackgroundTransparency = 1
         thankText.Text = "obrigado por usar minha library cute cute:3"
-        thankText.TextColor3 = Color3.fromRGB(255, 240, 170)
+        thankText.TextColor3 = Color3.fromRGB(245, 248, 255)
         thankText.Font = Enum.Font.GothamBold
         thankText.TextSize = 13
         thankText.TextWrapped = true
@@ -5732,7 +5768,7 @@ end
         languageTitle.Position = UDim2.new(0, 14, 0, 318)
         languageTitle.BackgroundTransparency = 1
         languageTitle.Text = "escolha seu idioma"
-        languageTitle.TextColor3 = Color3.fromRGB(255, 235, 150)
+        languageTitle.TextColor3 = Color3.fromRGB(235, 245, 255)
         languageTitle.Font = Enum.Font.GothamBold
         languageTitle.TextSize = 12
         languageTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -5820,7 +5856,7 @@ end
         continueButton.ZIndex = 303
         continueButton.Parent = panel
         Instance.new("UICorner", continueButton).CornerRadius = UDim.new(0, 9)
-        AddGlow(continueButton, Color3.fromRGB(255, 220, 60), 1.2, 0.18)
+        AddGlow(continueButton, Color3.fromRGB(255, 210, 65), 1.2, 0.18)
 
         PlaySFX(Window.IntroThankSFX, 1)
         TweenService:Create(image1, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
@@ -5973,7 +6009,7 @@ end
             welcomeText.Position = UDim2.new(0, 14, 0, 310)
             welcomeText.BackgroundTransparency = 1
             welcomeText.Text = "Bem-vindo(a) " .. tostring(Player.DisplayName)
-            welcomeText.TextColor3 = Color3.fromRGB(255, 240, 170)
+            welcomeText.TextColor3 = Color3.fromRGB(245, 248, 255)
             welcomeText.Font = Enum.Font.GothamBold
             welcomeText.TextSize = 13
             welcomeText.TextWrapped = true
