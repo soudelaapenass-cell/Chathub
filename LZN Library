@@ -830,7 +830,15 @@ function LZNLib:CreateWindow(options)
         end
     end
 
+    local ColorPickerCloseHandlers = {}
+    local function CloseAllColorPickers()
+        for _, closeHandler in ipairs(ColorPickerCloseHandlers) do
+            pcall(closeHandler)
+        end
+    end
+
     local function SetPage(page)
+        CloseAllColorPickers()
         CurrentPage = page
         ContentContainer.Visible = false  -- HUB removido
         GamePage.Visible = page == "Game"
@@ -1090,11 +1098,12 @@ function LZNLib:CreateWindow(options)
     ToggleHubBtn.Size = UDim2.new(0, 46, 0, 46)
     ToggleHubBtn.Position = UDim2.new(0, 16, 0, 16)
     ToggleHubBtn.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
+    ToggleHubBtn.ClipsDescendants = true
     ToggleHubBtn.Text = ""
     ToggleHubBtn.ZIndex = 30
     ToggleHubBtn.Parent = ScreenGui
     local FloatingButtonCorner = Instance.new("UICorner")
-    FloatingButtonCorner.CornerRadius = UDim.new(0, 10)
+    FloatingButtonCorner.CornerRadius = UDim.new(1, 0)
     FloatingButtonCorner.Parent = ToggleHubBtn
 
     local FloatingButtonImage = Instance.new("ImageLabel")
@@ -1112,8 +1121,6 @@ function LZNLib:CreateWindow(options)
     MakeDraggable(ToggleHubBtn)
     AddClickEffect(ToggleHubBtn)
 
-    -- Pulso arredondado somente com sons Roblox externos ao player interno da Library.
-    -- AudioPlayer e BGM da própria Library são ignorados.
     local HubOpen = true
     local IsAnimatingHub = false
 
@@ -1134,6 +1141,7 @@ function LZNLib:CreateWindow(options)
                 IsAnimatingHub = false
             end)
         else
+            CloseAllColorPickers()
             local tween = TweenService:Create(HubScale, TweenInfo.new(0.24, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
                 Scale = 0.01
             })
@@ -2738,6 +2746,7 @@ function LZNLib:CreateWindow(options)
     end
 
     local function SelectPublicTab(tab, silent)
+        CloseAllColorPickers()
         if type(tab) == "string" then tab = TabRegistry[tab] end
         if not tab or not tab.Page or not tab.Page.Parent then return false end
         ActiveTabName = tab.Name
@@ -3373,7 +3382,7 @@ function LZNLib:CreateWindow(options)
 
         local preview = Instance.new("Frame")
         preview.Size = UDim2.new(0, 18, 0, 18)
-        preview.Position = UDim2.new(1, -28, 0, 185)
+        preview.Position = UDim2.new(1, -30, 0, 185)
         preview.BackgroundColor3 = draftColor
         preview.BorderSizePixel = 0
         preview.ZIndex = 82
@@ -3455,7 +3464,7 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", hueMarker).CornerRadius = UDim.new(1, 0)
 
         local hexLabel = Instance.new("TextLabel")
-        hexLabel.Size = UDim2.new(1, -42, 0, 20)
+        hexLabel.Size = UDim2.new(1, -48, 0, 20)
         hexLabel.Position = UDim2.new(0, 10, 0, 184)
         hexLabel.BackgroundTransparency = 1
         hexLabel.TextColor3 = Color3.fromRGB(155, 180, 205)
@@ -3554,6 +3563,7 @@ function LZNLib:CreateWindow(options)
                 pickerFollowConnection = nil
             end
         end
+        table.insert(ColorPickerCloseHandlers, closePicker)
         local draggingSV = false
         local draggingHue = false
         local activePickerInput = nil
@@ -3614,7 +3624,7 @@ function LZNLib:CreateWindow(options)
             swatch.BackgroundColor3 = committedColor
             SafeCallback(cfg.Callback, committedColor, committedColor:ToHSV())
             Window.NotifyAction(cfg.Text or "ColorPicker", "Cor aplicada: " .. string.format("#%02X%02X%02X", math.floor(committedColor.R * 255 + 0.5), math.floor(committedColor.G * 255 + 0.5), math.floor(committedColor.B * 255 + 0.5)), "success")
-            animatePopup(false)
+            closePicker()
         end)
         row.Destroying:Connect(function()
             if picker and picker.Parent then picker:Destroy() end
