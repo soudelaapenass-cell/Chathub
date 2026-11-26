@@ -3379,7 +3379,7 @@ function LZNLib:CreateWindow(options)
 
         local preview = Instance.new("Frame")
         preview.Size = UDim2.new(0, 22, 0, 18)
-        preview.Position = UDim2.new(1, -32, 0, 185)
+        preview.Position = UDim2.new(0, 92, 0, 185)  -- ao lado do codigo hex
         preview.BackgroundColor3 = draftColor
         preview.BorderSizePixel = 0
         preview.ZIndex = 83
@@ -3462,7 +3462,7 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", hueMarker).CornerRadius = UDim.new(1, 0)
 
         local hexLabel = Instance.new("TextLabel")
-        hexLabel.Size = UDim2.new(1, -48, 0, 20)
+        hexLabel.Size = UDim2.new(0, 78, 0, 20)
         hexLabel.Position = UDim2.new(0, 10, 0, 184)
         hexLabel.BackgroundTransparency = 1
         hexLabel.TextColor3 = Color3.fromRGB(155, 180, 205)
@@ -3573,6 +3573,17 @@ function LZNLib:CreateWindow(options)
             visConn = HubScale:GetPropertyChangedSignal("Scale"):Connect(function()
                 if HubScale.Scale < 0.2 and popupOpen then
                     closePicker()
+                end
+            end)
+            -- Segue o hub enquanto o picker esta aberto (arrastar / redimensionar)
+            MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+                if popupOpen and picker.Visible then
+                    placePopup()
+                end
+            end)
+            MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                if popupOpen and picker.Visible then
+                    placePopup()
                 end
             end)
         end
@@ -4056,7 +4067,7 @@ function LZNLib:CreateWindow(options)
 
     Player.CharacterAdded:Connect(function(newChar)
         CaptureDefaultCharStats(newChar)
-        task.wait(0.15)
+        task.wait(0.1)
         local hum = newChar:WaitForChild("Humanoid", 5)
         if hum then
             local targetSpeed = speedSlider:GetValue()
@@ -4066,17 +4077,26 @@ function LZNLib:CreateWindow(options)
             hum.JumpPower = targetJump
             BindJumpPowerPersistence(hum)
             BindWalkSpeedPersistence(hum)
-            -- Reforça de novo após um pouco (alguns jogos sobrescrevem)
-            task.delay(0.6, function()
-                if hum and hum.Parent then
+            -- Reforca varias vezes (jogos que resetam stats no spawn)
+            task.spawn(function()
+                for i = 1, 20 do
+                    if not hum or not hum.Parent then break end
                     hum.WalkSpeed = targetSpeed
                     hum.UseJumpPower = true
                     hum.JumpPower = targetJump
+                    task.wait(0.12)
                 end
             end)
         end
         if godModeActive then
-            BindGodModeToCharacter(newChar)
+            task.delay(0.05, function()
+                BindGodModeToCharacter(newChar)
+            end)
+            task.delay(0.4, function()
+                if godModeActive then
+                    BindGodModeToCharacter(newChar)
+                end
+            end)
         end
         platformFixedY = nil
         lastSavedPos = nil
@@ -5172,7 +5192,7 @@ function LZNLib:CreateWindow(options)
         if godModeActive and char and hum and hrp then
             pcall(function()
                 local state = hum:GetState()
-                if state == Enum.HumanoidStateType.Dead or state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.FallingDown then
+                if state == Enum.HumanoidStateType.Dead or state == Enum.HumanoidStateType.Ragdoll or state == Enum.HumanoidStateType.FallingDown or state == Enum.HumanoidStateType.Physics then
                     hum:ChangeState(Enum.HumanoidStateType.Running)
                 end
                 hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
@@ -5182,38 +5202,42 @@ function LZNLib:CreateWindow(options)
                 hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
                 hum.BreakJointsOnDeath = false
                 hum.RequiresNeck = false
-                if hum.MaxHealth < 1e9 then
+                -- Health lock ultra agressivo
+                if hum.MaxHealth ~= math.huge then
                     hum.MaxHealth = math.huge
                 end
-                if hum.Health < 1e9 then
+                if hum.Health < 1e12 then
                     hum.Health = math.huge
                 end
-                -- Anti-fling / anti-void mais forte
+                -- Anti-fling / anti-void / anti-spin
                 local vel = hrp.AssemblyLinearVelocity
-                if math.abs(vel.Y) > 90 or vel.Magnitude > 220 then
-                    hrp.AssemblyLinearVelocity = Vector3.new(vel.X * 0.25, 0, vel.Z * 0.25)
+                if math.abs(vel.Y) > 80 or vel.Magnitude > 180 then
+                    hrp.AssemblyLinearVelocity = Vector3.new(vel.X * 0.15, 0, vel.Z * 0.15)
                 end
-                if hrp.AssemblyAngularVelocity.Magnitude > 20 then
+                if hrp.AssemblyAngularVelocity.Magnitude > 12 then
                     hrp.AssemblyAngularVelocity = Vector3.zero
                 end
-                if hrp.Position.Y > workspace.FallenPartsDestroyHeight + 25 then
+                -- Salva posicao boa com mais frequencia
+                if hrp.Position.Y > workspace.FallenPartsDestroyHeight + 30 then
                     lastSavedPos = hrp.Position
                 elseif lastSavedPos then
-                    hrp.CFrame = CFrame.new(lastSavedPos + Vector3.new(0, 4, 0))
+                    hrp.CFrame = CFrame.new(lastSavedPos + Vector3.new(0, 5, 0))
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
+                    hum:ChangeState(Enum.HumanoidStateType.Running)
                 end
-                -- Remove ForceField antigo e garante um limpo (visual + proteção extra)
+                -- ForceField invisivel sempre presente
                 local oldFF = char:FindFirstChildOfClass("ForceField")
                 if not oldFF then
                     local ff = Instance.new("ForceField")
                     ff.Visible = false
+                    ff.Name = "LZN_GodFF"
                     ff.Parent = char
                 end
             end)
         end
 
-        if antiFlingActive and hrp then
+                if antiFlingActive and hrp then
             pcall(function()
                 if hrp.AssemblyAngularVelocity.Magnitude > 35 then
                     hrp.AssemblyAngularVelocity = Vector3.zero
