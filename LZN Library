@@ -5615,385 +5615,130 @@ end
         ScreenGui.DescendantAdded:Connect(function(object) task.defer(function() AutoTranslateObject(object) end) end)
     end)
 
-    if options.ShowLanguageIntro == true then
+    if options.ShowLanguageIntro ~= false then
         task.spawn(function()
             MainFrame.Visible = false
-        ToggleHubBtn.Visible = false
-        HubOpen = true
-        if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
+            ToggleHubBtn.Visible = false
+            HubOpen = true
+            if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
 
-        local introBlur = Instance.new("BlurEffect")
-        introBlur.Name = hubName .. "_IntroBlur"
-        introBlur.Size = 0
-        introBlur.Parent = Lighting
-        TweenService:Create(introBlur, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 24}):Play()
+            local introBlur = Instance.new("BlurEffect")
+            introBlur.Name = hubName .. "_IntroBlur"
+            introBlur.Size = 0
+            introBlur.Parent = Lighting
+            TweenService:Create(introBlur, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 20}):Play()
 
-        local overlay = Instance.new("Frame")
-        overlay.Name = "LZNLanguageIntro"
-        overlay.Size = UDim2.new(1, 0, 1, 0)
-        overlay.BackgroundColor3 = Color3.fromRGB(3, 5, 10)
-        overlay.BackgroundTransparency = 0.22
-        overlay.BorderSizePixel = 0
-        overlay.ZIndex = 300
-        overlay.Parent = FullScreenBlurGui
+            local overlay = Instance.new("Frame")
+            overlay.Name = "LZNWelcomeIntro"
+            overlay.Size = UDim2.new(1, 0, 1, 0)
+            overlay.BackgroundColor3 = Color3.fromRGB(3, 5, 10)
+            overlay.BackgroundTransparency = 0.18
+            overlay.BorderSizePixel = 0
+            overlay.ZIndex = 300
+            overlay.Parent = FullScreenBlurGui
 
-        local panel = Instance.new("Frame")
-        local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(360, 720)
-        panel.Size = UDim2.new(0, 340, 0, 560)
-        panel.AnchorPoint = Vector2.new(0.5, 0.5)
-        panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-        panel.BackgroundColor3 = Color3.fromRGB(9, 13, 22)
-        panel.BackgroundTransparency = 0.06
-        panel.BorderSizePixel = 0
-        panel.ZIndex = 301
-        panel.Parent = overlay
-        Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 18)
-        AddGlow(panel, accentColor, 1.8, 0.16)
-        AddGradient(panel, Color3.fromRGB(17, 25, 41), Color3.fromRGB(7, 10, 18), 135)
+            local panel = Instance.new("Frame")
+            panel.Name = "IntroPanel"
+            panel.Size = UDim2.new(0, 340, 0, 390)
+            panel.AnchorPoint = Vector2.new(0.5, 0.5)
+            panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+            panel.BackgroundColor3 = Color3.fromRGB(9, 13, 22)
+            panel.BackgroundTransparency = 0.04
+            panel.BorderSizePixel = 0
+            panel.ZIndex = 301
+            panel.Parent = overlay
+            Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 18)
+            AddGlow(panel, accentColor, 1.8, 0.16)
+            AddGradient(panel, Color3.fromRGB(17, 25, 41), Color3.fromRGB(7, 10, 18), 135)
 
-        local fitScale = Instance.new("UIScale")
-        fitScale.Name = "ViewportFit"
-        fitScale.Parent = panel
-        local function updateIntroScale()
-            local camera = workspace.CurrentCamera
-            local size = camera and camera.ViewportSize or Vector2.new(360, 720)
-            local scaleX = math.max(0.55, (size.X - 24) / 340)
-            local scaleY = math.max(0.45, (size.Y - 24) / 560)
-            fitScale.Scale = math.min(1, scaleX, scaleY)
-        end
-        updateIntroScale()
-        local viewportConnection
-        if workspace.CurrentCamera then
-            viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateIntroScale)
-        end
-
-        local panelScale = Instance.new("UIScale")
-        panelScale.Scale = 0.88
-        panelScale.Parent = panel
-        TweenService:Create(panelScale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-
-        local image1 = Instance.new("ImageLabel")
-        image1.Name = "ThankYouImage"
-        image1.Size = UDim2.new(0, 122, 0, 122)
-        image1.Position = UDim2.new(0.5, -61, 0, 18)
-        image1.BackgroundTransparency = 1
-        image1.Image = options.IntroImage1 or "https://i.ibb.co/Lhz8DG4k/IMG-20261122-065924.png"
-        image1.ScaleType = Enum.ScaleType.Fit
-        image1.ImageTransparency = 1
-        image1.ZIndex = 302
-        image1.Parent = panel
-        local image1Scale = Instance.new("UIScale")
-        image1Scale.Scale = 0.72
-        image1Scale.Parent = image1
-
-        local thankText = Instance.new("TextLabel")
-        thankText.Size = UDim2.new(1, -28, 0, 34)
-        thankText.Position = UDim2.new(0, 14, 0, 145)
-        thankText.BackgroundTransparency = 1
-        thankText.Text = "obrigado por usar minha library cute cute:3"
-        thankText.TextColor3 = Color3.fromRGB(245, 248, 255)
-        thankText.Font = Enum.Font.GothamBold
-        thankText.TextSize = 13
-        thankText.TextWrapped = true
-        thankText.TextTransparency = 1
-        thankText.TextXAlignment = Enum.TextXAlignment.Center
-        thankText.ZIndex = 302
-        thankText.Parent = panel
-
-        local byline = Instance.new("TextLabel")
-        byline.Size = UDim2.new(1, -28, 0, 20)
-        byline.Position = UDim2.new(0, 14, 0, 179)
-        byline.BackgroundTransparency = 1
-        byline.Text = "Library by LZN (Lezin)"
-        byline.TextColor3 = Color3.fromRGB(255, 196, 0)
-        byline.Font = Enum.Font.GothamBold
-        byline.TextSize = 11
-        byline.TextTransparency = 1
-        byline.Visible = false
-        byline.TextXAlignment = Enum.TextXAlignment.Center
-        byline.ZIndex = 302
-        byline.Parent = panel
-
-        local image2 = Instance.new("ImageLabel")
-        image2.Name = "IntroSecondaryImage"
-        image2.Size = UDim2.new(0, 148, 0, 96)
-        image2.Position = UDim2.new(0.5, -74, 0, 207)
-        image2.BackgroundTransparency = 1
-        image2.Image = options.IntroImage2 or "https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png"
-        image2.ScaleType = Enum.ScaleType.Fit
-        image2.ImageTransparency = 1
-        image2.ZIndex = 302
-        image2.Parent = panel
-        local image2Scale = Instance.new("UIScale")
-        image2Scale.Scale = 0.58
-        image2Scale.Parent = image2
-
-        local languageTitle = Instance.new("TextLabel")
-        languageTitle.Size = UDim2.new(1, -28, 0, 24)
-        languageTitle.Position = UDim2.new(0, 14, 0, 318)
-        languageTitle.BackgroundTransparency = 1
-        languageTitle.Text = "escolha seu idioma"
-        languageTitle.TextColor3 = Color3.fromRGB(235, 245, 255)
-        languageTitle.Font = Enum.Font.GothamBold
-        languageTitle.TextSize = 12
-        languageTitle.TextXAlignment = Enum.TextXAlignment.Left
-        languageTitle.ZIndex = 302
-        languageTitle.Parent = panel
-
-        local languages = {
-            {Name = "Português (Brasil)", Code = "pt"},
-            {Name = "English", Code = "en"},
-            {Name = "Русский", Code = "ru"},
-            {Name = "Español", Code = "es"},
-            {Name = "Français", Code = "fr"},
-            {Name = "Deutsch", Code = "de"},
-            {Name = "日本語", Code = "ja"},
-            {Name = "한국어", Code = "ko"},
-            {Name = "中文", Code = "zh"},
-            {Name = "Türkçe", Code = "tr"},
-            {Name = "العربية", Code = "ar"},
-            {Name = "हिन्दी", Code = "hi"}
-        }
-        local selectedLanguage = languages[1]
-
-        local languageButton = Instance.new("TextButton")
-        languageButton.Size = UDim2.new(1, -28, 0, 36)
-        languageButton.Position = UDim2.new(0, 14, 0, 344)
-        languageButton.BackgroundColor3 = Color3.fromRGB(13, 22, 36)
-        languageButton.Text = selectedLanguage.Name .. "   ▾"
-        languageButton.TextColor3 = Color3.fromRGB(225, 240, 255)
-        languageButton.Font = Enum.Font.GothamBold
-        languageButton.TextSize = 11
-        languageButton.AutoButtonColor = false
-        languageButton.ZIndex = 303
-        languageButton.Parent = panel
-        Instance.new("UICorner", languageButton).CornerRadius = UDim.new(0, 9)
-        AddGlow(languageButton, accentColor, 1.2, 0.28)
-
-        local languageList = Instance.new("ScrollingFrame")
-        languageList.Size = UDim2.new(1, -28, 0, 0)
-        languageList.Position = UDim2.new(0, 14, 0, 384)
-        languageList.BackgroundColor3 = Color3.fromRGB(8, 12, 20)
-        languageList.BorderSizePixel = 0
-        languageList.ScrollBarThickness = 3
-        languageList.ScrollBarImageColor3 = accentColor
-        languageList.CanvasSize = UDim2.new(0, 0, 0, #languages * 30)
-        languageList.Visible = false
-        languageList.ZIndex = 304
-        languageList.Parent = panel
-        Instance.new("UICorner", languageList).CornerRadius = UDim.new(0, 8)
-        local langLayout = Instance.new("UIListLayout")
-        langLayout.Padding = UDim.new(0, 2)
-        langLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        langLayout.Parent = languageList
-
-        for i, language in ipairs(languages) do
-            local option = Instance.new("TextButton")
-            option.Size = UDim2.new(1, -6, 0, 28)
-            option.BackgroundColor3 = Color3.fromRGB(16, 23, 36)
-            option.BackgroundTransparency = 0.2
-            option.Text = language.Name
-            option.TextColor3 = Color3.fromRGB(220, 235, 250)
-            option.Font = Enum.Font.GothamMedium
-            option.TextSize = 11
-            option.LayoutOrder = i
-            option.AutoButtonColor = false
-            option.ZIndex = 305
-            option.Parent = languageList
-            Instance.new("UICorner", option).CornerRadius = UDim.new(0, 6)
-            option.MouseButton1Click:Connect(function()
-                selectedLanguage = language
-                languageButton.Text = language.Name .. "   ▾"
-                languageList.Visible = false
-                TweenService:Create(languageList, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -28, 0, 0)}):Play()
-            end)
-        end
-
-        local continueButton = Instance.new("TextButton")
-        continueButton.Size = UDim2.new(1, -28, 0, 38)
-        continueButton.Position = UDim2.new(0, 14, 1, -52)
-        continueButton.BackgroundColor3 = Color3.fromRGB(190, 140, 0)
-        continueButton.Text = "Continuar"
-        continueButton.TextColor3 = Color3.new(1, 1, 1)
-        continueButton.Font = Enum.Font.GothamBold
-        continueButton.TextSize = 12
-        continueButton.AutoButtonColor = false
-        continueButton.ZIndex = 303
-        continueButton.Parent = panel
-        Instance.new("UICorner", continueButton).CornerRadius = UDim.new(0, 9)
-        AddGlow(continueButton, Color3.fromRGB(255, 210, 65), 1.2, 0.18)
-
-        PlaySFX(Window.IntroThankSFX, 1)
-        TweenService:Create(image1, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
-        TweenService:Create(image1Scale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        TweenService:Create(thankText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-
-        languageButton.MouseButton1Click:Connect(function()
-            local open = not languageList.Visible
-            languageList.Visible = true
-            TweenService:Create(languageList, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-                Size = UDim2.new(1, -28, 0, open and 108 or 0)
-            }):Play()
-            if not open then
-                task.delay(0.18, function()
-                    if languageList and languageList.Parent then languageList.Visible = false end
-                end)
+            local panelScale = Instance.new("UIScale")
+            panelScale.Scale = 0.88
+            panelScale.Parent = panel
+            local function fitIntro()
+                local camera = workspace.CurrentCamera
+                local size = camera and camera.ViewportSize or Vector2.new(360, 720)
+                panelScale.Scale = math.min(1, math.max(0.55, (size.X - 24) / 340), math.max(0.55, (size.Y - 24) / 390))
             end
-        end)
+            fitIntro()
+            local viewportConnection
+            if workspace.CurrentCamera then
+                viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitIntro)
+            end
+            TweenService:Create(panelScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
-        local function buildTranslator()
-            local moduleRef = options.AutoTranslateModule
-            if not moduleRef then
-                moduleRef = ReplicatedStorage:FindFirstChild("AutoTranslate", true)
+            local function makeText(name, text, position, size, color, textSize)
+                local label = Instance.new("TextLabel")
+                label.Name = name
+                label.Size = size
+                label.Position = position
+                label.BackgroundTransparency = 1
+                label.Text = text
+                label.TextColor3 = color or Color3.fromRGB(245, 248, 255)
+                label.Font = Enum.Font.GothamBold
+                label.TextSize = textSize or 13
+                label.TextWrapped = true
+                label.TextXAlignment = Enum.TextXAlignment.Center
+                label.TextYAlignment = Enum.TextYAlignment.Center
+                label.TextTransparency = 1
+                label.ZIndex = 302
+                label.Parent = panel
+                return label
             end
-            if not moduleRef and type(getgenv) == "function" then
-                pcall(function()
-                    local env = getgenv()
-                    moduleRef = env.AutoTranslateModule or env.LZN_AutoTranslateModule
-                end)
+            local function makeImage(name, url, position, size)
+                local image = Instance.new("ImageLabel")
+                image.Name = name
+                image.Size = size
+                image.Position = position
+                image.BackgroundTransparency = 1
+                image.Image = url
+                image.ScaleType = Enum.ScaleType.Fit
+                image.ImageTransparency = 1
+                image.ZIndex = 302
+                image.Parent = panel
+                return image
             end
-            if type(moduleRef) == "string" then
-                local numericRef = tonumber(moduleRef)
-                if numericRef then
-                    moduleRef = numericRef
-                else
-                    local path = moduleRef:gsub("^game%.ReplicatedStorage%.?", "")
-                    local current = ReplicatedStorage
-                    for segment in string.gmatch(path, "[^%.]+") do
-                        current = current and current:FindFirstChild(segment)
+            local function fadeIn(objects)
+                for _, object in ipairs(objects) do
+                    if object:IsA("ImageLabel") then
+                        TweenService:Create(object, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+                    else
+                        TweenService:Create(object, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
                     end
-                    if current then moduleRef = current end
                 end
             end
-            local moduleObject = options.AutoTranslate
-            if not moduleObject and moduleRef then
-                local ok, result = pcall(require, moduleRef)
-                if ok then moduleObject = result end
+            local function fadeOut(objects)
+                local lastTween
+                for _, object in ipairs(objects) do
+                    local properties = object:IsA("ImageLabel") and {ImageTransparency = 1} or {TextTransparency = 1}
+                    lastTween = TweenService:Create(object, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), properties)
+                    lastTween:Play()
+                end
+                if lastTween then lastTween.Completed:Wait() end
             end
-            if type(moduleObject) ~= "table" or type(moduleObject.new) ~= "function" then
-                return nil
-            end
-            local ok, instance = pcall(function()
-                return moduleObject.new({
-                    TargetLang = selectedLanguage.Code,
-                    SourceLang = "auto",
-                    DelayBetweenRequests = 0.08
-                })
-            end)
-            if ok then return instance end
-            return nil
-        end
 
-        local translator = nil
-        local translatedTextCache = {}
-        local function translateGuiObject(object)
-            if not translator or not object or not object.Parent then return end
-            if not (object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")) then return end
-            local original = object.Text
-            if type(original) ~= "string" or original == "" or translatedTextCache[original] ~= nil then
-                if translatedTextCache[original] and object.Parent then object.Text = translatedTextCache[original] end
-                return
-            end
-            if original:match("^rbxassetid://") or original:match("^#%x%x%x%x%x%x$") then return end
-            local ok = pcall(function()
-                translator:TranslateAsync(original, function(translatedText, err)
-                    if not err and type(translatedText) == "string" and object.Parent then
-                        translatedTextCache[original] = translatedText
-                        object.Text = translatedText
-                    end
-                end)
-            end)
-            if not ok then return end
-        end
-
-        local translateConnections = {}
-        local function applyLanguage()
-            translator = buildTranslator()
-            Window.Language = selectedLanguage.Code
-            Window.LanguageName = selectedLanguage.Name
-            if not translator then
-                warn("[LZN Library] Idioma selecionado: " .. tostring(selectedLanguage.Code) .. ". Para traduzir os textos, forneça options.AutoTranslateModule com o ModuleScript/ID ou publique um ModuleScript chamado AutoTranslate em ReplicatedStorage.")
-                return
-            end
-            for _, object in ipairs(ScreenGui:GetDescendants()) do
-                translateGuiObject(object)
-            end
-            for _, object in ipairs(FullScreenBlurGui:GetDescendants()) do
-                translateGuiObject(object)
-            end
-            table.insert(translateConnections, ScreenGui.DescendantAdded:Connect(function(object)
-                task.defer(function() translateGuiObject(object) end)
-            end))
-            table.insert(translateConnections, FullScreenBlurGui.DescendantAdded:Connect(function(object)
-                task.defer(function() translateGuiObject(object) end)
-            end))
-        end
-
-        local completed = false
-        continueButton.MouseButton1Click:Connect(function()
-            if completed then return end
-            completed = true
-            applyLanguage()
-            byline.Visible = true
-            TweenService:Create(byline, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-            languageButton.Active = false
-            continueButton.Active = false
-            languageTitle.Visible = false
-            languageButton.Visible = false
-            languageList.Visible = false
-            continueButton.Visible = false
-
-            TweenService:Create(image2, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
-            TweenService:Create(image2Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-
-            task.wait(2.7)
+            -- Primeira tela: agradecimento nos dois idiomas e a imagem logo abaixo.
+            local thanksPT = makeText("ThanksPortuguese", "PT-BR 🇧🇷\nobrigado(a) por usar minha library, vida🤭 quero dizer, anjo😅❤️", UDim2.new(0, 16, 0, 50), UDim2.new(1, -32, 0, 76), nil, 13)
+            local thanksEN = makeText("ThanksEnglish", "EN 🇺🇸\nThank(s) you for using my library, life🤭 I mean, angel😅❤️", UDim2.new(0, 16, 0, 132), UDim2.new(1, -32, 0, 76), nil, 13)
+            local thanksImage = makeImage("ThanksImage", options.IntroImage3 or "https://i.ibb.co/8nsVqWrh/1795746809383.jpg", UDim2.new(0.5, -82, 0, 220), UDim2.new(0, 164, 0, 140))
+            fadeIn({thanksPT, thanksEN, thanksImage})
+            task.wait(4)
             if not overlay.Parent then return end
-            local fadeSecond = TweenService:Create(image2, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1})
-            fadeSecond:Play()
-            TweenService:Create(image2Scale, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.65}):Play()
-            fadeSecond.Completed:Wait()
+            fadeOut({thanksPT, thanksEN, thanksImage})
+            thanksPT:Destroy(); thanksEN:Destroy(); thanksImage:Destroy()
 
+            -- Segunda tela: créditos e as duas imagens lado a lado.
+            local creditPT = makeText("CreditPortuguese", "PT-BR 🇧🇷\nlibrary criada por LZN (Lezin)♥️", UDim2.new(0, 16, 0, 58), UDim2.new(1, -32, 0, 66), Color3.fromRGB(255, 205, 90), 14)
+            local creditEN = makeText("CreditEnglish", "EN 🇺🇸\nlibrary by LZN (Lezin)♥️", UDim2.new(0, 16, 0, 132), UDim2.new(1, -32, 0, 58), Color3.fromRGB(255, 205, 90), 14)
+            local creditImage1 = makeImage("CreditImageLZN", options.IntroImage2 or "https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png", UDim2.new(0, 26, 0, 220), UDim2.new(0, 132, 0, 132))
+            local creditImage2 = makeImage("CreditImageManhattan", options.IntroImage4 or "https://i.ibb.co/gLZkkcZR/manhattan.png", UDim2.new(1, -158, 0, 220), UDim2.new(0, 132, 0, 132))
+            fadeIn({creditPT, creditEN, creditImage1, creditImage2})
+            task.wait(4)
             if not overlay.Parent then return end
-            image2.Visible = false
-            local image3 = Instance.new("ImageLabel")
-            image3.Name = "WelcomeImage"
-            image3.Size = UDim2.new(0, 148, 0, 96)
-            image3.Position = UDim2.new(0.5, -74, 0, 207)
-            image3.BackgroundTransparency = 1
-            image3.Image = options.IntroImage3 or "https://i.ibb.co/jFJt92F/file-000000003304820eb37d3ad0b97ead96.png"
-            image3.ScaleType = Enum.ScaleType.Fit
-            image3.ImageTransparency = 1
-            image3.ZIndex = 302
-            image3.Parent = panel
-            local image3Scale = Instance.new("UIScale")
-            image3Scale.Scale = 0.58
-            image3Scale.Parent = image3
+            fadeOut({creditPT, creditEN, creditImage1, creditImage2})
 
-            local welcomeText = Instance.new("TextLabel")
-            welcomeText.Size = UDim2.new(1, -28, 0, 32)
-            welcomeText.Position = UDim2.new(0, 14, 0, 310)
-            welcomeText.BackgroundTransparency = 1
-            welcomeText.Text = "Bem-vindo(a) " .. tostring(Player.DisplayName)
-            welcomeText.TextColor3 = Color3.fromRGB(245, 248, 255)
-            welcomeText.Font = Enum.Font.GothamBold
-            welcomeText.TextSize = 13
-            welcomeText.TextWrapped = true
-            welcomeText.TextTransparency = 1
-            welcomeText.TextXAlignment = Enum.TextXAlignment.Center
-            welcomeText.ZIndex = 302
-            welcomeText.Parent = panel
-
-            PlaySFX(Window.IntroWelcomeSFX, 1)
-            TweenService:Create(image3, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
-            TweenService:Create(image3Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            TweenService:Create(welcomeText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-            task.wait(2.6)
-
-            if overlay.Parent then
-                TweenService:Create(overlay, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
-                TweenService:Create(panelScale, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.92}):Play()
-            end
-            TweenService:Create(introBlur, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0}):Play()
+            TweenService:Create(overlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+            TweenService:Create(panelScale, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.92}):Play()
+            TweenService:Create(introBlur, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0}):Play()
             task.wait(0.45)
             if viewportConnection then viewportConnection:Disconnect() end
             if overlay and overlay.Parent then overlay:Destroy() end
@@ -6003,12 +5748,10 @@ end
                 ToggleHubBtn.Visible = true
                 HubOpen = true
                 HubScale.Scale = 0.72
-                TweenService:Create(HubScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+                TweenService:Create(HubScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
                 if BackgroundMusic and BGMText.Text ~= "OFF" then BackgroundMusic:Resume() end
             end
         end)
-    end)
-
     else
         MainFrame.Visible = true
         ToggleHubBtn.Visible = true
