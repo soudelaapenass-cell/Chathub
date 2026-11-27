@@ -7,7 +7,6 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local SoundService = game:GetService("SoundService")
-local ContentProvider = game:GetService("ContentProvider")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
@@ -311,11 +310,11 @@ function LZNLib:CreateWindow(options)
     options = options or {}
     local hubName = options.Name or "LZNUltraHub"
     local titleText = options.Title or "LZN // ULTIMATE ENGINE"
-    local bgImage = "https://i.ibb.co/TD5SQyGY/manhattan-cafe-umamusume-drawn-by-gwinggwing-sample-467edfd96009dfffca371a679c9c95bb.jpg"
-    local floatImage = "rbxassetid://75283846905375"
+    local bgImage = options.BackgroundImage or "rbxassetid://78521393913034"
+    local floatImage = options.FloatingImage or "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png"
     local musicId = options.MusicId or "rbxassetid://132631534724831"
     local musicVolume = options.MusicVolume or 0.12
-    local accentColor = Color3.fromRGB(255, 196, 0)
+    local accentColor = options.AccentColor or Color3.fromRGB(255, 196, 0)
     local customInventoryEnabled = options.CustomInventory ~= false
 
     local toggleOnSoundId = options.ToggleOnSound or "rbxassetid://131390520971848"
@@ -377,8 +376,7 @@ function LZNLib:CreateWindow(options)
     Window.IntroWelcomeSFX = CreateSFX("IntroWelcome", "rbxassetid://117409737658405", 0.62, 1)
     local SFX = {
         DropdownSelect = CreateSFX("DropdownSelect", "rbxassetid://2029831027", 0.42, 1),
-        MultiSelect = CreateSFX("MultiSelect", "rbxassetid://117649901456711", 1, 1),
-        MultiDropdownOpen = CreateSFX("MultiDropdownOpen", "rbxassetid://17208372272", 1, 1),
+        MultiSelect = CreateSFX("MultiSelect", "rbxassetid://7060363375", 0.42, 1),
         Tab = CreateSFX("Tab", "rbxassetid://139746569667955", 0.42, 1),
         Popup = CreateSFX("Popup", "rbxassetid://96219687807442", 0.42, 1),
         ColorPicker = CreateSFX("ColorPicker", "rbxassetid://111223777734727", 0.42, 1),
@@ -392,38 +390,6 @@ function LZNLib:CreateWindow(options)
     }
     Window.NotificationSFX = {SFX.NotifySuccess, SFX.NotifyError, SFX.NotifyFail, SFX.NotifyWarning}
     Window.NotificationSoundIndex = 0
-
-    -- Dedicated playback for MultiDropdown sounds: full volume and its own Sound instance.
-    local function PlayMultiDropdownSFX(sourceSound)
-        if not sfxEnabled or not sourceSound then return end
-        task.spawn(function()
-            local playback = sourceSound:Clone()
-            playback.Name = sourceSound.Name .. "_Playback"
-            playback.Volume = 1
-            playback.PlaybackSpeed = 1
-            playback.Looped = false
-            playback.TimePosition = 0
-            playback.Parent = SoundService
-
-            pcall(function()
-                ContentProvider:PreloadAsync({playback})
-            end)
-
-            local cleaned = false
-            local function cleanup()
-                if cleaned then return end
-                cleaned = true
-                if playback and playback.Parent then
-                    playback:Destroy()
-                end
-            end
-
-            playback.Ended:Connect(cleanup)
-            playback:Play()
-
-            task.delay(12, cleanup)
-        end)
-    end
 
     local function PlaySFX(sfxObj, pitchOverride)
         if not sfxEnabled or not sfxObj then return end
@@ -677,7 +643,7 @@ function LZNLib:CreateWindow(options)
         end
     end)
 
-    local CurrentPage = "Game"
+    local CurrentPage = "Home"
 
     local ContentContainer = Instance.new("ScrollingFrame")
     local ActiveContainer = ContentContainer
@@ -849,10 +815,9 @@ function LZNLib:CreateWindow(options)
         return b, tx, ic
     end
 
-    -- HUB tab removida conforme pedido
-    local GameTab, GameTabText, GameTabIcon = MakePageTab("GAME", "game", 1)
-    local PlayerTab, PlayerTabText, PlayerTabIcon = MakePageTab("PLAYER", "player", 2)
-    local HomeTab, HomeTabText, HomeTabIcon = nil, nil, nil
+    local HomeTab, HomeTabText, HomeTabIcon = MakePageTab("HUB", "home", 1)
+    local GameTab, GameTabText, GameTabIcon = MakePageTab("GAME", "game", 2)
+    local PlayerTab, PlayerTabText, PlayerTabIcon = MakePageTab("PLAYER", "player", 3)
 
     local function SetTabColor(iconFrame, labelObj, active)
         local col = active and Color3.fromRGB(255, 196, 0) or Color3.fromRGB(190, 210, 230)
@@ -864,28 +829,20 @@ function LZNLib:CreateWindow(options)
         end
     end
 
-    local ColorPickerCloseHandlers = {}
-    local function CloseAllColorPickers()
-        for _, closeHandler in ipairs(ColorPickerCloseHandlers) do
-            pcall(closeHandler)
-        end
-    end
-
     local function SetPage(page)
-        CloseAllColorPickers()
         CurrentPage = page
-        ContentContainer.Visible = false  -- HUB removido
+        ContentContainer.Visible = page == "Home"
         GamePage.Visible = page == "Game"
         PlayerPage.Visible = page == "Player"
 
-        if page == "Game" then
+        if page == "Home" then
+            ActiveContainer = ContentContainer
+            ActiveTabName = nil
+        elseif page == "Game" then
             ActiveContainer = GamePage
             ActiveTabName = nil
         elseif page == "Player" then
             ActiveContainer = PlayerPage
-            ActiveTabName = nil
-        else
-            ActiveContainer = GamePage
             ActiveTabName = nil
         end
 
@@ -897,18 +854,16 @@ function LZNLib:CreateWindow(options)
             end
         end
 
-        if HomeTabIcon and HomeTabText then
-            SetTabColor(HomeTabIcon, HomeTabText, false)
-        end
+        SetTabColor(HomeTabIcon, HomeTabText, page == "Home")
         SetTabColor(GameTabIcon, GameTabText, page == "Game")
         SetTabColor(PlayerTabIcon, PlayerTabText, page == "Player")
         UpdateHubHeight()
     end
 
-    SetTabColor(GameTabIcon, GameTabText, true)
+    SetTabColor(HomeTabIcon, HomeTabText, true)
+    HomeTab.MouseButton1Click:Connect(function() PlaySFX(SFX.Tab, 1); SetPage("Home") end)
     GameTab.MouseButton1Click:Connect(function() PlaySFX(SFX.Tab, 1); SetPage("Game") end)
     PlayerTab.MouseButton1Click:Connect(function() PlaySFX(SFX.Tab, 1); SetPage("Player") end)
-    SetPage("Game")
 
     local resizingCorner = false
     local resizeStartPos = nil
@@ -1132,13 +1087,10 @@ function LZNLib:CreateWindow(options)
     ToggleHubBtn.Size = UDim2.new(0, 46, 0, 46)
     ToggleHubBtn.Position = UDim2.new(0, 16, 0, 16)
     ToggleHubBtn.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
-    ToggleHubBtn.ClipsDescendants = true
     ToggleHubBtn.Text = ""
     ToggleHubBtn.ZIndex = 30
     ToggleHubBtn.Parent = ScreenGui
-    local FloatingButtonCorner = Instance.new("UICorner")
-    FloatingButtonCorner.CornerRadius = UDim.new(1, 0)
-    FloatingButtonCorner.Parent = ToggleHubBtn
+    Instance.new("UICorner", ToggleHubBtn).CornerRadius = UDim.new(1, 0)
 
     local FloatingButtonImage = Instance.new("ImageLabel")
     FloatingButtonImage.Name = "FloatingButtonImage"
@@ -1175,7 +1127,6 @@ function LZNLib:CreateWindow(options)
                 IsAnimatingHub = false
             end)
         else
-            CloseAllColorPickers()
             local tween = TweenService:Create(HubScale, TweenInfo.new(0.24, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
                 Scale = 0.01
             })
@@ -1872,7 +1823,7 @@ function LZNLib:CreateWindow(options)
             if AudioSound.IsPlaying then
                 SetCustomIconType(playPauseIcon, "pause", Color3.fromRGB(255, 196, 0), 14)
             else
-                SetCustomIconType(playPauseIcon, "play", Color3.fromRGB(255, 196, 0), 14)
+                SetCustomIconType(playPauseIcon, "play", Color3.fromRGB(0, 255, 175), 14)
             end
             playPauseIcon.Position = UDim2.new(0.5, -7, 0.5, -7)
         end
@@ -2636,7 +2587,7 @@ function LZNLib:CreateWindow(options)
             itemBtn.MouseButton1Click:Connect(function()
                 selectedMap[key] = not selectedMap[key]
                 local nowSel = selectedMap[key] == true
-                PlayMultiDropdownSFX(SFX.MultiSelect)
+                PlaySFX(SFX.MultiSelect, 1)
                 refreshOptionsVisual()
                 if cfg.Callback then
                     cfg.Callback(getSelectedList(), item, nowSel)
@@ -2649,7 +2600,7 @@ function LZNLib:CreateWindow(options)
 
         dropBtn.MouseButton1Click:Connect(function()
             isOpen = not isOpen
-            PlayMultiDropdownSFX(SFX.MultiDropdownOpen)
+            PlaySFX(DropdownSFX, 1)
             dropBtn.Text = formatHeader()
             local targetH = isOpen and (42 + (#items * 30)) or 38
             TweenService:Create(wrapper, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
@@ -2780,7 +2731,6 @@ function LZNLib:CreateWindow(options)
     end
 
     local function SelectPublicTab(tab, silent)
-        CloseAllColorPickers()
         if type(tab) == "string" then tab = TabRegistry[tab] end
         if not tab or not tab.Page or not tab.Page.Parent then return false end
         ActiveTabName = tab.Name
@@ -2797,9 +2747,7 @@ function LZNLib:CreateWindow(options)
                 end
             end
         end
-        if HomeTabIcon and HomeTabText then
-            SetTabColor(HomeTabIcon, HomeTabText, false)
-        end
+        SetTabColor(HomeTabIcon, HomeTabText, false)
         SetTabColor(GameTabIcon, GameTabText, false)
         SetTabColor(PlayerTabIcon, PlayerTabText, false)
         UpdateTabNavigation(tab.Button)
@@ -2916,8 +2864,8 @@ function LZNLib:CreateWindow(options)
         end
         if ActiveTabName == name then
             ActiveTabName = nil
-            ActiveContainer = GamePage
-            SetPage("Game")
+            ActiveContainer = ContentContainer
+            SetPage("Home")
             if TabOrder[1] then SelectPublicTab(TabOrder[1]) end
         end
         return true
@@ -3415,8 +3363,8 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 7)
 
         local preview = Instance.new("Frame")
-        preview.Size = UDim2.new(0, 18, 0, 18)
-        preview.Position = UDim2.new(1, -30, 0, 185)
+        preview.Size = UDim2.new(0, 26, 0, 20)
+        preview.Position = UDim2.new(1, -38, 0, 39)
         preview.BackgroundColor3 = draftColor
         preview.BorderSizePixel = 0
         preview.ZIndex = 82
@@ -3498,7 +3446,7 @@ function LZNLib:CreateWindow(options)
         Instance.new("UICorner", hueMarker).CornerRadius = UDim.new(1, 0)
 
         local hexLabel = Instance.new("TextLabel")
-        hexLabel.Size = UDim2.new(1, -48, 0, 20)
+        hexLabel.Size = UDim2.new(1, -20, 0, 20)
         hexLabel.Position = UDim2.new(0, 10, 0, 184)
         hexLabel.BackgroundTransparency = 1
         hexLabel.TextColor3 = Color3.fromRGB(155, 180, 205)
@@ -3576,28 +3524,18 @@ function LZNLib:CreateWindow(options)
             local y = math.clamp(pos.Y + 95, 6, math.max(ScreenGui.AbsoluteSize.Y - picker.AbsoluteSize.Y - 6, 6))
             picker.Position = UDim2.fromOffset(x, y)
         end
-        local pickerFollowConnection
         local function openPicker()
             hue, saturation, value = committedColor:ToHSV()
             updateDraft()
             placePopup()
             animatePopup(true)
-            if pickerFollowConnection then pickerFollowConnection:Disconnect() end
-            pickerFollowConnection = RunService.RenderStepped:Connect(function()
-                if popupOpen and picker.Parent then placePopup() end
-            end)
             PlaySFX(DropdownSFX, 1)
         end
         local function closePicker()
             hue, saturation, value = committedColor:ToHSV()
             updateDraft()
             animatePopup(false)
-            if pickerFollowConnection then
-                pickerFollowConnection:Disconnect()
-                pickerFollowConnection = nil
-            end
         end
-        table.insert(ColorPickerCloseHandlers, closePicker)
         local draggingSV = false
         local draggingHue = false
         local activePickerInput = nil
@@ -3658,7 +3596,7 @@ function LZNLib:CreateWindow(options)
             swatch.BackgroundColor3 = committedColor
             SafeCallback(cfg.Callback, committedColor, committedColor:ToHSV())
             Window.NotifyAction(cfg.Text or "ColorPicker", "Cor aplicada: " .. string.format("#%02X%02X%02X", math.floor(committedColor.R * 255 + 0.5), math.floor(committedColor.G * 255 + 0.5), math.floor(committedColor.B * 255 + 0.5)), "success")
-            closePicker()
+            animatePopup(false)
         end)
         row.Destroying:Connect(function()
             if picker and picker.Parent then picker:Destroy() end
@@ -4865,7 +4803,7 @@ function LZNLib:CreateWindow(options)
         cLbl.Size = UDim2.new(1, -6, 0, 12)
         cLbl.Position = UDim2.new(0, 3, 1, -14)
         cLbl.BackgroundTransparency = 1
-        cLbl.TextColor3 = Color3.fromRGB(255, 196, 0)
+        cLbl.TextColor3 = Color3.fromRGB(0, 255, 175)
         cLbl.Font = Enum.Font.GothamBlack
         cLbl.TextSize = 9
         cLbl.TextXAlignment = Enum.TextXAlignment.Right
@@ -4971,7 +4909,7 @@ function LZNLib:CreateWindow(options)
                 cL.Position = UDim2.new(0, 2, 1, -13)
                 cL.BackgroundTransparency = 1
                 cL.Text = itemData.Count > 1 and ("x" .. tostring(itemData.Count)) or ""
-                cL.TextColor3 = Color3.fromRGB(255, 196, 0)
+                cL.TextColor3 = Color3.fromRGB(0, 255, 175)
                 cL.Font = Enum.Font.GothamBlack
                 cL.TextSize = 8
                 cL.TextXAlignment = Enum.TextXAlignment.Right
@@ -5184,82 +5122,75 @@ function LZNLib:CreateWindow(options)
     end)
 
 
-    local function LoadBackgroundAsset(url, fileName)
-        local assetGetter = type(getcustomasset) == "function" and getcustomasset
-            or (type(getsynasset) == "function" and getsynasset)
-        if not assetGetter or type(writefile) ~= "function" then
-            warn("[LZN] getcustomasset/getsynasset e writefile são necessários para carregar imagens locais.")
-            return nil
+    Window.LoadIntroImage = function(url, fileName, fallback)
+        if type(getcustomasset) ~= "function" and type(getsynasset) ~= "function" then
+            return fallback or ""
         end
-
-        local function isImage(data)
-            if type(data) ~= "string" or #data < 128 then return false end
-            return data:sub(1, 8) == string.char(137) .. "PNG\r\n\26\n"
-                or data:sub(1, 3) == string.char(255, 216, 255)
+        if type(writefile) ~= "function" then
+            return fallback or ""
         end
-
+        local assetGetter = type(getcustomasset) == "function" and getcustomasset or getsynasset
         local cached = false
-        if type(isfile) == "function" and type(readfile) == "function" then
-            local ok, exists = pcall(isfile, fileName)
-            if ok and exists then
-                local readOk, bytes = pcall(readfile, fileName)
-                cached = readOk and isImage(bytes)
-            end
+        if type(isfile) == "function" then
+            pcall(function() cached = isfile(fileName) end)
         end
-
         if not cached then
-            local body
-            local requestFns = {}
-            if type(request) == "function" then table.insert(requestFns, request) end
-            if type(http_request) == "function" then table.insert(requestFns, http_request) end
-            if type(syn) == "table" and type(syn.request) == "function" then table.insert(requestFns, syn.request) end
-            if type(http) == "table" and type(http.request) == "function" then table.insert(requestFns, http.request) end
-
-            for _, req in ipairs(requestFns) do
-                local ok, response = pcall(req, {
-                    Url = url,
-                    Method = "GET",
-                    Headers = {["User-Agent"] = "Mozilla/5.0", ["Accept"] = "image/png,image/jpeg,*/*"}
-                })
-                if ok and type(response) == "table" then
-                    local status = tonumber(response.StatusCode or response.Status or response.status_code)
-                    local candidate = response.Body or response.body
-                    if (not status or (status >= 200 and status < 300)) and isImage(candidate) then
-                        body = candidate
-                        break
-                    end
+            local requestFunction = nil
+            if type(request) == "function" then
+                requestFunction = request
+            elseif type(http_request) == "function" then
+                requestFunction = http_request
+            elseif type(syn) == "table" and type(syn.request) == "function" then
+                requestFunction = syn.request
+            end
+            local body = nil
+            if requestFunction then
+                local ok, response = pcall(requestFunction, {Url = url, Method = "GET"})
+                if ok and type(response) == "table" and response.Success ~= false then
+                    body = response.Body
                 end
             end
-
-            if not body then
-                local ok, candidate = pcall(function() return game:HttpGet(url) end)
-                if ok and isImage(candidate) then body = candidate end
+            if type(body) ~= "string" or #body < 100 then
+                local ok, result = pcall(function() return game:HttpGet(url) end)
+                if ok and type(result) == "string" and #result > 100 then body = result end
             end
-
-            if not body then
-                warn("[LZN] Não foi possível baixar a imagem: " .. tostring(url))
-                return nil
-            end
-
-            local writeOk, writeErr = pcall(writefile, fileName, body)
-            if not writeOk then
-                warn("[LZN] writefile falhou (" .. tostring(fileName) .. "): " .. tostring(writeErr))
-                return nil
+            if type(body) == "string" and #body > 100 then
+                pcall(writefile, fileName, body)
             end
         end
-
-        local ok, localAsset = pcall(assetGetter, fileName)
-        if ok and type(localAsset) == "string" and localAsset ~= "" then
-            return localAsset
-        end
-        warn("[LZN] getcustomasset não conseguiu resolver: " .. tostring(fileName))
-        return nil
+        local ok, asset = pcall(assetGetter, fileName)
+        if ok and type(asset) == "string" then return asset end
+        return fallback or ""
     end
 
-    HubBackground.Image = LoadBackgroundAsset(bgImage, "LZN_hub_background.jpg") or ""
-    HubBackground.ScaleType = Enum.ScaleType.Stretch
-    FloatingButtonImage.Image = floatImage
-    FloatingButtonImage.ScaleType = Enum.ScaleType.Stretch
+    -- Assets externos: cache local com getcustomasset para imagens de fundo e botão flutuante.
+    local backgroundUrls = {
+        "https://i.ibb.co/d4cv5BCf/junoelise161-Manhattan-Cafe-umamusume-9137539.jpg",
+        "https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png",
+        "https://i.ibb.co/XfKzm6Pm/LZN-1795598058085.webp",
+        "https://i.ibb.co/1Y2d29kt/thumb-1920-1284078.png",
+        "https://i.ibb.co/3yvdQvxf/herohero-higashi-no-dou-Manhattan-Cafe-umamusume-9158949.jpg"
+    }
+    local function LoadCachedImage(url, fileName)
+        return Window.LoadIntroImage(url, fileName, "")
+    end
+    local floatingAsset = LoadCachedImage("https://i.ibb.co/wFV8HkxD/manhattan-cafe-in-the-morning-by-lbstranian-v0-z50mknh05lmf1.png", "LZN_floating_manhattan.png")
+    if floatingAsset ~= "" then FloatingButtonImage.Image = floatingAsset end
+    local loadedBackgrounds = {}
+    for i, url in ipairs(backgroundUrls) do
+        local extension = url:match("%.([%w]+)$") or "png"
+        loadedBackgrounds[i] = LoadCachedImage(url, "LZN_hub_background_" .. tostring(i) .. "." .. extension)
+    end
+    task.spawn(function()
+        local index = 1
+        while ScreenGui.Parent do
+            if loadedBackgrounds[index] and loadedBackgrounds[index] ~= "" then
+                HubBackground.Image = loadedBackgrounds[index]
+            end
+            index = (index % #backgroundUrls) + 1
+            task.wait(10)
+        end
+    end)
 
     -- Shader original do arquivo Shaders by LZN (Lezin), embutido para funcionar como toggle.
     local LZN_SHADER_SOURCE = [=[local Lighting = game:GetService("Lighting")
@@ -5644,14 +5575,14 @@ end
     shaderToggle = Window:AddToggle({
         Text = "LZN shaders",
         Icon = "success",
-        Default = false,
+        Default = true,
         Callback = function(state)
             local ok = SetLZNShadersEnabled(state)
             if not ok and shaderToggle then shaderToggle:Set(false) end
         end
     })
     ActiveContainer = previousContainer
-    SetLZNShadersEnabled(false)
+    SetLZNShadersEnabled(true)
 
     -- Idioma automático: LocaleId é a fonte principal; RobloxLocaleId é fallback.
     local LocalizationService = game:GetService("LocalizationService")
@@ -5684,181 +5615,399 @@ end
         ScreenGui.DescendantAdded:Connect(function(object) task.defer(function() AutoTranslateObject(object) end) end)
     end)
 
-    -- A apresentação fica ativada por padrão; só é ignorada se o usuário
-    -- definir ShowLanguageIntro = false explicitamente.
-    if options.ShowLanguageIntro ~= false then
-        MainFrame.Visible = false
-        ToggleHubBtn.Visible = false
+    if options.ShowLanguageIntro == true then
         task.spawn(function()
-            HubOpen = true
-            if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
+            MainFrame.Visible = false
+        ToggleHubBtn.Visible = false
+        HubOpen = true
+        if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
 
-            local overlay = Instance.new("Frame")
-            overlay.Name = "LZNLanguageIntro"
-            overlay.Size = UDim2.fromScale(1, 1)
-            overlay.Position = UDim2.fromScale(0, 0)
-            overlay.AnchorPoint = Vector2.new(0, 0)
-            overlay.BackgroundColor3 = Color3.new(0, 0, 0)
-            overlay.BackgroundTransparency = 0
-            overlay.BorderSizePixel = 0
-            overlay.ZIndex = 1000
-            FullScreenBlurGui.Enabled = true
-            FullScreenBlurGui.IgnoreGuiInset = true
-            FullScreenBlurGui.DisplayOrder = 999999
-            overlay.Parent = FullScreenBlurGui
+        local introBlur = Instance.new("BlurEffect")
+        introBlur.Name = hubName .. "_IntroBlur"
+        introBlur.Size = 0
+        introBlur.Parent = Lighting
+        TweenService:Create(introBlur, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 24}):Play()
 
-            local function addText(name, content, pos, size, fontSize, color)
-                local label = Instance.new("TextLabel")
-                label.Name = name
-                label.BackgroundTransparency = 1
-                label.BorderSizePixel = 0
-                label.Size = size
-                label.Position = pos
-                label.Font = Enum.Font.GothamBold
-                label.Text = content
-                label.TextColor3 = color or Color3.new(1, 1, 1)
-                label.TextSize = fontSize
-                label.TextWrapped = true
-                label.TextXAlignment = Enum.TextXAlignment.Center
-                label.TextYAlignment = Enum.TextYAlignment.Center
-                label.TextTransparency = 1
-                label.ZIndex = 1001
-                label.Parent = overlay
-                return label
+        local overlay = Instance.new("Frame")
+        overlay.Name = "LZNLanguageIntro"
+        overlay.Size = UDim2.new(1, 0, 1, 0)
+        overlay.BackgroundColor3 = Color3.fromRGB(3, 5, 10)
+        overlay.BackgroundTransparency = 0.22
+        overlay.BorderSizePixel = 0
+        overlay.ZIndex = 300
+        overlay.Parent = FullScreenBlurGui
+
+        local panel = Instance.new("Frame")
+        local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(360, 720)
+        panel.Size = UDim2.new(0, 340, 0, 560)
+        panel.AnchorPoint = Vector2.new(0.5, 0.5)
+        panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+        panel.BackgroundColor3 = Color3.fromRGB(9, 13, 22)
+        panel.BackgroundTransparency = 0.06
+        panel.BorderSizePixel = 0
+        panel.ZIndex = 301
+        panel.Parent = overlay
+        Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 18)
+        AddGlow(panel, accentColor, 1.8, 0.16)
+        AddGradient(panel, Color3.fromRGB(17, 25, 41), Color3.fromRGB(7, 10, 18), 135)
+
+        local fitScale = Instance.new("UIScale")
+        fitScale.Name = "ViewportFit"
+        fitScale.Parent = panel
+        local function updateIntroScale()
+            local camera = workspace.CurrentCamera
+            local size = camera and camera.ViewportSize or Vector2.new(360, 720)
+            local scaleX = math.max(0.55, (size.X - 24) / 340)
+            local scaleY = math.max(0.45, (size.Y - 24) / 560)
+            fitScale.Scale = math.min(1, scaleX, scaleY)
+        end
+        updateIntroScale()
+        local viewportConnection
+        if workspace.CurrentCamera then
+            viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateIntroScale)
+        end
+
+        local panelScale = Instance.new("UIScale")
+        panelScale.Scale = 0.88
+        panelScale.Parent = panel
+        TweenService:Create(panelScale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+        local image1 = Instance.new("ImageLabel")
+        image1.Name = "ThankYouImage"
+        image1.Size = UDim2.new(0, 122, 0, 122)
+        image1.Position = UDim2.new(0.5, -61, 0, 18)
+        image1.BackgroundTransparency = 1
+        image1.Image = Window.LoadIntroImage("https://i.ibb.co/Lhz8DG4k/IMG-20261122-065924.png", "LZN_intro_thank.png", options.IntroImage1)
+        image1.ScaleType = Enum.ScaleType.Fit
+        image1.ImageTransparency = 1
+        image1.ZIndex = 302
+        image1.Parent = panel
+        local image1Scale = Instance.new("UIScale")
+        image1Scale.Scale = 0.72
+        image1Scale.Parent = image1
+
+        local thankText = Instance.new("TextLabel")
+        thankText.Size = UDim2.new(1, -28, 0, 34)
+        thankText.Position = UDim2.new(0, 14, 0, 145)
+        thankText.BackgroundTransparency = 1
+        thankText.Text = "obrigado por usar minha library cute cute:3"
+        thankText.TextColor3 = Color3.fromRGB(245, 248, 255)
+        thankText.Font = Enum.Font.GothamBold
+        thankText.TextSize = 13
+        thankText.TextWrapped = true
+        thankText.TextTransparency = 1
+        thankText.TextXAlignment = Enum.TextXAlignment.Center
+        thankText.ZIndex = 302
+        thankText.Parent = panel
+
+        local byline = Instance.new("TextLabel")
+        byline.Size = UDim2.new(1, -28, 0, 20)
+        byline.Position = UDim2.new(0, 14, 0, 179)
+        byline.BackgroundTransparency = 1
+        byline.Text = "Library by LZN (Lezin)"
+        byline.TextColor3 = Color3.fromRGB(255, 196, 0)
+        byline.Font = Enum.Font.GothamBold
+        byline.TextSize = 11
+        byline.TextTransparency = 1
+        byline.Visible = false
+        byline.TextXAlignment = Enum.TextXAlignment.Center
+        byline.ZIndex = 302
+        byline.Parent = panel
+
+        local image2 = Instance.new("ImageLabel")
+        image2.Name = "IntroSecondaryImage"
+        image2.Size = UDim2.new(0, 148, 0, 96)
+        image2.Position = UDim2.new(0.5, -74, 0, 207)
+        image2.BackgroundTransparency = 1
+        image2.Image = Window.LoadIntroImage("https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png", "LZN_intro_secondary.png", options.IntroImage2)
+        image2.ScaleType = Enum.ScaleType.Fit
+        image2.ImageTransparency = 1
+        image2.ZIndex = 302
+        image2.Parent = panel
+        local image2Scale = Instance.new("UIScale")
+        image2Scale.Scale = 0.58
+        image2Scale.Parent = image2
+
+        local languageTitle = Instance.new("TextLabel")
+        languageTitle.Size = UDim2.new(1, -28, 0, 24)
+        languageTitle.Position = UDim2.new(0, 14, 0, 318)
+        languageTitle.BackgroundTransparency = 1
+        languageTitle.Text = "escolha seu idioma"
+        languageTitle.TextColor3 = Color3.fromRGB(235, 245, 255)
+        languageTitle.Font = Enum.Font.GothamBold
+        languageTitle.TextSize = 12
+        languageTitle.TextXAlignment = Enum.TextXAlignment.Left
+        languageTitle.ZIndex = 302
+        languageTitle.Parent = panel
+
+        local languages = {
+            {Name = "Português (Brasil)", Code = "pt"},
+            {Name = "English", Code = "en"},
+            {Name = "Русский", Code = "ru"},
+            {Name = "Español", Code = "es"},
+            {Name = "Français", Code = "fr"},
+            {Name = "Deutsch", Code = "de"},
+            {Name = "日本語", Code = "ja"},
+            {Name = "한국어", Code = "ko"},
+            {Name = "中文", Code = "zh"},
+            {Name = "Türkçe", Code = "tr"},
+            {Name = "العربية", Code = "ar"},
+            {Name = "हिन्दी", Code = "hi"}
+        }
+        local selectedLanguage = languages[1]
+
+        local languageButton = Instance.new("TextButton")
+        languageButton.Size = UDim2.new(1, -28, 0, 36)
+        languageButton.Position = UDim2.new(0, 14, 0, 344)
+        languageButton.BackgroundColor3 = Color3.fromRGB(13, 22, 36)
+        languageButton.Text = selectedLanguage.Name .. "   ▾"
+        languageButton.TextColor3 = Color3.fromRGB(225, 240, 255)
+        languageButton.Font = Enum.Font.GothamBold
+        languageButton.TextSize = 11
+        languageButton.AutoButtonColor = false
+        languageButton.ZIndex = 303
+        languageButton.Parent = panel
+        Instance.new("UICorner", languageButton).CornerRadius = UDim.new(0, 9)
+        AddGlow(languageButton, accentColor, 1.2, 0.28)
+
+        local languageList = Instance.new("ScrollingFrame")
+        languageList.Size = UDim2.new(1, -28, 0, 0)
+        languageList.Position = UDim2.new(0, 14, 0, 384)
+        languageList.BackgroundColor3 = Color3.fromRGB(8, 12, 20)
+        languageList.BorderSizePixel = 0
+        languageList.ScrollBarThickness = 3
+        languageList.ScrollBarImageColor3 = accentColor
+        languageList.CanvasSize = UDim2.new(0, 0, 0, #languages * 30)
+        languageList.Visible = false
+        languageList.ZIndex = 304
+        languageList.Parent = panel
+        Instance.new("UICorner", languageList).CornerRadius = UDim.new(0, 8)
+        local langLayout = Instance.new("UIListLayout")
+        langLayout.Padding = UDim.new(0, 2)
+        langLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        langLayout.Parent = languageList
+
+        for i, language in ipairs(languages) do
+            local option = Instance.new("TextButton")
+            option.Size = UDim2.new(1, -6, 0, 28)
+            option.BackgroundColor3 = Color3.fromRGB(16, 23, 36)
+            option.BackgroundTransparency = 0.2
+            option.Text = language.Name
+            option.TextColor3 = Color3.fromRGB(220, 235, 250)
+            option.Font = Enum.Font.GothamMedium
+            option.TextSize = 11
+            option.LayoutOrder = i
+            option.AutoButtonColor = false
+            option.ZIndex = 305
+            option.Parent = languageList
+            Instance.new("UICorner", option).CornerRadius = UDim.new(0, 6)
+            option.MouseButton1Click:Connect(function()
+                selectedLanguage = language
+                languageButton.Text = language.Name .. "   ▾"
+                languageList.Visible = false
+                TweenService:Create(languageList, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, -28, 0, 0)}):Play()
+            end)
+        end
+
+        local continueButton = Instance.new("TextButton")
+        continueButton.Size = UDim2.new(1, -28, 0, 38)
+        continueButton.Position = UDim2.new(0, 14, 1, -52)
+        continueButton.BackgroundColor3 = Color3.fromRGB(190, 140, 0)
+        continueButton.Text = "Continuar"
+        continueButton.TextColor3 = Color3.new(1, 1, 1)
+        continueButton.Font = Enum.Font.GothamBold
+        continueButton.TextSize = 12
+        continueButton.AutoButtonColor = false
+        continueButton.ZIndex = 303
+        continueButton.Parent = panel
+        Instance.new("UICorner", continueButton).CornerRadius = UDim.new(0, 9)
+        AddGlow(continueButton, Color3.fromRGB(255, 210, 65), 1.2, 0.18)
+
+        PlaySFX(Window.IntroThankSFX, 1)
+        TweenService:Create(image1, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+        TweenService:Create(image1Scale, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(thankText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+
+        languageButton.MouseButton1Click:Connect(function()
+            local open = not languageList.Visible
+            languageList.Visible = true
+            TweenService:Create(languageList, TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, -28, 0, open and 108 or 0)
+            }):Play()
+            if not open then
+                task.delay(0.18, function()
+                    if languageList and languageList.Parent then languageList.Visible = false end
+                end)
             end
+        end)
 
-            local function addImage(name, url, fileName, pos, size)
-                local image = Instance.new("ImageLabel")
-                image.Name = name
-                image.BackgroundTransparency = 1
-                image.BorderSizePixel = 0
-                image.Size = size
-                image.Position = pos
-                image.ScaleType = Enum.ScaleType.Fit
-                image.ImageTransparency = 1
-                image.ZIndex = 1001
-                image.Parent = overlay
-
-                -- Image is assigned ONLY from getcustomasset/getsynasset.
-                local localAsset = LoadBackgroundAsset(url, fileName)
-                if localAsset then
-                    image.Image = localAsset
+        local function buildTranslator()
+            local moduleRef = options.AutoTranslateModule
+            if not moduleRef then
+                moduleRef = ReplicatedStorage:FindFirstChild("AutoTranslate", true)
+            end
+            if not moduleRef and type(getgenv) == "function" then
+                pcall(function()
+                    local env = getgenv()
+                    moduleRef = env.AutoTranslateModule or env.LZN_AutoTranslateModule
+                end)
+            end
+            if type(moduleRef) == "string" then
+                local numericRef = tonumber(moduleRef)
+                if numericRef then
+                    moduleRef = numericRef
                 else
-                    image.Visible = false
-                end
-                return image
-            end
-
-            local function fadeIn(objects, duration)
-                for _, object in ipairs(objects) do
-                    local property = object:IsA("ImageLabel") and "ImageTransparency" or "TextTransparency"
-                    TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        [property] = 0
-                    }):Play()
+                    local path = moduleRef:gsub("^game%.ReplicatedStorage%.?", "")
+                    local current = ReplicatedStorage
+                    for segment in string.gmatch(path, "[^%.]+") do
+                        current = current and current:FindFirstChild(segment)
+                    end
+                    if current then moduleRef = current end
                 end
             end
-
-            local function fadeOut(objects, duration)
-                local tweens = {}
-                for _, object in ipairs(objects) do
-                    local property = object:IsA("ImageLabel") and "ImageTransparency" or "TextTransparency"
-                    local tween = TweenService:Create(object, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                        [property] = 1
-                    })
-                    table.insert(tweens, tween)
-                    tween:Play()
-                end
-                if tweens[1] then tweens[1].Completed:Wait() end
+            local moduleObject = options.AutoTranslate
+            if not moduleObject and moduleRef then
+                local ok, result = pcall(require, moduleRef)
+                if ok then moduleObject = result end
             end
-
-            local function waitIfAlive(seconds)
-                local elapsed = 0
-                while elapsed < seconds and overlay.Parent do
-                    local dt = task.wait(0.1)
-                    elapsed += dt
-                end
+            if type(moduleObject) ~= "table" or type(moduleObject.new) ~= "function" then
+                return nil
             end
+            local ok, instance = pcall(function()
+                return moduleObject.new({
+                    TargetLang = selectedLanguage.Code,
+                    SourceLang = "auto",
+                    DelayBetweenRequests = 0.08
+                })
+            end)
+            if ok then return instance end
+            return nil
+        end
 
-            -- Slide 1: bilingual thank-you message with its image directly underneath.
-            local thankPT = addText(
-                "ThankYouPT",
-                "PT-BR 🇧🇷\nobrigado(a) por usar minha library, vida🤭 quero dizer, anjo😅❤️",
-                UDim2.new(0.08, 0, 0.20, 0),
-                UDim2.new(0.84, 0, 0, 76),
-                16
-            )
-            local thankEN = addText(
-                "ThankYouEN",
-                "EN 🇺🇸\nThank(s) you for using my library, life🤭 I mean, angel😅❤️",
-                UDim2.new(0.08, 0, 0.36, 0),
-                UDim2.new(0.84, 0, 0, 76),
-                16
-            )
-            local thankImage = addImage(
-                "ThankYouImage",
-                "https://i.ibb.co/8nsVqWrh/1795746809383.jpg",
-                "LZN_intro_thanks.jpg",
-                UDim2.new(0.5, -105, 0.54, 0),
-                UDim2.new(0, 210, 0, 190)
-            )
+        local translator = nil
+        local translatedTextCache = {}
+        local function translateGuiObject(object)
+            if not translator or not object or not object.Parent then return end
+            if not (object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox")) then return end
+            local original = object.Text
+            if type(original) ~= "string" or original == "" or translatedTextCache[original] ~= nil then
+                if translatedTextCache[original] and object.Parent then object.Text = translatedTextCache[original] end
+                return
+            end
+            if original:match("^rbxassetid://") or original:match("^#%x%x%x%x%x%x$") then return end
+            local ok = pcall(function()
+                translator:TranslateAsync(original, function(translatedText, err)
+                    if not err and type(translatedText) == "string" and object.Parent then
+                        translatedTextCache[original] = translatedText
+                        object.Text = translatedText
+                    end
+                end)
+            end)
+            if not ok then return end
+        end
 
-            fadeIn({thankPT, thankEN, thankImage}, 0.55)
-            waitIfAlive(4)
-            fadeOut({thankPT, thankEN, thankImage}, 0.5)
-            thankPT:Destroy()
-            thankEN:Destroy()
-            thankImage:Destroy()
+        local translateConnections = {}
+        local function applyLanguage()
+            translator = buildTranslator()
+            Window.Language = selectedLanguage.Code
+            Window.LanguageName = selectedLanguage.Name
+            if not translator then
+                warn("[LZN Library] Idioma selecionado: " .. tostring(selectedLanguage.Code) .. ". Para traduzir os textos, forneça options.AutoTranslateModule com o ModuleScript/ID ou publique um ModuleScript chamado AutoTranslate em ReplicatedStorage.")
+                return
+            end
+            for _, object in ipairs(ScreenGui:GetDescendants()) do
+                translateGuiObject(object)
+            end
+            for _, object in ipairs(FullScreenBlurGui:GetDescendants()) do
+                translateGuiObject(object)
+            end
+            table.insert(translateConnections, ScreenGui.DescendantAdded:Connect(function(object)
+                task.defer(function() translateGuiObject(object) end)
+            end))
+            table.insert(translateConnections, FullScreenBlurGui.DescendantAdded:Connect(function(object)
+                task.defer(function() translateGuiObject(object) end)
+            end))
+        end
+
+        local completed = false
+        continueButton.MouseButton1Click:Connect(function()
+            if completed then return end
+            completed = true
+            applyLanguage()
+            byline.Visible = true
+            TweenService:Create(byline, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            languageButton.Active = false
+            continueButton.Active = false
+            languageTitle.Visible = false
+            languageButton.Visible = false
+            languageList.Visible = false
+            continueButton.Visible = false
+
+            TweenService:Create(image2, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+            TweenService:Create(image2Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+            task.wait(2.7)
+            if not overlay.Parent then return end
+            local fadeSecond = TweenService:Create(image2, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1})
+            fadeSecond:Play()
+            TweenService:Create(image2Scale, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.65}):Play()
+            fadeSecond.Completed:Wait()
 
             if not overlay.Parent then return end
+            image2.Visible = false
+            local image3 = Instance.new("ImageLabel")
+            image3.Name = "WelcomeImage"
+            image3.Size = UDim2.new(0, 148, 0, 96)
+            image3.Position = UDim2.new(0.5, -74, 0, 207)
+            image3.BackgroundTransparency = 1
+            image3.Image = Window.LoadIntroImage("https://i.ibb.co/jFJt92F/file-000000003304820eb37d3ad0b97ead96.png", "LZN_intro_welcome.png", options.IntroImage3)
+            image3.ScaleType = Enum.ScaleType.Fit
+            image3.ImageTransparency = 1
+            image3.ZIndex = 302
+            image3.Parent = panel
+            local image3Scale = Instance.new("UIScale")
+            image3Scale.Scale = 0.58
+            image3Scale.Parent = image3
 
-            -- Slide 2: creator credits, with the two images side-by-side below the text.
-            local creditPT = addText(
-                "CreditPT",
-                "PT-BR 🇧🇷\nlibrary criada por LZN (Lezin)♥️",
-                UDim2.new(0.06, 0, 0.20, 0),
-                UDim2.new(0.88, 0, 0, 68),
-                17,
-                Color3.fromRGB(255, 220, 120)
-            )
-            local creditEN = addText(
-                "CreditEN",
-                "EN 🇺🇸\nlibrary by LZN (Lezin)♥️",
-                UDim2.new(0.06, 0, 0.34, 0),
-                UDim2.new(0.88, 0, 0, 68),
-                17,
-                Color3.fromRGB(255, 220, 120)
-            )
-            local creditImage1 = addImage(
-                "LZNLogoImage",
-                "https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png",
-                "LZN_intro_logo.png",
-                UDim2.new(0.5, -155, 0.53, 0),
-                UDim2.new(0, 140, 0, 170)
-            )
-            local creditImage2 = addImage(
-                "ManhattanCreditImage",
-                "https://i.ibb.co/gLZkkcZR/manhattan.png",
-                "LZN_intro_manhattan.png",
-                UDim2.new(0.5, 15, 0.53, 0),
-                UDim2.new(0, 140, 0, 170)
-            )
+            local welcomeText = Instance.new("TextLabel")
+            welcomeText.Size = UDim2.new(1, -28, 0, 32)
+            welcomeText.Position = UDim2.new(0, 14, 0, 310)
+            welcomeText.BackgroundTransparency = 1
+            welcomeText.Text = "Bem-vindo(a) " .. tostring(Player.DisplayName)
+            welcomeText.TextColor3 = Color3.fromRGB(245, 248, 255)
+            welcomeText.Font = Enum.Font.GothamBold
+            welcomeText.TextSize = 13
+            welcomeText.TextWrapped = true
+            welcomeText.TextTransparency = 1
+            welcomeText.TextXAlignment = Enum.TextXAlignment.Center
+            welcomeText.ZIndex = 302
+            welcomeText.Parent = panel
 
-            fadeIn({creditPT, creditEN, creditImage1, creditImage2}, 0.55)
-            waitIfAlive(4)
-            fadeOut({creditPT, creditEN, creditImage1, creditImage2}, 0.5)
+            PlaySFX(Window.IntroWelcomeSFX, 1)
+            TweenService:Create(image3, TweenInfo.new(0.48, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+            TweenService:Create(image3Scale, TweenInfo.new(0.48, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            TweenService:Create(welcomeText, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            task.wait(2.6)
 
+            if overlay.Parent then
+                TweenService:Create(overlay, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+                TweenService:Create(panelScale, TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.92}):Play()
+            end
+            TweenService:Create(introBlur, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0}):Play()
+            task.wait(0.45)
+            if viewportConnection then viewportConnection:Disconnect() end
             if overlay and overlay.Parent then overlay:Destroy() end
+            if introBlur and introBlur.Parent then introBlur:Destroy() end
             if ScreenGui and ScreenGui.Parent then
                 MainFrame.Visible = true
                 ToggleHubBtn.Visible = true
                 HubOpen = true
                 HubScale.Scale = 0.72
-                TweenService:Create(HubScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Scale = 1
-                }):Play()
+                TweenService:Create(HubScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
                 if BackgroundMusic and BGMText.Text ~= "OFF" then BackgroundMusic:Resume() end
             end
         end)
+    end)
 
     else
         MainFrame.Visible = true
