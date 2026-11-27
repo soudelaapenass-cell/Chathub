@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local SoundService = game:GetService("SoundService")
+local ContentProvider = game:GetService("ContentProvider")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
@@ -376,8 +377,8 @@ function LZNLib:CreateWindow(options)
     Window.IntroWelcomeSFX = CreateSFX("IntroWelcome", "rbxassetid://117409737658405", 0.62, 1)
     local SFX = {
         DropdownSelect = CreateSFX("DropdownSelect", "rbxassetid://2029831027", 0.42, 1),
-        MultiSelect = CreateSFX("MultiSelect", "rbxassetid://117649901456711", 0.42, 1),
-        MultiDropdownOpen = CreateSFX("MultiDropdownOpen", "rbxassetid://17208372272", 0.42, 1),
+        MultiSelect = CreateSFX("MultiSelect", "rbxassetid://117649901456711", 1, 1),
+        MultiDropdownOpen = CreateSFX("MultiDropdownOpen", "rbxassetid://17208372272", 1, 1),
         Tab = CreateSFX("Tab", "rbxassetid://139746569667955", 0.42, 1),
         Popup = CreateSFX("Popup", "rbxassetid://96219687807442", 0.42, 1),
         ColorPicker = CreateSFX("ColorPicker", "rbxassetid://111223777734727", 0.42, 1),
@@ -391,6 +392,38 @@ function LZNLib:CreateWindow(options)
     }
     Window.NotificationSFX = {SFX.NotifySuccess, SFX.NotifyError, SFX.NotifyFail, SFX.NotifyWarning}
     Window.NotificationSoundIndex = 0
+
+    -- Dedicated playback for MultiDropdown sounds: full volume and its own Sound instance.
+    local function PlayMultiDropdownSFX(sourceSound)
+        if not sfxEnabled or not sourceSound then return end
+        task.spawn(function()
+            local playback = sourceSound:Clone()
+            playback.Name = sourceSound.Name .. "_Playback"
+            playback.Volume = 1
+            playback.PlaybackSpeed = 1
+            playback.Looped = false
+            playback.TimePosition = 0
+            playback.Parent = SoundService
+
+            pcall(function()
+                ContentProvider:PreloadAsync({playback})
+            end)
+
+            local cleaned = false
+            local function cleanup()
+                if cleaned then return end
+                cleaned = true
+                if playback and playback.Parent then
+                    playback:Destroy()
+                end
+            end
+
+            playback.Ended:Connect(cleanup)
+            playback:Play()
+
+            task.delay(12, cleanup)
+        end)
+    end
 
     local function PlaySFX(sfxObj, pitchOverride)
         if not sfxEnabled or not sfxObj then return end
@@ -2603,7 +2636,7 @@ function LZNLib:CreateWindow(options)
             itemBtn.MouseButton1Click:Connect(function()
                 selectedMap[key] = not selectedMap[key]
                 local nowSel = selectedMap[key] == true
-                PlaySFX(SFX.MultiSelect, 1)
+                PlayMultiDropdownSFX(SFX.MultiSelect)
                 refreshOptionsVisual()
                 if cfg.Callback then
                     cfg.Callback(getSelectedList(), item, nowSel)
@@ -2616,7 +2649,7 @@ function LZNLib:CreateWindow(options)
 
         dropBtn.MouseButton1Click:Connect(function()
             isOpen = not isOpen
-            PlaySFX(SFX.MultiDropdownOpen, 1)
+            PlayMultiDropdownSFX(SFX.MultiDropdownOpen)
             dropBtn.Text = formatHeader()
             local targetH = isOpen and (42 + (#items * 30)) or 38
             TweenService:Create(wrapper, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
