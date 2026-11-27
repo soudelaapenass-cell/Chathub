@@ -16,111 +16,110 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Player = Players.LocalPlayer
 
-local function MakeDraggable(gui)
+local function MakeDraggable(target, dragHandle)
+    -- target é o objeto que será movido; dragHandle é a área que inicia o arraste.
+    local handle = dragHandle or target
     local dragging = false
-    local dragStart = nil
-    local startAnchor = nil
-    local latestPointer = nil
+    local dragInputType = nil
+    local dragStartPointer = nil
+    local dragStartAnchor = nil
 
-    gui.Active = true
+    handle.Active = true
+    if handle:IsA("GuiObject") then
+        handle.Selectable = false
+    end
 
-    local function getParentBounds()
-        local camera = workspace.CurrentCamera
-        local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
-        local parent = gui.Parent
-
+    local function parentGeometry()
+        local parent = target.Parent
         if parent and parent:IsA("GuiObject") then
             return parent.AbsolutePosition, parent.AbsoluteSize
         end
 
-        local screenGui = gui:FindFirstAncestorOfClass("ScreenGui")
-        if screenGui and screenGui.IgnoreGuiInset then
+        local camera = workspace.CurrentCamera
+        local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+        local screen = target:FindFirstAncestorOfClass("ScreenGui")
+        if screen and screen.IgnoreGuiInset then
             return Vector2.zero, viewport
         end
 
-        local topLeftInset, bottomRightInset = GuiService:GetGuiInset()
-        local available = Vector2.new(
-            math.max(1, viewport.X - topLeftInset.X - bottomRightInset.X),
-            math.max(1, viewport.Y - topLeftInset.Y - bottomRightInset.Y)
-        )
-        return topLeftInset, available
-    end
-
-    local function getLocalAnchor()
-        local origin = getParentBounds()
-        local absolute = gui.AbsolutePosition
-        return absolute - origin + Vector2.new(
-            gui.AbsoluteSize.X * gui.AnchorPoint.X,
-            gui.AbsoluteSize.Y * gui.AnchorPoint.Y
+        local topLeft = GuiService:GetGuiInset()
+        return topLeft, Vector2.new(
+            math.max(1, viewport.X - topLeft.X),
+            math.max(1, viewport.Y - topLeft.Y)
         )
     end
 
-    local function applyClampedAnchor(anchorPosition)
-        if not gui.Parent then return end
-        local origin, bounds = getParentBounds()
-        local size = gui.AbsoluteSize
-        local anchor = gui.AnchorPoint
+    local function localPointer(screenPosition)
+        local origin = parentGeometry()
+        return screenPosition - origin
+    end
+
+    local function targetAnchorLocal()
+        local origin = parentGeometry()
+        return target.AbsolutePosition - origin + Vector2.new(
+            target.AbsoluteSize.X * target.AnchorPoint.X,
+            target.AbsoluteSize.Y * target.AnchorPoint.Y
+        )
+    end
+
+    local function moveClamped(anchorPosition)
+        if not target.Parent then return end
+
+        local _, bounds = parentGeometry()
+        local size = target.AbsoluteSize
+        local anchor = target.AnchorPoint
 
         local minX = size.X * anchor.X
         local minY = size.Y * anchor.Y
         local maxX = math.max(minX, bounds.X - size.X * (1 - anchor.X))
         local maxY = math.max(minY, bounds.Y - size.Y * (1 - anchor.Y))
 
-        local clampedX = math.clamp(anchorPosition.X, minX, maxX)
-        local clampedY = math.clamp(anchorPosition.Y, minY, maxY)
+        local x = math.clamp(anchorPosition.X, minX, maxX)
+        local y = math.clamp(anchorPosition.Y, minY, maxY)
 
-        -- Position is expressed relative to the parent, not absolute screen pixels.
-        gui.Position = UDim2.fromOffset(clampedX, clampedY)
+        -- Mantém a posição em offsets para que o limite seja previsível no celular e PC.
+        target.Position = UDim2.fromOffset(x, y)
     end
 
-    local function pointerToLocal(position)
-        local origin = getParentBounds()
-        return position - origin
-    end
-
-    gui.InputBegan:Connect(function(input)
+    handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            dragStart = pointerToLocal(input.Position)
-            startAnchor = getLocalAnchor()
-            latestPointer = input.Position
+            dragInputType = input.UserInputType
+            dragStartPointer = localPointer(input.Position)
+            dragStartAnchor = targetAnchorLocal()
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
         if not dragging then return end
 
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch then
-            latestPointer = input.Position
-            if dragStart and startAnchor then
-                local currentLocal = pointerToLocal(latestPointer)
-                applyClampedAnchor(startAnchor + (currentLocal - dragStart))
-            end
+        local isMouseMove = dragInputType == Enum.UserInputType.MouseButton1
+            and input.UserInputType == Enum.UserInputType.MouseMovement
+        local isTouchMove = dragInputType == Enum.UserInputType.Touch
+            and input.UserInputType == Enum.UserInputType.Touch
+
+        if isMouseMove or isTouchMove then
+            local currentPointer = localPointer(input.Position)
+            moveClamped(dragStartAnchor + (currentPointer - dragStartPointer))
         end
     end)
 
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
+        if (dragInputType == Enum.UserInputType.MouseButton1
+                and input.UserInputType == Enum.UserInputType.MouseButton1)
+            or (dragInputType == Enum.UserInputType.Touch
+                and input.UserInputType == Enum.UserInputType.Touch) then
             dragging = false
-            dragStart = nil
-            startAnchor = nil
-            latestPointer = nil
+            dragInputType = nil
+            dragStartPointer = nil
+            dragStartAnchor = nil
         end
     end)
 
-    gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        if not dragging and gui.Parent then
-            applyClampedAnchor(getLocalAnchor())
-        end
-    end)
-
-    -- Also corrects an out-of-bounds position caused by resizing or external scripts.
     task.defer(function()
-        if gui.Parent then
-            applyClampedAnchor(getLocalAnchor())
+        if target.Parent then
+            moveClamped(targetAnchorLocal())
         end
     end)
 end
@@ -542,7 +541,6 @@ function LZNLib:CreateWindow(options)
     HubBackground.Parent = MainFrame
     Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
-    MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
     AddGlow(MainFrame, accentColor, 2, 0.1)
     AddGradient(MainFrame, Color3.fromRGB(14, 18, 28), Color3.fromRGB(6, 7, 11), 135)
@@ -559,6 +557,19 @@ function LZNLib:CreateWindow(options)
     HeaderFrame.ZIndex = 24
     HeaderFrame.Parent = MainFrame
     Instance.new("UICorner", HeaderFrame).CornerRadius = UDim.new(0, 18)
+
+    -- Área transparente para arrastar o Hub sem bloquear os botões do cabeçalho.
+    local HubDragHandle = Instance.new("TextButton")
+    HubDragHandle.Name = "HubDragHandle"
+    HubDragHandle.Size = UDim2.new(1, 0, 1, 0)
+    HubDragHandle.Position = UDim2.new(0, 0, 0, 0)
+    HubDragHandle.BackgroundTransparency = 1
+    HubDragHandle.BorderSizePixel = 0
+    HubDragHandle.Text = ""
+    HubDragHandle.AutoButtonColor = false
+    HubDragHandle.ZIndex = 24
+    HubDragHandle.Parent = HeaderFrame
+    MakeDraggable(MainFrame, HubDragHandle)
 
     local HeaderGlow = Instance.new("Frame")
     HeaderGlow.Size = UDim2.new(1, 0, 0, 1)
@@ -1193,7 +1204,7 @@ function LZNLib:CreateWindow(options)
     Instance.new("UICorner", FloatingButtonImage).CornerRadius = UDim.new(1, 0)
     AddGlow(ToggleHubBtn, accentColor, 2, 0.1)
     AddGradient(ToggleHubBtn, Color3.fromRGB(18, 25, 40), Color3.fromRGB(8, 10, 15), 135)
-    MakeDraggable(ToggleHubBtn)
+    MakeDraggable(ToggleHubBtn, ToggleHubBtn)
     AddClickEffect(ToggleHubBtn)
 
     local HubOpen = true
