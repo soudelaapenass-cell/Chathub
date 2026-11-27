@@ -492,88 +492,45 @@ function LZNLib:CreateWindow(options)
     HubBackground.Parent = MainFrame
     Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
-    
--- Decorações externas nos quatro cantos do Hub
-local CornerGuiName = hubName .. "_CornerImagesGui"
-
-local oldCornerGui = CoreGui:FindFirstChild(CornerGuiName)
-if oldCornerGui then
-    oldCornerGui:Destroy()
-end
-
-local CornerGui = Instance.new("ScreenGui")
-CornerGui.Name = CornerGuiName
-CornerGui.ResetOnSpawn = false
-CornerGui.IgnoreGuiInset = true
-CornerGui.DisplayOrder = 41
-CornerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-CornerGui.Parent = CoreGui
-
-local HubCornerImages = {}
-
-local cornerImageConfigs = {
-    {
-        Name = "HubCornerTopLeft",
-        Image = "rbxassetid://131148058397719",
-        X = 0, Y = 0
-    },
-    {
-        Name = "HubCornerTopRight",
-        Image = "rbxassetid://108804305478512",
-        X = 1, Y = 0
-    },
-    {
-        Name = "HubCornerBottomLeft",
-        Image = "rbxassetid://133523315737725",
-        X = 0, Y = 1
-    },
-    {
-        Name = "HubCornerBottomRight",
-        Image = "rbxassetid://88446643995980",
-        X = 1, Y = 1
+    -- Imagens decorativas nos cantos: cada uma fica metade dentro e metade fora.
+    -- São filhas do ScreenGui (não do MainFrame), então não são cortadas pelo Hub
+    -- e permanecem acima de todos os elementos internos.
+    local HubCornerImages = {}
+    local cornerImageConfigs = {
+        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", X = 0, Y = 0},
+        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", X = 1, Y = 0},
+        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", X = 0, Y = 1},
+        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", X = 1, Y = 1}
     }
-}
-
-for _, cfg in ipairs(cornerImageConfigs) do
-    local img = Instance.new("ImageLabel")
-    img.Name = cfg.Name
-    img.Size = UDim2.fromOffset(58, 58)
-    img.AnchorPoint = Vector2.new(0.5, 0.5)
-    img.BackgroundTransparency = 1
-    img.Image = cfg.Image
-    img.ScaleType = Enum.ScaleType.Fit
-    img.ZIndex = 100
-    img.Active = false
-    img.Parent = CornerGui
-
-    table.insert(HubCornerImages, {
-        Object = img,
-        X = cfg.X,
-        Y = cfg.Y
-    })
-end
-
--- Acompanhar posição, tamanho e animações do Hub
-local CornerFollowConnection
-
-CornerFollowConnection = RunService.RenderStepped:Connect(function()
-    if not MainFrame.Parent or not CornerGui.Parent then
-        CornerFollowConnection:Disconnect()
-        return
+    for _, cfg in ipairs(cornerImageConfigs) do
+        local cornerImage = Instance.new("ImageLabel")
+        cornerImage.Name = cfg.Name
+        cornerImage.Size = UDim2.fromOffset(70, 70)
+        cornerImage.AnchorPoint = Vector2.new(0.5, 0.5)
+        cornerImage.BackgroundTransparency = 1
+        cornerImage.Image = cfg.Image
+        cornerImage.ScaleType = Enum.ScaleType.Fit
+        cornerImage.ImageTransparency = 0
+        cornerImage.Active = false
+        cornerImage.Selectable = false
+        cornerImage.ZIndex = 1000
+        cornerImage.Parent = ScreenGui
+        table.insert(HubCornerImages, {Object = cornerImage, X = cfg.X, Y = cfg.Y})
     end
 
-    local pos = MainFrame.AbsolutePosition
-    local size = MainFrame.AbsoluteSize
-
-    for _, data in ipairs(HubCornerImages) do
-        local x = pos.X + size.X * data.X
-        local y = pos.Y + size.Y * data.Y
-
-        data.Object.Position = UDim2.fromOffset(x, y)
-        data.Object.Visible = MainFrame.Visible
+    local function UpdateHubCornerImages()
+        if not MainFrame or not MainFrame.Parent then return end
+        local p = MainFrame.AbsolutePosition
+        local z = MainFrame.AbsoluteSize
+        for _, item in ipairs(HubCornerImages) do
+            local x = p.X + z.X * item.X
+            local y = p.Y + z.Y * item.Y
+            item.Object.Position = UDim2.fromOffset(x, y)
+            item.Object.Visible = MainFrame.Visible
+        end
     end
-end)
-
+    UpdateHubCornerImages()
+    local HubCornerFollowConnection = RunService.RenderStepped:Connect(UpdateHubCornerImages)
 
     MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
