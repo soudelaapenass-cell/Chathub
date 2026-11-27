@@ -479,6 +479,8 @@ function LZNLib:CreateWindow(options)
     MainFrame.ClipsDescendants = true
     MainFrame.ZIndex = 20
     MainFrame.Parent = ScreenGui
+    -- Começa oculto para nunca piscar antes da decisão da tela de apresentação.
+    MainFrame.Visible = false
 
     local HubBackground = Instance.new("ImageLabel")
     HubBackground.Name = "HubBackground"
@@ -492,29 +494,53 @@ function LZNLib:CreateWindow(options)
     HubBackground.Parent = MainFrame
     Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
-    -- Decorações nos quatro cantos do Hub (imagens solicitadas pelo criador).
+    -- Decorações em uma ScreenGui separada: ficam acima do Hub e podem
+    -- ultrapassar seus limites sem serem cortadas pelo MainFrame.
+    local CornerDecorGui = Instance.new("ScreenGui")
+    CornerDecorGui.Name = hubName .. "_CornerDecorations"
+    CornerDecorGui.ResetOnSpawn = false
+    CornerDecorGui.IgnoreGuiInset = ScreenGui.IgnoreGuiInset
+    CornerDecorGui.DisplayOrder = ScreenGui.DisplayOrder + 1
+    CornerDecorGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    CornerDecorGui.Enabled = false
+    CornerDecorGui.Parent = CoreGui
+
     local HubCornerImages = {}
     local cornerImageConfigs = {
-        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", Position = UDim2.new(0, 5, 0, 5), Anchor = Vector2.new(0, 0)},
-        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", Position = UDim2.new(1, -5, 0, 5), Anchor = Vector2.new(1, 0)},
-        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", Position = UDim2.new(0, 5, 1, -5), Anchor = Vector2.new(0, 1)},
-        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", Position = UDim2.new(1, -5, 1, -5), Anchor = Vector2.new(1, 1)}
+        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", X = 0, Y = 0},
+        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", X = 1, Y = 0},
+        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", X = 0, Y = 1},
+        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", X = 1, Y = 1}
     }
     for _, cfg in ipairs(cornerImageConfigs) do
         local cornerImage = Instance.new("ImageLabel")
         cornerImage.Name = cfg.Name
-        cornerImage.Size = UDim2.new(0, 58, 0, 58)
-        cornerImage.Position = cfg.Position
-        cornerImage.AnchorPoint = cfg.Anchor
+        cornerImage.Size = UDim2.fromOffset(76, 76)
+        cornerImage.AnchorPoint = Vector2.new(0.5, 0.5)
         cornerImage.BackgroundTransparency = 1
         cornerImage.Image = cfg.Image
         cornerImage.ScaleType = Enum.ScaleType.Fit
-        cornerImage.ImageTransparency = 0.04
+        cornerImage.ImageTransparency = 0
         cornerImage.Active = false
-        cornerImage.ZIndex = 22
-        cornerImage.Parent = MainFrame
-        table.insert(HubCornerImages, cornerImage)
+        cornerImage.ZIndex = 100
+        cornerImage.Parent = CornerDecorGui
+        table.insert(HubCornerImages, {Object = cornerImage, X = cfg.X, Y = cfg.Y})
     end
+
+    -- Reposiciona as quatro imagens nos vértices reais do Hub, inclusive
+    -- quando o Hub é arrastado, redimensionado ou animado por UIScale.
+    local CornerFollowConnection = RunService.RenderStepped:Connect(function()
+        if not MainFrame.Parent or not CornerDecorGui.Parent then return end
+        local absPos = MainFrame.AbsolutePosition
+        local absSize = MainFrame.AbsoluteSize
+        local showCorners = CornerDecorGui.Enabled and MainFrame.Visible
+        for _, item in ipairs(HubCornerImages) do
+            local x = absPos.X + absSize.X * item.X
+            local y = absPos.Y + absSize.Y * item.Y
+            item.Object.Position = UDim2.fromOffset(x, y)
+            item.Object.Visible = showCorners
+        end
+    end)
 
     MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
@@ -1151,6 +1177,7 @@ function LZNLib:CreateWindow(options)
     ToggleHubBtn.Text = ""
     ToggleHubBtn.ZIndex = 30
     ToggleHubBtn.Parent = ScreenGui
+    ToggleHubBtn.Visible = false
     local FloatingButtonCorner = Instance.new("UICorner")
     FloatingButtonCorner.CornerRadius = UDim.new(1, 0)
     FloatingButtonCorner.Parent = ToggleHubBtn
@@ -1282,6 +1309,12 @@ function LZNLib:CreateWindow(options)
         end
         if FullScreenBlurGui then
             pcall(function() FullScreenBlurGui:Destroy() end)
+        end
+        if CornerFollowConnection then
+            pcall(function() CornerFollowConnection:Disconnect() end)
+        end
+        if CornerDecorGui then
+            pcall(function() CornerDecorGui:Destroy() end)
         end
         if ScreenGui then
             pcall(function() ScreenGui:Destroy() end)
@@ -5727,8 +5760,11 @@ end
     -- A apresentação fica ativada por padrão; só é ignorada se o usuário
     -- definir ShowLanguageIntro = false explicitamente.
     if options.ShowLanguageIntro ~= false then
+        -- Esconde o Hub imediatamente (antes do task.spawn) para impedir
+        -- qualquer frame de aparecer atrás/antes da apresentação.
         MainFrame.Visible = false
         ToggleHubBtn.Visible = false
+        CornerDecorGui.Enabled = false
         task.spawn(function()
             HubOpen = true
             if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
@@ -5888,9 +5924,12 @@ end
             fadeOut({creditPT, creditEN, creditImage1, creditImage2}, 0.5)
 
             if overlay and overlay.Parent then overlay:Destroy() end
+            -- Aguarda o overlay sair da árvore visual antes de revelar o Hub.
+            task.wait()
             if ScreenGui and ScreenGui.Parent then
                 MainFrame.Visible = true
                 ToggleHubBtn.Visible = true
+                CornerDecorGui.Enabled = true
                 HubOpen = true
                 HubScale.Scale = 0.72
                 TweenService:Create(HubScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
@@ -5903,6 +5942,7 @@ end
     else
         MainFrame.Visible = true
         ToggleHubBtn.Visible = true
+        CornerDecorGui.Enabled = true
         HubOpen = true
     end
 
