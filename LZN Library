@@ -437,7 +437,7 @@ function LZNLib:CreateWindow(options)
     ScreenGui.Name = hubName
     ScreenGui.Parent = CoreGui
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.DisplayOrder = 10000
+    ScreenGui.DisplayOrder = 40
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     local FullScreenBlurGui = Instance.new("ScreenGui")
@@ -492,50 +492,55 @@ function LZNLib:CreateWindow(options)
     HubBackground.Parent = MainFrame
     Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
-    -- Decorações nos quatro cantos: ficam metade dentro/metade fora do Hub.
-    -- São filhas do ScreenGui (não do MainFrame) para escapar de ClipsDescendants,
-    -- e usam ZIndex alto para aparecerem sobre os elementos do Hub.
+    -- As quatro imagens ficam centralizadas exatamente nas pontas do Hub:
+    -- metade para dentro e metade para fora. Em uma ScreenGui separada do
+    -- conteúdo do Frame, elas não são cortadas pelo ClipsDescendants do Hub.
     local HubCornerImages = {}
     local cornerImageConfigs = {
-        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", Corner = "TopLeft"},
-        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", Corner = "TopRight"},
-        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", Corner = "BottomLeft"},
-        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", Corner = "BottomRight"}
+        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", Corner = Vector2.new(0, 0)},
+        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", Corner = Vector2.new(1, 0)},
+        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", Corner = Vector2.new(0, 1)},
+        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", Corner = Vector2.new(1, 1)}
     }
+
     for _, cfg in ipairs(cornerImageConfigs) do
         local cornerImage = Instance.new("ImageLabel")
         cornerImage.Name = cfg.Name
-        cornerImage.Size = UDim2.fromOffset(76, 76)
+        cornerImage.Size = UDim2.fromOffset(72, 72)
         cornerImage.AnchorPoint = Vector2.new(0.5, 0.5)
-        cornerImage.Position = UDim2.fromOffset(0, 0) -- atualizado pela conexão abaixo
+        cornerImage.Position = UDim2.fromOffset(0, 0)
         cornerImage.BackgroundTransparency = 1
         cornerImage.Image = cfg.Image
         cornerImage.ScaleType = Enum.ScaleType.Fit
-        cornerImage.ImageTransparency = 0
+        cornerImage.ImageTransparency = 0.04
         cornerImage.Active = false
-        cornerImage.Selectable = false
-        cornerImage.ZIndex = 10000
+        cornerImage.ZIndex = 1000
         cornerImage.Parent = ScreenGui
-        table.insert(HubCornerImages, {Object = cornerImage, Corner = cfg.Corner})
+        table.insert(HubCornerImages, {Image = cornerImage, Corner = cfg.Corner})
     end
 
-    -- Acompanha posição e tamanho reais (incluindo UIScale e arraste do Hub).
-    -- O centro de cada imagem coincide exatamente com a ponta do canto: 38 px ficam dentro e 38 px fora. DisplayOrder/ZIndex altos mantêm as imagens acima de todo o Hub.
+    -- Atualiza a posição continuamente para acompanhar arrasto e redimensionamento.
     local HubCornerFollowConnection
     HubCornerFollowConnection = RunService.RenderStepped:Connect(function()
-        if not ScreenGui.Parent then
-            if HubCornerFollowConnection then HubCornerFollowConnection:Disconnect() end
+        if not MainFrame.Parent then
+            if HubCornerFollowConnection then
+                HubCornerFollowConnection:Disconnect()
+                HubCornerFollowConnection = nil
+            end
             return
         end
-        local pos = MainFrame.AbsolutePosition
-        local size = MainFrame.AbsoluteSize
-        for _, entry in ipairs(HubCornerImages) do
-            local x = pos.X
-            local y = pos.Y
-            if string.find(entry.Corner, "Right", 1, true) then x = x + size.X end
-            if string.find(entry.Corner, "Bottom", 1, true) then y = y + size.Y end
-            entry.Object.Position = UDim2.fromOffset(x, y)
-            entry.Object.Visible = MainFrame.Visible
+
+        local hubPos = MainFrame.AbsolutePosition
+        local hubSize = MainFrame.AbsoluteSize
+        local left = hubPos.X
+        local top = hubPos.Y
+        local right = left + hubSize.X
+        local bottom = top + hubSize.Y
+
+        for _, item in ipairs(HubCornerImages) do
+            local x = item.Corner.X == 0 and left or right
+            local y = item.Corner.Y == 0 and top or bottom
+            item.Image.Position = UDim2.fromOffset(x, y)
         end
     end)
 
