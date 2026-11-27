@@ -492,6 +492,30 @@ function LZNLib:CreateWindow(options)
     HubBackground.Parent = MainFrame
     Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
+    -- Decorações nos quatro cantos do Hub (imagens solicitadas pelo criador).
+    local HubCornerImages = {}
+    local cornerImageConfigs = {
+        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", Position = UDim2.new(0, 5, 0, 5), Anchor = Vector2.new(0, 0)},
+        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", Position = UDim2.new(1, -5, 0, 5), Anchor = Vector2.new(1, 0)},
+        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", Position = UDim2.new(0, 5, 1, -5), Anchor = Vector2.new(0, 1)},
+        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", Position = UDim2.new(1, -5, 1, -5), Anchor = Vector2.new(1, 1)}
+    }
+    for _, cfg in ipairs(cornerImageConfigs) do
+        local cornerImage = Instance.new("ImageLabel")
+        cornerImage.Name = cfg.Name
+        cornerImage.Size = UDim2.new(0, 58, 0, 58)
+        cornerImage.Position = cfg.Position
+        cornerImage.AnchorPoint = cfg.Anchor
+        cornerImage.BackgroundTransparency = 1
+        cornerImage.Image = cfg.Image
+        cornerImage.ScaleType = Enum.ScaleType.Fit
+        cornerImage.ImageTransparency = 0.04
+        cornerImage.Active = false
+        cornerImage.ZIndex = 22
+        cornerImage.Parent = MainFrame
+        table.insert(HubCornerImages, cornerImage)
+    end
+
     MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
     AddGlow(MainFrame, accentColor, 2, 0.1)
@@ -1123,7 +1147,7 @@ function LZNLib:CreateWindow(options)
     ToggleHubBtn.Size = UDim2.new(0, 46, 0, 46)
     ToggleHubBtn.Position = UDim2.new(0, 16, 0, 16)
     ToggleHubBtn.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
-    ToggleHubBtn.ClipsDescendants = true
+    ToggleHubBtn.ClipsDescendants = false
     ToggleHubBtn.Text = ""
     ToggleHubBtn.ZIndex = 30
     ToggleHubBtn.Parent = ScreenGui
@@ -1141,6 +1165,20 @@ function LZNLib:CreateWindow(options)
     FloatingButtonImage.ZIndex = ToggleHubBtn.ZIndex + 1
     FloatingButtonImage.Parent = ToggleHubBtn
     Instance.new("UICorner", FloatingButtonImage).CornerRadius = UDim.new(1, 0)
+
+    -- Imagem decorativa posicionada acima do botão; como filha dele, acompanha
+    -- automaticamente todo movimento/arrasto do botão flutuante.
+    local FloatingFollowImage = Instance.new("ImageLabel")
+    FloatingFollowImage.Name = "FloatingButtonFollowImage"
+    FloatingFollowImage.Size = UDim2.new(0, 48, 0, 48)
+    FloatingFollowImage.Position = UDim2.new(0.5, -24, 0, -43)
+    FloatingFollowImage.BackgroundTransparency = 1
+    FloatingFollowImage.Image = ""
+    FloatingFollowImage.ScaleType = Enum.ScaleType.Fit
+    FloatingFollowImage.ZIndex = ToggleHubBtn.ZIndex + 2
+    FloatingFollowImage.Active = false
+    FloatingFollowImage.Parent = ToggleHubBtn
+
     AddGlow(ToggleHubBtn, accentColor, 2, 0.1)
     AddGradient(ToggleHubBtn, Color3.fromRGB(18, 25, 40), Color3.fromRGB(8, 10, 15), 135)
     MakeDraggable(ToggleHubBtn)
@@ -5252,92 +5290,16 @@ function LZNLib:CreateWindow(options)
     FloatingButtonImage.Image = floatImage
     FloatingButtonImage.ScaleType = Enum.ScaleType.Stretch
 
-    -- Decorações independentes do Hub: fora do MainFrame para não serem cortadas.
-    local LZNDecorationGui = Instance.new("ScreenGui")
-    LZNDecorationGui.Name = hubName .. "_Decorations"
-    LZNDecorationGui.ResetOnSpawn = false
-    LZNDecorationGui.IgnoreGuiInset = ScreenGui.IgnoreGuiInset
-    LZNDecorationGui.DisplayOrder = 1000000
-    LZNDecorationGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    LZNDecorationGui.Parent = CoreGui
-    ScreenGui.AncestryChanged:Connect(function(_, parent)
-        if parent == nil and LZNDecorationGui and LZNDecorationGui.Parent then
-            LZNDecorationGui:Destroy()
-        end
-    end)
 
-    local cornerImageIds = {
-        "131148058397719",
-        "108804305478512",
-        "133523315737725",
-        "88446643995980"
-    }
-    local cornerImages = {}
-    local cornerSize = 82
-
-    for index, imageId in ipairs(cornerImageIds) do
-        local image = Instance.new("ImageLabel")
-        image.Name = "LZN_HubCorner_" .. tostring(index)
-        image.BackgroundTransparency = 1
-        image.BorderSizePixel = 0
-        image.AnchorPoint = Vector2.new(0.5, 0.5)
-        image.Size = UDim2.fromOffset(cornerSize, cornerSize)
-        image.Image = "rbxassetid://" .. imageId
-        image.ScaleType = Enum.ScaleType.Fit
-        image.ZIndex = 100
-        image.Active = false
-        image.Parent = LZNDecorationGui
-        cornerImages[index] = image
-    end
-
-    -- Imagem decorativa acima do botão flutuante, acompanhando sua posição.
-    local FloatingTopImage = Instance.new("ImageLabel")
-    FloatingTopImage.Name = "LZN_FloatingButtonTopImage"
-    FloatingTopImage.BackgroundTransparency = 1
-    FloatingTopImage.BorderSizePixel = 0
-    FloatingTopImage.AnchorPoint = Vector2.new(0.5, 1)
-    FloatingTopImage.Size = UDim2.fromOffset(68, 68)
-    FloatingTopImage.Image = LoadBackgroundAsset(
+    local followAsset = LoadBackgroundAsset(
         "https://i.ibb.co/0ybrnxbc/1795767300499.png",
-        "LZN_floating_button_top_1795767300499.png"
-    ) or ""
-    FloatingTopImage.ScaleType = Enum.ScaleType.Fit
-    FloatingTopImage.ZIndex = 110
-    FloatingTopImage.Active = false
-    FloatingTopImage.Parent = LZNDecorationGui
-
-    local decorationFollowConnection
-    decorationFollowConnection = RunService.RenderStepped:Connect(function()
-        if not LZNDecorationGui.Parent then
-            if decorationFollowConnection then decorationFollowConnection:Disconnect() end
-            return
-        end
-
-        if MainFrame and MainFrame.Parent then
-            local hubPos = MainFrame.AbsolutePosition
-            local hubSize = MainFrame.AbsoluteSize
-            -- Centro da imagem exatamente no canto: metade para dentro e metade para fora.
-            cornerImages[1].Position = UDim2.fromOffset(hubPos.X, hubPos.Y)
-            cornerImages[2].Position = UDim2.fromOffset(hubPos.X + hubSize.X, hubPos.Y)
-            cornerImages[3].Position = UDim2.fromOffset(hubPos.X, hubPos.Y + hubSize.Y)
-            cornerImages[4].Position = UDim2.fromOffset(hubPos.X + hubSize.X, hubPos.Y + hubSize.Y)
-            for _, image in ipairs(cornerImages) do
-                image.Visible = MainFrame.Visible
-            end
-        end
-
-        if ToggleHubBtn and ToggleHubBtn.Parent then
-            local buttonPos = ToggleHubBtn.AbsolutePosition
-            local buttonSize = ToggleHubBtn.AbsoluteSize
-            FloatingTopImage.Position = UDim2.fromOffset(
-                buttonPos.X + buttonSize.X / 2,
-                buttonPos.Y - 3
-            )
-            FloatingTopImage.Visible = ToggleHubBtn.Visible
-        else
-            FloatingTopImage.Visible = false
-        end
-    end)
+        "LZN_floating_button_follow.png"
+    )
+    if followAsset then
+        FloatingFollowImage.Image = followAsset
+    else
+        warn("[LZN] A imagem acima do botão flutuante não pôde ser carregada.")
+    end
 
     -- Shader original do arquivo Shaders by LZN (Lezin), embutido para funcionar como toggle.
     local LZN_SHADER_SOURCE = [=[local Lighting = game:GetService("Lighting")
