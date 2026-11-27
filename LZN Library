@@ -5650,10 +5650,12 @@ end
         ScreenGui.DescendantAdded:Connect(function(object) task.defer(function() AutoTranslateObject(object) end) end)
     end)
 
-    if options.ShowLanguageIntro == true then
+    -- A apresentação fica ativada por padrão; só é ignorada se o usuário
+    -- definir ShowLanguageIntro = false explicitamente.
+    if options.ShowLanguageIntro ~= false then
+        MainFrame.Visible = false
+        ToggleHubBtn.Visible = false
         task.spawn(function()
-            MainFrame.Visible = false
-            ToggleHubBtn.Visible = false
             HubOpen = true
             if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
 
@@ -5666,6 +5668,9 @@ end
             overlay.BackgroundTransparency = 0
             overlay.BorderSizePixel = 0
             overlay.ZIndex = 1000
+            FullScreenBlurGui.Enabled = true
+            FullScreenBlurGui.IgnoreGuiInset = true
+            FullScreenBlurGui.DisplayOrder = 999999
             overlay.Parent = FullScreenBlurGui
 
             local function addText(name, content, pos, size, fontSize, color)
