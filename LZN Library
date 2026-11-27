@@ -692,48 +692,30 @@ function LZNLib:CreateWindow(options)
 
     ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateHubHeight)
 
-    local PageNav = Instance.new("ScrollingFrame")
-    PageNav.AutomaticCanvasSize = Enum.AutomaticSize.None
-    PageNav.CanvasSize = UDim2.new(0, 0, 0, 0)
-    PageNav.ScrollingDirection = Enum.ScrollingDirection.X
-    PageNav.ScrollBarThickness = 0
-    PageNav.ScrollingEnabled = false
-    PageNav.ClipsDescendants = true
-    PageNav.Size = UDim2.new(1, -28, 0, 26)
+    -- Navegação fixa: duas abas compactas, sempre lado a lado.
+    -- Frame comum evita que o tamanho das abas seja calculado pelo CanvasSize
+    -- de um ScrollingFrame e acabe ocupando uma faixa enorme.
+    local PageNav = Instance.new("Frame")
+    PageNav.Name = "PageNavigation"
+    PageNav.Size = UDim2.new(1, -28, 0, 34)
     PageNav.Position = UDim2.new(0, 14, 0, 85)
     PageNav.BackgroundTransparency = 1
+    PageNav.BorderSizePixel = 0
+    PageNav.ClipsDescendants = true
     PageNav.ZIndex = 24
     PageNav.Parent = MainFrame
 
     local NavLayout = Instance.new("UIListLayout")
     NavLayout.FillDirection = Enum.FillDirection.Horizontal
     NavLayout.Padding = UDim.new(0, 8)
-    NavLayout.FillDirection = Enum.FillDirection.Horizontal
-    NavLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    NavLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    NavLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     NavLayout.SortOrder = Enum.SortOrder.LayoutOrder
     NavLayout.Parent = PageNav
+
     local function UpdateTabNavigation(selectedButton)
-        local contentWidth = NavLayout.AbsoluteContentSize.X + 8
-        PageNav.CanvasSize = UDim2.new(0, contentWidth, 0, 0)
-        if selectedButton then
-            task.defer(function()
-                if not selectedButton.Parent then return end
-                local left = selectedButton.AbsolutePosition.X - PageNav.AbsolutePosition.X + PageNav.CanvasPosition.X
-                local right = left + selectedButton.AbsoluteSize.X
-                local viewLeft = PageNav.CanvasPosition.X
-                local viewRight = viewLeft + PageNav.AbsoluteSize.X
-                local target = viewLeft
-                if left < viewLeft then target = left - 8
-                elseif right > viewRight then target = right - PageNav.AbsoluteSize.X + 8 end
-                local maxCanvas = math.max(contentWidth - PageNav.AbsoluteSize.X, 0)
-                target = math.clamp(target, 0, maxCanvas)
-                TweenService:Create(PageNav, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {CanvasPosition = Vector2.new(target, 0)}):Play()
-            end)
-        end
+        -- Não há rolagem: GAME e PLAYER permanecem visíveis simultaneamente.
     end
-    NavLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        PageNav.CanvasSize = UDim2.new(0, NavLayout.AbsoluteContentSize.X + 8, 0, 0)
-    end)
 
     local GamePage = Instance.new("ScrollingFrame")
     GamePage.Name = "GamePage"
@@ -792,6 +774,7 @@ function LZNLib:CreateWindow(options)
     local function MakePageTab(label, iconName, order)
         local b = Instance.new("TextButton")
         b.Size = UDim2.new(0.5, -4, 1, 0)
+        b.AutomaticSize = Enum.AutomaticSize.None
         b.LayoutOrder = order
         b.BackgroundColor3 = Color3.fromRGB(16, 22, 34)
         b.BackgroundTransparency = 0.5
