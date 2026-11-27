@@ -3,6 +3,7 @@ local LZNLib = {}
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
@@ -17,48 +18,109 @@ local Player = Players.LocalPlayer
 
 local function MakeDraggable(gui)
     local dragging = false
-    local dragInput = nil
     local dragStart = nil
-    local startPos = nil
+    local startAnchor = nil
+    local latestPointer = nil
 
-    local function clampToViewport(position)
+    gui.Active = true
+
+    local function getParentBounds()
         local camera = workspace.CurrentCamera
         local viewport = camera and camera.ViewportSize or Vector2.new(800, 600)
+        local parent = gui.Parent
+
+        if parent and parent:IsA("GuiObject") then
+            return parent.AbsolutePosition, parent.AbsoluteSize
+        end
+
+        local screenGui = gui:FindFirstAncestorOfClass("ScreenGui")
+        if screenGui and screenGui.IgnoreGuiInset then
+            return Vector2.zero, viewport
+        end
+
+        local topLeftInset, bottomRightInset = GuiService:GetGuiInset()
+        local available = Vector2.new(
+            math.max(1, viewport.X - topLeftInset.X - bottomRightInset.X),
+            math.max(1, viewport.Y - topLeftInset.Y - bottomRightInset.Y)
+        )
+        return topLeftInset, available
+    end
+
+    local function getLocalAnchor()
+        local origin = getParentBounds()
+        local absolute = gui.AbsolutePosition
+        return absolute - origin + Vector2.new(
+            gui.AbsoluteSize.X * gui.AnchorPoint.X,
+            gui.AbsoluteSize.Y * gui.AnchorPoint.Y
+        )
+    end
+
+    local function applyClampedAnchor(anchorPosition)
+        if not gui.Parent then return end
+        local origin, bounds = getParentBounds()
         local size = gui.AbsoluteSize
         local anchor = gui.AnchorPoint
+
         local minX = size.X * anchor.X
         local minY = size.Y * anchor.Y
-        local maxX = math.max(minX, viewport.X - size.X * (1 - anchor.X))
-        local maxY = math.max(minY, viewport.Y - size.Y * (1 - anchor.Y))
-        local absX = math.clamp(position.X, minX, maxX)
-        local absY = math.clamp(position.Y, minY, maxY)
-        return UDim2.fromOffset(absX, absY)
+        local maxX = math.max(minX, bounds.X - size.X * (1 - anchor.X))
+        local maxY = math.max(minY, bounds.Y - size.Y * (1 - anchor.Y))
+
+        local clampedX = math.clamp(anchorPosition.X, minX, maxX)
+        local clampedY = math.clamp(anchorPosition.Y, minY, maxY)
+
+        -- Position is expressed relative to the parent, not absolute screen pixels.
+        gui.Position = UDim2.fromOffset(clampedX, clampedY)
+    end
+
+    local function pointerToLocal(position)
+        local origin = getParentBounds()
+        return position - origin
     end
 
     gui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            dragStart = input.Position
-            startPos = gui.AbsolutePosition + Vector2.new(gui.AbsoluteSize.X * gui.AnchorPoint.X, gui.AbsoluteSize.Y * gui.AnchorPoint.Y)
-            dragInput = input
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    gui.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
+            dragStart = pointerToLocal(input.Position)
+            startAnchor = getLocalAnchor()
+            latestPointer = input.Position
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input == dragInput or input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStart and startPos then
-            local delta = input.Position - dragStart
-            gui.Position = clampToViewport(startPos + delta)
+        if not dragging then return end
+
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+            latestPointer = input.Position
+            if dragStart and startAnchor then
+                local currentLocal = pointerToLocal(latestPointer)
+                applyClampedAnchor(startAnchor + (currentLocal - dragStart))
+            end
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            dragStart = nil
+            startAnchor = nil
+            latestPointer = nil
+        end
+    end)
+
+    gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if not dragging and gui.Parent then
+            applyClampedAnchor(getLocalAnchor())
+        end
+    end)
+
+    -- Also corrects an out-of-bounds position caused by resizing or external scripts.
+    task.defer(function()
+        if gui.Parent then
+            applyClampedAnchor(getLocalAnchor())
         end
     end)
 end
@@ -5686,167 +5748,188 @@ end
 
     if options.ShowLanguageIntro ~= false then
         task.spawn(function()
-            MainFrame.Visible = false
-            ToggleHubBtn.Visible = false
-            HubOpen = true
-            if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
-
-            local introBlur = Instance.new("BlurEffect")
-            introBlur.Name = hubName .. "_IntroBlur"
-            introBlur.Size = 0
-            introBlur.Parent = Lighting
-            TweenService:Create(introBlur, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 20}):Play()
-
-            local overlay = Instance.new("Frame")
-            overlay.Name = "LZNWelcomeIntro"
-            overlay.Size = UDim2.new(1, 0, 1, 0)
-            overlay.BackgroundColor3 = Color3.new(0, 0, 0)
-            overlay.BackgroundTransparency = 0
-            overlay.BorderSizePixel = 0
-            overlay.BorderColor3 = Color3.new(0, 0, 0)
-            overlay.ZIndex = 300
-            overlay.Parent = FullScreenBlurGui
-
-            local panel = Instance.new("Frame")
-            panel.Name = "IntroPanel"
-            panel.Size = UDim2.new(0, 340, 0, 390)
-            panel.AnchorPoint = Vector2.new(0.5, 0.5)
-            panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-            panel.BackgroundColor3 = Color3.new(0, 0, 0)
-            panel.BackgroundTransparency = 1
-            panel.BorderSizePixel = 0
-            panel.BorderColor3 = Color3.new(0, 0, 0)
-            panel.ZIndex = 301
-            panel.Parent = overlay
-
-            local panelScale = Instance.new("UIScale")
-            panelScale.Scale = 0.88
-            panelScale.Parent = panel
-            local function fitIntro()
-                local camera = workspace.CurrentCamera
-                local size = camera and camera.ViewportSize or Vector2.new(360, 720)
-                panelScale.Scale = math.min(1, math.max(0.55, (size.X - 24) / 340), math.max(0.55, (size.Y - 24) / 390))
-            end
-            fitIntro()
-            local viewportConnection
-            if workspace.CurrentCamera then
-                viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitIntro)
-            end
-            TweenService:Create(panelScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-
-            local function removeIntroDecorations(root)
-                for _, object in ipairs(root:GetDescendants()) do
-                    if object:IsA("GuiObject") then
-                        object.BorderSizePixel = 0
-                        object.BorderColor3 = Color3.new(0, 0, 0)
-                    elseif object:IsA("UIStroke") or object:IsA("UICorner") or object:IsA("UIGradient") then
-                        object:Destroy()
-                    end
+            local introBlur, overlay, viewportConnection
+            local function safeCleanup()
+                if viewportConnection then pcall(function() viewportConnection:Disconnect() end) end
+                if overlay and overlay.Parent then pcall(function() overlay:Destroy() end) end
+                if introBlur and introBlur.Parent then pcall(function() introBlur:Destroy() end) end
+                if ScreenGui and ScreenGui.Parent then
+                    MainFrame.Visible = true
+                    ToggleHubBtn.Visible = true
+                    HubOpen = true
                 end
             end
-            removeIntroDecorations(overlay)
-            overlay.DescendantAdded:Connect(function(object)
-                if object:IsA("GuiObject") then
-                    object.BorderSizePixel = 0
-                    object.BorderColor3 = Color3.new(0, 0, 0)
-                elseif object:IsA("UIStroke") or object:IsA("UICorner") or object:IsA("UIGradient") then
-                    object:Destroy()
-                end
-            end)
 
-            local function makeText(name, text, position, size, color, textSize)
-                local label = Instance.new("TextLabel")
-                label.Name = name
-                label.Size = size
-                label.Position = position
-                label.BackgroundTransparency = 1
-                label.Text = text
-                label.TextColor3 = color or Color3.fromRGB(245, 248, 255)
-                label.Font = Enum.Font.GothamBold
-                label.TextSize = textSize or 13
-                label.TextWrapped = true
-                label.TextXAlignment = Enum.TextXAlignment.Center
-                label.TextYAlignment = Enum.TextYAlignment.Center
-                label.TextTransparency = 1
-                label.ZIndex = 302
-                label.Parent = panel
-                return label
-            end
-            local function makeImage(name, url, assetFile, position, size)
-                local image = Instance.new("ImageLabel")
-                image.Name = name
-                image.Size = size
-                image.Position = position
-                image.BackgroundTransparency = 1
-                image.BorderSizePixel = 0
-                image.BorderColor3 = Color3.new(0, 0, 0)
-                image.ScaleType = Enum.ScaleType.Fit
-                image.ImageTransparency = 1
-                image.ZIndex = 302
-                image.Parent = panel
-
-                -- URL é usada somente para baixar; Image recebe exclusivamente o asset local.
-                local customAsset = LoadBackgroundAsset(url, assetFile)
-                if type(customAsset) == "string" and customAsset ~= "" then
-                    image.Image = customAsset
-                else
-                    warn("[LZN Library] Imagem não carregada via getcustomasset: " .. tostring(assetFile))
-                end
-                return image
-            end
-            local function fadeIn(objects)
-                for _, object in ipairs(objects) do
-                    if object:IsA("ImageLabel") then
-                        TweenService:Create(object, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
-                    else
-                        TweenService:Create(object, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-                    end
-                end
-            end
-            local function fadeOut(objects)
-                local lastTween
-                for _, object in ipairs(objects) do
-                    local properties = object:IsA("ImageLabel") and {ImageTransparency = 1} or {TextTransparency = 1}
-                    lastTween = TweenService:Create(object, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), properties)
-                    lastTween:Play()
-                end
-                if lastTween then lastTween.Completed:Wait() end
-            end
-
-            -- Primeira tela: agradecimento nos dois idiomas e a imagem logo abaixo.
-            local thanksPT = makeText("ThanksPortuguese", "PT-BR 🇧🇷\nobrigado(a) por usar minha library, vida🤭 quero dizer, anjo😅❤️", UDim2.new(0, 16, 0, 50), UDim2.new(1, -32, 0, 76), nil, 13)
-            local thanksEN = makeText("ThanksEnglish", "EN 🇺🇸\nThank(s) you for using my library, life🤭 I mean, angel😅❤️", UDim2.new(0, 16, 0, 132), UDim2.new(1, -32, 0, 76), nil, 13)
-            local thanksImage = makeImage("ThanksImage", options.IntroImage3 or "https://i.ibb.co/8nsVqWrh/1795746809383.jpg", "LZN_intro_thanks.jpg", UDim2.new(0.5, -90, 0, 218), UDim2.new(0, 180, 0, 145))
-            fadeIn({thanksPT, thanksEN, thanksImage})
-            task.wait(4)
-            if not overlay.Parent then return end
-            fadeOut({thanksPT, thanksEN, thanksImage})
-            thanksPT:Destroy(); thanksEN:Destroy(); thanksImage:Destroy()
-
-            -- Segunda tela: créditos e as duas imagens lado a lado.
-            local creditPT = makeText("CreditPortuguese", "PT-BR 🇧🇷\nlibrary criada por LZN (Lezin)♥️", UDim2.new(0, 16, 0, 58), UDim2.new(1, -32, 0, 66), Color3.fromRGB(255, 205, 90), 14)
-            local creditEN = makeText("CreditEnglish", "EN 🇺🇸\nlibrary by LZN (Lezin)♥️", UDim2.new(0, 16, 0, 132), UDim2.new(1, -32, 0, 58), Color3.fromRGB(255, 205, 90), 14)
-            local creditImage1 = makeImage("CreditImageLZN", options.IntroImage2 or "https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png", "LZN_intro_creator.png", UDim2.new(0.5, -146, 0, 218), UDim2.new(0, 132, 0, 132))
-            local creditImage2 = makeImage("CreditImageManhattan", options.IntroImage4 or "https://i.ibb.co/gLZkkcZR/manhattan.png", "LZN_intro_manhattan.png", UDim2.new(0.5, 14, 0, 218), UDim2.new(0, 132, 0, 132))
-            fadeIn({creditPT, creditEN, creditImage1, creditImage2})
-            task.wait(4)
-            if not overlay.Parent then return end
-            fadeOut({creditPT, creditEN, creditImage1, creditImage2})
-
-            TweenService:Create(overlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
-            TweenService:Create(panelScale, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.92}):Play()
-            TweenService:Create(introBlur, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0}):Play()
-            task.wait(0.45)
-            if viewportConnection then viewportConnection:Disconnect() end
-            if overlay and overlay.Parent then overlay:Destroy() end
-            if introBlur and introBlur.Parent then introBlur:Destroy() end
-            if ScreenGui and ScreenGui.Parent then
-                MainFrame.Visible = true
-                ToggleHubBtn.Visible = true
+            local ok, err = xpcall(function()
+                MainFrame.Visible = false
+                ToggleHubBtn.Visible = false
                 HubOpen = true
-                HubScale.Scale = 0.72
-                TweenService:Create(HubScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-                if BackgroundMusic and BGMText.Text ~= "OFF" then BackgroundMusic:Resume() end
+                if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
+
+                introBlur = Instance.new("BlurEffect")
+                introBlur.Name = hubName .. "_IntroBlur"
+                introBlur.Size = 0
+                introBlur.Parent = Lighting
+                TweenService:Create(introBlur, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 18}):Play()
+
+                overlay = Instance.new("Frame")
+                overlay.Name = "LZNWelcomeIntro"
+                overlay.Size = UDim2.fromScale(1, 1)
+                overlay.Position = UDim2.fromOffset(0, 0)
+                overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+                overlay.BackgroundTransparency = 0
+                overlay.BorderSizePixel = 0
+                overlay.BorderColor3 = Color3.new(0, 0, 0)
+                overlay.ZIndex = 300
+                overlay.Parent = FullScreenBlurGui
+
+                local panel = Instance.new("Frame")
+                panel.Name = "IntroContent"
+                panel.Size = UDim2.fromOffset(340, 390)
+                panel.AnchorPoint = Vector2.new(0.5, 0.5)
+                panel.Position = UDim2.fromScale(0.5, 0.5)
+                panel.BackgroundColor3 = Color3.new(0, 0, 0)
+                panel.BackgroundTransparency = 1
+                panel.BorderSizePixel = 0
+                panel.BorderColor3 = Color3.new(0, 0, 0)
+                panel.ZIndex = 301
+                panel.Parent = overlay
+
+                local fitScale = Instance.new("UIScale")
+                fitScale.Parent = panel
+                local function fitIntro()
+                    local camera = workspace.CurrentCamera
+                    local viewport = camera and camera.ViewportSize or Vector2.new(360, 720)
+                    fitScale.Scale = math.min(1, (viewport.X - 24) / 340, (viewport.Y - 24) / 390)
+                    fitScale.Scale = math.max(0.5, fitScale.Scale)
+                end
+                fitIntro()
+                if workspace.CurrentCamera then
+                    viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitIntro)
+                end
+
+                local function makeText(name, value, y, height, color, textSize)
+                    local label = Instance.new("TextLabel")
+                    label.Name = name
+                    label.Size = UDim2.new(1, -24, 0, height)
+                    label.Position = UDim2.new(0, 12, 0, y)
+                    label.BackgroundTransparency = 1
+                    label.BorderSizePixel = 0
+                    label.Text = value
+                    label.TextColor3 = color or Color3.fromRGB(245, 245, 245)
+                    label.Font = Enum.Font.GothamBold
+                    label.TextSize = textSize or 13
+                    label.TextWrapped = true
+                    label.TextXAlignment = Enum.TextXAlignment.Center
+                    label.TextYAlignment = Enum.TextYAlignment.Center
+                    label.TextTransparency = 1
+                    label.ZIndex = 302
+                    label.Parent = panel
+                    return label
+                end
+
+                local function makeImage(name, url, fileName, x, y, width, height)
+                    local image = Instance.new("ImageLabel")
+                    image.Name = name
+                    image.Size = UDim2.fromOffset(width, height)
+                    image.Position = UDim2.new(0.5, x, 0, y)
+                    image.AnchorPoint = Vector2.new(0, 0)
+                    image.BackgroundTransparency = 1
+                    image.BorderSizePixel = 0
+                    image.Image = ""
+                    image.ScaleType = Enum.ScaleType.Fit
+                    image.ImageTransparency = 1
+                    image.ZIndex = 302
+                    image.Parent = panel
+
+                    -- Download happens in the background. The URL is never assigned to Image.
+                    task.spawn(function()
+                        local loaded, asset = pcall(LoadBackgroundAsset, url, fileName)
+                        if loaded and type(asset) == "string" and asset ~= "" and image.Parent then
+                            image.Image = asset
+                            TweenService:Create(image, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                ImageTransparency = 0
+                            }):Play()
+                        else
+                            warn("[LZN Library] Não foi possível carregar a imagem local: " .. fileName .. " | " .. tostring(asset))
+                        end
+                    end)
+                    return image
+                end
+
+                local function fadeTextIn(objects)
+                    for _, object in ipairs(objects) do
+                        TweenService:Create(object, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            TextTransparency = 0
+                        }):Play()
+                    end
+                end
+
+                local function fadeOut(objects)
+                    local tweens = {}
+                    for _, object in ipairs(objects) do
+                        local props
+                        if object:IsA("ImageLabel") then
+                            props = {ImageTransparency = 1}
+                        else
+                            props = {TextTransparency = 1}
+                        end
+                        local tween = TweenService:Create(object, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), props)
+                        table.insert(tweens, tween)
+                        tween:Play()
+                    end
+                    if tweens[1] then tweens[1].Completed:Wait() end
+                end
+
+                -- First screen: text becomes visible immediately; image downloads separately.
+                local thanksPT = makeText("ThanksPortuguese",
+                    "PT-BR 🇧🇷\nobrigado(a) por usar minha library, vida🤭 quero dizer, anjo😅❤️",
+                    42, 78, nil, 13)
+                local thanksEN = makeText("ThanksEnglish",
+                    "EN 🇺🇸\nThank(s) you for using my library, life🤭 I mean, angel😅❤️",
+                    124, 78, nil, 13)
+                local thanksImage = makeImage("ThanksImage",
+                    options.IntroImage3 or "https://i.ibb.co/8nsVqWrh/1795746809383.jpg",
+                    "LZN_intro_thanks.jpg", -90, 218, 180, 145)
+                fadeTextIn({thanksPT, thanksEN})
+                task.wait(4)
+                fadeOut({thanksPT, thanksEN, thanksImage})
+                thanksPT:Destroy()
+                thanksEN:Destroy()
+                thanksImage:Destroy()
+
+                -- Second screen: credit text with both images directly underneath.
+                local creditPT = makeText("CreditPortuguese",
+                    "PT-BR 🇧🇷\nlibrary criada por LZN (Lezin)♥️",
+                    58, 66, Color3.fromRGB(255, 205, 90), 14)
+                local creditEN = makeText("CreditEnglish",
+                    "EN 🇺🇸\nlibrary by LZN (Lezin)♥️",
+                    128, 66, Color3.fromRGB(255, 205, 90), 14)
+                local creditImage1 = makeImage("CreditImageLZN",
+                    options.IntroImage2 or "https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png",
+                    "LZN_intro_creator.png", -146, 218, 132, 132)
+                local creditImage2 = makeImage("CreditImageManhattan",
+                    options.IntroImage4 or "https://i.ibb.co/gLZkkcZR/manhattan.png",
+                    "LZN_intro_manhattan.png", 14, 218, 132, 132)
+                fadeTextIn({creditPT, creditEN})
+                task.wait(4)
+                fadeOut({creditPT, creditEN, creditImage1, creditImage2})
+
+                TweenService:Create(overlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    BackgroundTransparency = 1
+                }):Play()
+                TweenService:Create(introBlur, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Size = 0
+                }):Play()
+                task.wait(0.45)
+            end, debug.traceback)
+
+            if not ok then
+                warn("[LZN Library] Erro na apresentação: " .. tostring(err))
+            end
+            safeCleanup()
+            if BackgroundMusic and BGMText and BGMText.Text ~= "OFF" then
+                pcall(function() BackgroundMusic:Resume() end)
             end
         end)
     else
