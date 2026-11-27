@@ -437,7 +437,7 @@ function LZNLib:CreateWindow(options)
     ScreenGui.Name = hubName
     ScreenGui.Parent = CoreGui
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.DisplayOrder = 40
+    ScreenGui.DisplayOrder = 10000
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     local FullScreenBlurGui = Instance.new("ScreenGui")
@@ -505,7 +505,7 @@ function LZNLib:CreateWindow(options)
     for _, cfg in ipairs(cornerImageConfigs) do
         local cornerImage = Instance.new("ImageLabel")
         cornerImage.Name = cfg.Name
-        cornerImage.Size = UDim2.fromOffset(64, 64)
+        cornerImage.Size = UDim2.fromOffset(76, 76)
         cornerImage.AnchorPoint = Vector2.new(0.5, 0.5)
         cornerImage.Position = UDim2.fromOffset(0, 0) -- atualizado pela conexão abaixo
         cornerImage.BackgroundTransparency = 1
@@ -514,13 +514,13 @@ function LZNLib:CreateWindow(options)
         cornerImage.ImageTransparency = 0
         cornerImage.Active = false
         cornerImage.Selectable = false
-        cornerImage.ZIndex = 1000
+        cornerImage.ZIndex = 10000
         cornerImage.Parent = ScreenGui
         table.insert(HubCornerImages, {Object = cornerImage, Corner = cfg.Corner})
     end
 
     -- Acompanha posição e tamanho reais (incluindo UIScale e arraste do Hub).
-    -- O centro de cada imagem coincide com a ponta do canto: 32 px ficam de cada lado.
+    -- O centro de cada imagem coincide exatamente com a ponta do canto: 38 px ficam dentro e 38 px fora. DisplayOrder/ZIndex altos mantêm as imagens acima de todo o Hub.
     local HubCornerFollowConnection
     HubCornerFollowConnection = RunService.RenderStepped:Connect(function()
         if not ScreenGui.Parent then
