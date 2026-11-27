@@ -336,6 +336,10 @@ function LZNLib:CreateWindow(options)
         CoreGui[hubName .. "_TopBlurGui"]:Destroy()
     end
 
+    if CoreGui:FindFirstChild(hubName .. "_CornerOverlayGui") then
+        CoreGui[hubName .. "_CornerOverlayGui"]:Destroy()
+    end
+
     if CoreGui:FindFirstChild(hubName .. "_CustomInventory") then
         CoreGui[hubName .. "_CustomInventory"]:Destroy()
     end
@@ -492,29 +496,60 @@ function LZNLib:CreateWindow(options)
     HubBackground.Parent = MainFrame
     Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
-    -- Decorações nos quatro cantos do Hub (imagens solicitadas pelo criador).
+    local CornerOverlayGui = Instance.new("ScreenGui")
+    CornerOverlayGui.Name = hubName .. "_CornerOverlayGui"
+    CornerOverlayGui.Parent = CoreGui
+    CornerOverlayGui.ResetOnSpawn = false
+    CornerOverlayGui.IgnoreGuiInset = true
+    CornerOverlayGui.DisplayOrder = 1000000
+    CornerOverlayGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+
     local HubCornerImages = {}
     local cornerImageConfigs = {
-        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", Position = UDim2.new(0, 5, 0, 5), Anchor = Vector2.new(0, 0)},
-        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", Position = UDim2.new(1, -5, 0, 5), Anchor = Vector2.new(1, 0)},
-        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", Position = UDim2.new(0, 5, 1, -5), Anchor = Vector2.new(0, 1)},
-        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", Position = UDim2.new(1, -5, 1, -5), Anchor = Vector2.new(1, 1)}
+        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719"},
+        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512"},
+        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725"},
+        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980"}
     }
+
     for _, cfg in ipairs(cornerImageConfigs) do
         local cornerImage = Instance.new("ImageLabel")
         cornerImage.Name = cfg.Name
-        cornerImage.Size = UDim2.new(0, 58, 0, 58)
-        cornerImage.Position = cfg.Position
-        cornerImage.AnchorPoint = cfg.Anchor
+        cornerImage.Size = UDim2.fromOffset(76, 76)
+        cornerImage.AnchorPoint = Vector2.new(0.5, 0.5)
         cornerImage.BackgroundTransparency = 1
         cornerImage.Image = cfg.Image
         cornerImage.ScaleType = Enum.ScaleType.Fit
         cornerImage.ImageTransparency = 0.04
         cornerImage.Active = false
-        cornerImage.ZIndex = 22
-        cornerImage.Parent = MainFrame
+        cornerImage.ZIndex = 100
+        cornerImage.Parent = CornerOverlayGui
         table.insert(HubCornerImages, cornerImage)
     end
+
+    local CornerOverlayConnection
+    CornerOverlayConnection = RunService.RenderStepped:Connect(function()
+        if not MainFrame.Parent or not CornerOverlayGui.Parent then
+            if CornerOverlayConnection then
+                CornerOverlayConnection:Disconnect()
+                CornerOverlayConnection = nil
+            end
+            return
+        end
+
+        local visible = MainFrame.Visible and ScreenGui.Enabled
+        CornerOverlayGui.Enabled = visible
+
+        if visible then
+            local position = MainFrame.AbsolutePosition
+            local size = MainFrame.AbsoluteSize
+
+            HubCornerImages[1].Position = UDim2.fromOffset(position.X, position.Y)
+            HubCornerImages[2].Position = UDim2.fromOffset(position.X + size.X, position.Y)
+            HubCornerImages[3].Position = UDim2.fromOffset(position.X, position.Y + size.Y)
+            HubCornerImages[4].Position = UDim2.fromOffset(position.X + size.X, position.Y + size.Y)
+        end
+    end)
 
     MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
@@ -1279,6 +1314,13 @@ function LZNLib:CreateWindow(options)
         end
         if InvGui then
             pcall(function() InvGui:Destroy() end)
+        end
+        if CornerOverlayConnection then
+            pcall(function() CornerOverlayConnection:Disconnect() end)
+            CornerOverlayConnection = nil
+        end
+        if CornerOverlayGui then
+            pcall(function() CornerOverlayGui:Destroy() end)
         end
         if FullScreenBlurGui then
             pcall(function() FullScreenBlurGui:Destroy() end)
