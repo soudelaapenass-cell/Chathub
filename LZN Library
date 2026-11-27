@@ -5631,28 +5631,25 @@ end
             local overlay = Instance.new("Frame")
             overlay.Name = "LZNWelcomeIntro"
             overlay.Size = UDim2.new(1, 0, 1, 0)
-            overlay.BackgroundColor3 = Color3.fromRGB(3, 5, 10)
-            overlay.BackgroundTransparency = 0.18
+            overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            overlay.BackgroundTransparency = 0
             overlay.BorderSizePixel = 0
             overlay.ZIndex = 300
             overlay.Parent = FullScreenBlurGui
 
+            -- Area central transparente: a tela inteira continua preta, sem cartao ou bordas.
             local panel = Instance.new("Frame")
             panel.Name = "IntroPanel"
             panel.Size = UDim2.new(0, 340, 0, 390)
             panel.AnchorPoint = Vector2.new(0.5, 0.5)
             panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-            panel.BackgroundColor3 = Color3.fromRGB(9, 13, 22)
-            panel.BackgroundTransparency = 0.04
+            panel.BackgroundTransparency = 1
             panel.BorderSizePixel = 0
             panel.ZIndex = 301
             panel.Parent = overlay
-            Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 18)
-            AddGlow(panel, accentColor, 1.8, 0.16)
-            AddGradient(panel, Color3.fromRGB(17, 25, 41), Color3.fromRGB(7, 10, 18), 135)
 
             local panelScale = Instance.new("UIScale")
-            panelScale.Scale = 0.88
+            panelScale.Scale = 1
             panelScale.Parent = panel
             local function fitIntro()
                 local camera = workspace.CurrentCamera
@@ -5664,7 +5661,6 @@ end
             if workspace.CurrentCamera then
                 viewportConnection = workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitIntro)
             end
-            TweenService:Create(panelScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
             local function makeText(name, text, position, size, color, textSize)
                 local label = Instance.new("TextLabel")
@@ -5690,8 +5686,11 @@ end
                 image.Size = size
                 image.Position = position
                 image.BackgroundTransparency = 1
-                image.Image = url
+                -- Baixa a imagem para arquivo local e carrega pelo asset customizado do executor.
+                local assetName = "LZN_Intro_" .. name .. ".img"
+                image.Image = LoadBackgroundAsset(url, assetName)
                 image.ScaleType = Enum.ScaleType.Fit
+                image.BorderSizePixel = 0
                 image.ImageTransparency = 1
                 image.ZIndex = 302
                 image.Parent = panel
@@ -5737,7 +5736,7 @@ end
             fadeOut({creditPT, creditEN, creditImage1, creditImage2})
 
             TweenService:Create(overlay, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
-            TweenService:Create(panelScale, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.92}):Play()
+            TweenService:Create(panel, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             TweenService:Create(introBlur, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0}):Play()
             task.wait(0.45)
             if viewportConnection then viewportConnection:Disconnect() end
