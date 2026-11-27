@@ -5,7 +5,6 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local SoundService = game:GetService("SoundService")
 local Debris = game:GetService("Debris")
@@ -493,57 +492,52 @@ function LZNLib:CreateWindow(options)
     HubBackground.Parent = MainFrame
     Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
-    -- Imagens decorativas ficam fora do MainFrame para não serem cortadas,
-    -- alinhadas às quatro pontas e sempre acima dos elementos internos do Hub.
+    -- Decorações nos quatro cantos: ficam metade dentro/metade fora do Hub.
+    -- São filhas do ScreenGui (não do MainFrame) para escapar de ClipsDescendants,
+    -- e usam ZIndex alto para aparecerem sobre os elementos do Hub.
     local HubCornerImages = {}
     local cornerImageConfigs = {
-        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", Anchor = Vector2.new(0, 0), Offset = Vector2.new(-22, -22)},
-        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", Anchor = Vector2.new(1, 0), Offset = Vector2.new(22, -22)},
-        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", Anchor = Vector2.new(0, 1), Offset = Vector2.new(-22, 22)},
-        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", Anchor = Vector2.new(1, 1), Offset = Vector2.new(22, 22)}
+        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", Corner = "TopLeft"},
+        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", Corner = "TopRight"},
+        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", Corner = "BottomLeft"},
+        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", Corner = "BottomRight"}
     }
     for _, cfg in ipairs(cornerImageConfigs) do
         local cornerImage = Instance.new("ImageLabel")
         cornerImage.Name = cfg.Name
-        cornerImage.Size = UDim2.fromOffset(76, 76)
-        cornerImage.AnchorPoint = cfg.Anchor
+        cornerImage.Size = UDim2.fromOffset(64, 64)
+        cornerImage.AnchorPoint = Vector2.new(0.5, 0.5)
+        cornerImage.Position = UDim2.fromOffset(0, 0) -- atualizado pela conexão abaixo
         cornerImage.BackgroundTransparency = 1
         cornerImage.Image = cfg.Image
         cornerImage.ScaleType = Enum.ScaleType.Fit
         cornerImage.ImageTransparency = 0
         cornerImage.Active = false
         cornerImage.Selectable = false
-        cornerImage.ZIndex = 200
-        cornerImage.Visible = false
+        cornerImage.ZIndex = 1000
         cornerImage.Parent = ScreenGui
-        table.insert(HubCornerImages, {Object = cornerImage, Offset = cfg.Offset})
+        table.insert(HubCornerImages, {Object = cornerImage, Corner = cfg.Corner})
     end
 
-    local function UpdateHubCornerImages()
-        if not MainFrame or not MainFrame.Parent then return end
-        local inset = GuiService:GetGuiInset()
-        local absolutePosition = MainFrame.AbsolutePosition
-        local absoluteSize = MainFrame.AbsoluteSize
-        local left = absolutePosition.X - inset.X
-        local top = absolutePosition.Y - inset.Y
-        local right = left + absoluteSize.X
-        local bottom = top + absoluteSize.Y
-        local visible = MainFrame.Visible
-        for index, entry in ipairs(HubCornerImages) do
-            local image = entry.Object
-            local cfg = cornerImageConfigs[index]
-            if cfg then
-                local x = (cfg.Anchor.X == 0) and left or right
-                local y = (cfg.Anchor.Y == 0) and top or bottom
-                image.Position = UDim2.fromOffset(x + entry.Offset.X, y + entry.Offset.Y)
-                image.Visible = visible
-            end
+    -- Acompanha posição e tamanho reais (incluindo UIScale e arraste do Hub).
+    -- O centro de cada imagem coincide com a ponta do canto: 32 px ficam de cada lado.
+    local HubCornerFollowConnection
+    HubCornerFollowConnection = RunService.RenderStepped:Connect(function()
+        if not ScreenGui.Parent then
+            if HubCornerFollowConnection then HubCornerFollowConnection:Disconnect() end
+            return
         end
-    end
-    RunService.RenderStepped:Connect(UpdateHubCornerImages)
-    MainFrame:GetPropertyChangedSignal("Visible"):Connect(UpdateHubCornerImages)
-    MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateHubCornerImages)
-    MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdateHubCornerImages)
+        local pos = MainFrame.AbsolutePosition
+        local size = MainFrame.AbsoluteSize
+        for _, entry in ipairs(HubCornerImages) do
+            local x = pos.X
+            local y = pos.Y
+            if string.find(entry.Corner, "Right", 1, true) then x = x + size.X end
+            if string.find(entry.Corner, "Bottom", 1, true) then y = y + size.Y end
+            entry.Object.Position = UDim2.fromOffset(x, y)
+            entry.Object.Visible = MainFrame.Visible
+        end
+    end)
 
     MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
@@ -5756,13 +5750,8 @@ end
     -- A apresentação fica ativada por padrão; só é ignorada se o usuário
     -- definir ShowLanguageIntro = false explicitamente.
     if options.ShowLanguageIntro ~= false then
-        -- Esconde Hub, botão e enfeites imediatamente, antes de iniciar a apresentação.
-        -- Assim não existe um frame em que o Hub apareça por trás/antes do overlay.
         MainFrame.Visible = false
         ToggleHubBtn.Visible = false
-        for _, entry in ipairs(HubCornerImages) do
-            entry.Object.Visible = false
-        end
         task.spawn(function()
             HubOpen = true
             if BackgroundMusic and BackgroundMusic.IsPlaying then BackgroundMusic:Pause() end
@@ -5922,13 +5911,10 @@ end
             fadeOut({creditPT, creditEN, creditImage1, creditImage2}, 0.5)
 
             if overlay and overlay.Parent then overlay:Destroy() end
-            -- Aguarda o overlay sair da árvore antes de revelar o Hub.
-            while overlay and overlay.Parent do task.wait() end
             if ScreenGui and ScreenGui.Parent then
                 MainFrame.Visible = true
                 ToggleHubBtn.Visible = true
                 HubOpen = true
-                UpdateHubCornerImages()
                 HubScale.Scale = 0.72
                 TweenService:Create(HubScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                     Scale = 1
@@ -5941,7 +5927,6 @@ end
         MainFrame.Visible = true
         ToggleHubBtn.Visible = true
         HubOpen = true
-        UpdateHubCornerImages()
     end
 
     UpdateHubHeight()
