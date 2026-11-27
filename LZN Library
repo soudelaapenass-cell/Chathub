@@ -492,45 +492,55 @@ function LZNLib:CreateWindow(options)
     HubBackground.Parent = MainFrame
     Instance.new("UICorner", HubBackground).CornerRadius = UDim.new(0, 18)
 
-    -- Imagens decorativas nos cantos: cada uma fica metade dentro e metade fora.
-    -- São filhas do ScreenGui (não do MainFrame), então não são cortadas pelo Hub
-    -- e permanecem acima de todos os elementos internos.
-    local HubCornerImages = {}
-    local cornerImageConfigs = {
-        {Name = "HubCornerTopLeft", Image = "rbxassetid://131148058397719", X = 0, Y = 0},
-        {Name = "HubCornerTopRight", Image = "rbxassetid://108804305478512", X = 1, Y = 0},
-        {Name = "HubCornerBottomLeft", Image = "rbxassetid://133523315737725", X = 0, Y = 1},
-        {Name = "HubCornerBottomRight", Image = "rbxassetid://88446643995980", X = 1, Y = 1}
+    -- Artes dos quatro cantos: ficam fora do MainFrame para escapar do ClipsDescendants.
+    -- O centro de cada arte coincide com a ponta do Hub (metade dentro/metade fora).
+    -- Parent ScreenGui + ZIndex alto mantém as imagens por cima de todos os elementos do Hub.
+    local HubCornerImages = {
+        "rbxassetid://131148058397719",
+        "rbxassetid://108804305478512",
+        "rbxassetid://133523315737725",
+        "rbxassetid://88446643995980"
     }
-    for _, cfg in ipairs(cornerImageConfigs) do
-        local cornerImage = Instance.new("ImageLabel")
-        cornerImage.Name = cfg.Name
-        cornerImage.Size = UDim2.fromOffset(70, 70)
-        cornerImage.AnchorPoint = Vector2.new(0.5, 0.5)
-        cornerImage.BackgroundTransparency = 1
-        cornerImage.Image = cfg.Image
-        cornerImage.ScaleType = Enum.ScaleType.Fit
-        cornerImage.ImageTransparency = 0
-        cornerImage.Active = false
-        cornerImage.Selectable = false
-        cornerImage.ZIndex = 1000
-        cornerImage.Parent = ScreenGui
-        table.insert(HubCornerImages, {Object = cornerImage, X = cfg.X, Y = cfg.Y})
+    local HubCornerArts = {}
+    for i, imageId in ipairs(HubCornerImages) do
+        local art = Instance.new("ImageLabel")
+        art.Name = "HubCornerArt" .. tostring(i)
+        art.BackgroundTransparency = 1
+        art.Size = UDim2.fromOffset(76, 76)
+        art.AnchorPoint = Vector2.new(0.5, 0.5)
+        art.Image = imageId
+        art.ScaleType = Enum.ScaleType.Fit
+        art.ImageTransparency = 0
+        art.Active = false
+        art.Selectable = false
+        art.ZIndex = 10000 + i
+        art.Parent = ScreenGui
+        HubCornerArts[i] = art
     end
 
-    local function UpdateHubCornerImages()
-        if not MainFrame or not MainFrame.Parent then return end
+    local function UpdateHubCornerArts()
+        if not MainFrame.Parent then return end
         local p = MainFrame.AbsolutePosition
         local z = MainFrame.AbsoluteSize
-        for _, item in ipairs(HubCornerImages) do
-            local x = p.X + z.X * item.X
-            local y = p.Y + z.Y * item.Y
-            item.Object.Position = UDim2.fromOffset(x, y)
-            item.Object.Visible = MainFrame.Visible
+        local corners = {
+            Vector2.new(p.X, p.Y),
+            Vector2.new(p.X + z.X, p.Y),
+            Vector2.new(p.X, p.Y + z.Y),
+            Vector2.new(p.X + z.X, p.Y + z.Y)
+        }
+        for i, art in ipairs(HubCornerArts) do
+            local point = corners[i]
+            art.Position = UDim2.fromOffset(point.X, point.Y)
         end
     end
-    UpdateHubCornerImages()
-    local HubCornerFollowConnection = RunService.RenderStepped:Connect(UpdateHubCornerImages)
+    UpdateHubCornerArts()
+    local HubCornerFollowConnection = RunService.RenderStepped:Connect(UpdateHubCornerArts)
+    ScreenGui.Destroying:Connect(function()
+        if HubCornerFollowConnection then
+            HubCornerFollowConnection:Disconnect()
+            HubCornerFollowConnection = nil
+        end
+    end)
 
     MakeDraggable(MainFrame)
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 18)
@@ -1163,7 +1173,7 @@ function LZNLib:CreateWindow(options)
     ToggleHubBtn.Size = UDim2.new(0, 46, 0, 46)
     ToggleHubBtn.Position = UDim2.new(0, 16, 0, 16)
     ToggleHubBtn.BackgroundColor3 = Color3.fromRGB(10, 14, 22)
-    ToggleHubBtn.ClipsDescendants = false
+    ToggleHubBtn.ClipsDescendants = true
     ToggleHubBtn.Text = ""
     ToggleHubBtn.ZIndex = 30
     ToggleHubBtn.Parent = ScreenGui
@@ -1182,18 +1192,36 @@ function LZNLib:CreateWindow(options)
     FloatingButtonImage.Parent = ToggleHubBtn
     Instance.new("UICorner", FloatingButtonImage).CornerRadius = UDim.new(1, 0)
 
-    -- Imagem decorativa posicionada acima do botão; como filha dele, acompanha
-    -- automaticamente todo movimento/arrasto do botão flutuante.
-    local FloatingFollowImage = Instance.new("ImageLabel")
-    FloatingFollowImage.Name = "FloatingButtonFollowImage"
-    FloatingFollowImage.Size = UDim2.new(0, 48, 0, 48)
-    FloatingFollowImage.Position = UDim2.new(0.5, -24, 0, -43)
-    FloatingFollowImage.BackgroundTransparency = 1
-    FloatingFollowImage.Image = ""
-    FloatingFollowImage.ScaleType = Enum.ScaleType.Fit
-    FloatingFollowImage.ZIndex = ToggleHubBtn.ZIndex + 2
-    FloatingFollowImage.Active = false
-    FloatingFollowImage.Parent = ToggleHubBtn
+    -- Arte decorativa acima do botão flutuante; acompanha sua posição enquanto ele é arrastado.
+    local FloatingButtonTopImage = Instance.new("ImageLabel")
+    FloatingButtonTopImage.Name = "FloatingButtonTopImage"
+    FloatingButtonTopImage.BackgroundTransparency = 1
+    FloatingButtonTopImage.Size = UDim2.fromOffset(62, 62)
+    FloatingButtonTopImage.AnchorPoint = Vector2.new(0.5, 1)
+    FloatingButtonTopImage.Image = "https://i.ibb.co/0ybrnxbc/1795767300499.png"
+    FloatingButtonTopImage.ScaleType = Enum.ScaleType.Fit
+    FloatingButtonTopImage.Active = false
+    FloatingButtonTopImage.Selectable = false
+    FloatingButtonTopImage.ZIndex = 11000
+    FloatingButtonTopImage.Parent = ScreenGui
+
+    local function UpdateFloatingButtonTopImage()
+        if not ToggleHubBtn.Parent then return end
+        local p = ToggleHubBtn.AbsolutePosition
+        local z = ToggleHubBtn.AbsoluteSize
+        FloatingButtonTopImage.Position = UDim2.fromOffset(
+            p.X + z.X / 2,
+            p.Y - 5
+        )
+    end
+    UpdateFloatingButtonTopImage()
+    local FloatingTopImageFollowConnection = RunService.RenderStepped:Connect(UpdateFloatingButtonTopImage)
+    ScreenGui.Destroying:Connect(function()
+        if FloatingTopImageFollowConnection then
+            FloatingTopImageFollowConnection:Disconnect()
+            FloatingTopImageFollowConnection = nil
+        end
+    end)
 
     AddGlow(ToggleHubBtn, accentColor, 2, 0.1)
     AddGradient(ToggleHubBtn, Color3.fromRGB(18, 25, 40), Color3.fromRGB(8, 10, 15), 135)
@@ -2659,9 +2687,28 @@ function LZNLib:CreateWindow(options)
             Instance.new("UICorner", checkBox).CornerRadius = UDim.new(0, 4)
             AddGlow(checkBox, accentColor, 1, 0.35)
 
+            local iconImage = nil
+            local iconOffset = 28
+            if type(cfg.GetIcon) == "function" then
+                local iconOk, iconValue = pcall(cfg.GetIcon, item)
+                if iconOk and type(iconValue) == "string" and iconValue ~= "" then
+                    iconImage = Instance.new("ImageLabel")
+                    iconImage.Name = "OptionPlayerIcon"
+                    iconImage.Size = UDim2.new(0, 20, 0, 20)
+                    iconImage.Position = UDim2.new(0, 28, 0.5, -10)
+                    iconImage.BackgroundTransparency = 1
+                    iconImage.Image = iconValue
+                    iconImage.ScaleType = Enum.ScaleType.Crop
+                    iconImage.ZIndex = 28
+                    iconImage.Parent = itemBtn
+                    Instance.new("UICorner", iconImage).CornerRadius = UDim.new(1, 0)
+                    iconOffset = 54
+                end
+            end
+
             local itemLbl = Instance.new("TextLabel")
-            itemLbl.Size = UDim2.new(1, -30, 1, 0)
-            itemLbl.Position = UDim2.new(0, 28, 0, 0)
+            itemLbl.Size = UDim2.new(1, -iconOffset - 4, 1, 0)
+            itemLbl.Position = UDim2.new(0, iconOffset, 0, 0)
             itemLbl.BackgroundTransparency = 1
             itemLbl.Text = key
             itemLbl.TextColor3 = Color3.fromRGB(215, 232, 250)
@@ -2926,6 +2973,11 @@ function LZNLib:CreateWindow(options)
         function tab:AddSlider(cfg) return withPage("AddSlider", cfg) end
         function tab:AddDropdown(cfg) return withPage("AddDropdown", cfg) end
         function tab:AddMultiDropdown(cfg) return withPage("AddMultiDropdown", cfg) end
+        function tab:AddIconPlyrdropdown(cfg) return withPage("AddIconPlyrdropdown", cfg) end
+        function tab:AddLezinUMAdropdown(cfg) return withPage("AddLezinUMAdropdown", cfg) end
+        function tab:addLezinUMAdropdown(cfg) return withPage("AddLezinUMAdropdown", cfg) end
+        function tab:AddAllFECB(cfg) return withPage("AddAllFECB", cfg) end
+        function tab:addAllFECB(cfg) return withPage("AddAllFECB", cfg) end
         function tab:AddAudioPlayer(cfg) return withPage("AddAudioPlayer", cfg) end
         function tab:AddKeybind(cfg) return withPage("AddKeybind", cfg) end
         function tab:AddColorPicker(cfg) return withPage("AddColorPicker", cfg) end
@@ -3023,6 +3075,11 @@ function LZNLib:CreateWindow(options)
         function section:AddSlider(cfg) return sectionCall("AddSlider", cfg) end
         function section:AddDropdown(cfg) return sectionCall("AddDropdown", cfg) end
         function section:AddMultiDropdown(cfg) return sectionCall("AddMultiDropdown", cfg) end
+        function section:AddIconPlyrdropdown(cfg) return sectionCall("AddIconPlyrdropdown", cfg) end
+        function section:AddLezinUMAdropdown(cfg) return sectionCall("AddLezinUMAdropdown", cfg) end
+        function section:addLezinUMAdropdown(cfg) return sectionCall("AddLezinUMAdropdown", cfg) end
+        function section:AddAllFECB(cfg) return sectionCall("AddAllFECB", cfg) end
+        function section:addAllFECB(cfg) return sectionCall("AddAllFECB", cfg) end
         function section:AddAudioPlayer(cfg) return sectionCall("AddAudioPlayer", cfg) end
         function section:AddKeybind(cfg) return sectionCall("AddKeybind", cfg) end
         function section:AddColorPicker(cfg) return sectionCall("AddColorPicker", cfg) end
@@ -3732,6 +3789,227 @@ function LZNLib:CreateWindow(options)
     end
 
     function Window:AddMultiSelect(cfg) return self:AddMultiDropdown(cfg) end
+
+    -- Multi-select de jogadores com miniatura de avatar ao lado de cada nome.
+    function Window:AddIconPlyrdropdown(cfg)
+        cfg = cfg or {}
+        local playerItems = {}
+        local playerByName = {}
+        for _, player in ipairs(Players:GetPlayers()) do
+            local playerName = player.Name
+            table.insert(playerItems, playerName)
+            playerByName[playerName] = player
+        end
+
+        local userCfg = {}
+        for k, v in pairs(cfg) do userCfg[k] = v end
+        userCfg.Text = cfg.Text or "Players"
+        userCfg.Options = playerItems
+        userCfg.GetIcon = function(playerName)
+            local player = playerByName[tostring(playerName)]
+            if not player then return nil end
+            return "rbxthumb://type=AvatarHeadShot&id=" .. tostring(player.UserId) .. "&w=48&h=48"
+        end
+
+        local originalCallback = cfg.Callback
+        userCfg.Callback = function(selectedNames, changedName, isSelected)
+            local selectedPlayers = {}
+            for _, playerName in ipairs(selectedNames) do
+                local player = playerByName[tostring(playerName)]
+                if player then table.insert(selectedPlayers, player) end
+            end
+            local changedPlayer = playerByName[tostring(changedName)]
+            if type(originalCallback) == "function" then
+                originalCallback(selectedPlayers, changedPlayer, isSelected)
+            end
+        end
+
+        local defaults = {}
+        if type(cfg.Default) == "table" then
+            for _, value in ipairs(cfg.Default) do
+                if typeof(value) == "Instance" and value:IsA("Player") then
+                    table.insert(defaults, value.Name)
+                else
+                    table.insert(defaults, tostring(value))
+                end
+            end
+        end
+        userCfg.Default = defaults
+        return self:AddMultiDropdown(userCfg)
+    end
+
+    -- Dropdown em grade inspirada em Manhattan Cafe: multi-select com cards lado a lado.
+    function Window:AddLezinUMAdropdown(cfg)
+        cfg = cfg or {}
+        local label = tostring(cfg.Text or "Manhattan Cafe")
+        local options = cfg.Options or {}
+        local columns = math.clamp(tonumber(cfg.Columns) or 2, 1, 4)
+        local selected = {}
+        for _, v in ipairs(cfg.Default or {}) do selected[tostring(v)] = true end
+        local function selectedList()
+            local out = {}
+            for _, v in ipairs(options) do if selected[tostring(v)] then table.insert(out, v) end end
+            return out
+        end
+        local wrapper = Instance.new("Frame")
+        wrapper.Name = "LezinUMADropdown"
+        wrapper.Size = UDim2.new(1, 0, 0, 42)
+        wrapper.BackgroundTransparency = 1
+        wrapper.LayoutOrder = NextOrder()
+        wrapper.ClipsDescendants = true
+        wrapper.ZIndex = 30
+        wrapper.Parent = ActiveContainer
+
+        local head = Instance.new("TextButton")
+        head.Name = "Header"
+        head.Size = UDim2.new(1, 0, 0, 42)
+        head.BackgroundColor3 = Color3.fromRGB(22, 18, 27)
+        head.Text = ""
+        head.AutoButtonColor = false
+        head.ZIndex = 31
+        head.Parent = wrapper
+        Instance.new("UICorner", head).CornerRadius = UDim.new(0, 11)
+        AddGlow(head, accentColor, 1.4, 0.28)
+        AddClickEffect(head)
+
+        local title = Instance.new("TextLabel")
+        title.BackgroundTransparency = 1
+        title.Position = UDim2.fromOffset(12, 0)
+        title.Size = UDim2.new(1, -100, 1, 0)
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 11
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.TextColor3 = Color3.fromRGB(255, 235, 218)
+        title.Text = label .. "  ·  " .. tostring(#selectedList()) .. " selecionados"
+        title.ZIndex = 32
+        title.Parent = head
+
+        local cafeIcon = Instance.new("ImageLabel")
+        cafeIcon.Name = "ManhattanCafeIcon"
+        cafeIcon.BackgroundTransparency = 1
+        cafeIcon.AnchorPoint = Vector2.new(1, 0.5)
+        cafeIcon.Position = UDim2.new(1, -12, 0.5, 0)
+        cafeIcon.Size = UDim2.fromOffset(30, 30)
+        cafeIcon.Image = "rbxassetid://91721602970623"
+        cafeIcon.ScaleType = Enum.ScaleType.Fit
+        cafeIcon.ZIndex = 33
+        cafeIcon.Parent = head
+
+        local gridPanel = Instance.new("Frame")
+        gridPanel.Name = "GridPanel"
+        gridPanel.Position = UDim2.fromOffset(0, 46)
+        gridPanel.Size = UDim2.new(1, 0, 0, 0)
+        gridPanel.BackgroundColor3 = Color3.fromRGB(15, 13, 20)
+        gridPanel.BackgroundTransparency = 0.04
+        gridPanel.ZIndex = 31
+        gridPanel.Parent = wrapper
+        Instance.new("UICorner", gridPanel).CornerRadius = UDim.new(0, 11)
+        AddGlow(gridPanel, accentColor, 1.2, 0.35)
+
+        local grid = Instance.new("UIGridLayout")
+        grid.CellPadding = UDim2.fromOffset(7, 7)
+        grid.CellSize = UDim2.new(1 / columns, -((columns - 1) * 7 / columns) - 8, 0, 36)
+        grid.SortOrder = Enum.SortOrder.LayoutOrder
+        grid.Parent = gridPanel
+        local pad = Instance.new("UIPadding")
+        pad.PaddingTop = UDim.new(0, 8); pad.PaddingLeft = UDim.new(0, 8)
+        pad.PaddingRight = UDim.new(0, 8); pad.PaddingBottom = UDim.new(0, 8)
+        pad.Parent = gridPanel
+
+        local buttons = {}
+        local function refresh()
+            local n = #selectedList()
+            title.Text = label .. "  ·  " .. tostring(n) .. " selecionados"
+            for _, entry in ipairs(buttons) do
+                local active = selected[entry.key] == true
+                entry.button.BackgroundColor3 = active and Color3.fromRGB(94, 58, 65) or Color3.fromRGB(30, 25, 34)
+                entry.stroke.Color = active and Color3.fromRGB(255, 190, 160) or accentColor
+                entry.mark.Visible = active
+                entry.text.TextColor3 = active and Color3.fromRGB(255, 224, 204) or Color3.fromRGB(224, 218, 232)
+            end
+        end
+        for i, option in ipairs(options) do
+            local key = tostring(option)
+            local b = Instance.new("TextButton")
+            b.Name = "GridOption_" .. tostring(i)
+            b.LayoutOrder = i
+            b.Text = ""
+            b.AutoButtonColor = false
+            b.BackgroundColor3 = Color3.fromRGB(30, 25, 34)
+            b.ZIndex = 32
+            b.Parent = gridPanel
+            Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = accentColor; stroke.Transparency = 0.45; stroke.Thickness = 1
+            stroke.Parent = b
+            local txt = Instance.new("TextLabel")
+            txt.BackgroundTransparency = 1; txt.Position = UDim2.fromOffset(8, 0)
+            txt.Size = UDim2.new(1, -30, 1, 0); txt.Font = Enum.Font.GothamSemibold
+            txt.TextSize = 10; txt.TextXAlignment = Enum.TextXAlignment.Left
+            txt.TextTruncate = Enum.TextTruncate.AtEnd; txt.Text = key
+            txt.TextColor3 = Color3.fromRGB(224, 218, 232); txt.ZIndex = 33; txt.Parent = b
+            local mark = Instance.new("TextLabel")
+            mark.BackgroundTransparency = 1; mark.AnchorPoint = Vector2.new(1, 0.5)
+            mark.Position = UDim2.new(1, -7, 0.5, 0); mark.Size = UDim2.fromOffset(16, 18)
+            mark.Font = Enum.Font.GothamBlack; mark.Text = "✓"; mark.TextSize = 13
+            mark.TextColor3 = Color3.fromRGB(255, 205, 170); mark.ZIndex = 34; mark.Parent = b
+            table.insert(buttons, {key=key, button=b, stroke=stroke, text=txt, mark=mark})
+            b.MouseButton1Click:Connect(function()
+                selected[key] = not selected[key]
+                PlayMultiDropdownEvent("rbxassetid://117649901456711")
+                refresh()
+                SafeCallback(cfg.Callback, selectedList(), option, selected[key] == true)
+            end)
+        end
+        local isOpen = false
+        local rows = math.ceil(#options / columns)
+        local panelHeight = rows > 0 and (rows * 43 + 16) or 42
+        head.MouseButton1Click:Connect(function()
+            isOpen = not isOpen
+            PlayMultiDropdownEvent("rbxassetid://17208372272")
+            TweenService:Create(wrapper, TweenInfo.new(0.24, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, 0, 0, isOpen and (46 + panelHeight) or 42)
+            }):Play()
+            TweenService:Create(gridPanel, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, 0, 0, isOpen and panelHeight or 0)
+            }):Play()
+        end)
+        refresh()
+        local obj = {Instance = wrapper}
+        function obj:GetSelected() return selectedList() end
+        function obj:GetValue() return selectedList() end
+        function obj:SetSelected(values)
+            selected = {}
+            for _, v in ipairs(values or {}) do selected[tostring(v)] = true end
+            refresh()
+        end
+        function obj:SetValue(values) self:SetSelected(values) end
+        function obj:Destroy() if wrapper then wrapper:Destroy() end end
+        return obj
+    end
+
+    -- addAllFECB é um despachante: cria APENAS o tipo explicitamente solicitado.
+    function Window:AddAllFECB(cfg)
+        cfg = cfg or {}
+        local kind = tostring(cfg.Type or cfg.Component or ""):lower()
+        local methods = {
+            button = "AddButton", minibutton = "AddButton", toggle = "AddToggle",
+            player = "AddIconPlyrdropdown", playericon = "AddIconPlyrdropdown",
+            textbox = "AddTextBox", dropdown = "AddDropdown", multiselect = "AddMultiDropdown",
+            slider = "AddSlider", lezinumadropdown = "AddLezinUMAdropdown"
+        }
+        local method = methods[kind]
+        if not method or type(self[method]) ~= "function" then
+            warn("[LZN Library] addAllFECB: informe Type com um componente válido.")
+            return nil
+        end
+        local componentCfg = cfg.Config or cfg.Settings or {}
+        return self[method](self, componentCfg)
+    end
+
+    function Window:addLezinUMAdropdown(cfg) return self:AddLezinUMAdropdown(cfg) end
+    function Window:addAllFECB(cfg) return self:AddAllFECB(cfg) end
+
     function Window:SetTheme(name) return ThemeManager:Apply(name) end
     function Window:GetTheme() return ThemeManager.Current end
     function Window:SetCompact(enabled)
@@ -5305,17 +5583,6 @@ function LZNLib:CreateWindow(options)
     HubBackground.ScaleType = Enum.ScaleType.Stretch
     FloatingButtonImage.Image = floatImage
     FloatingButtonImage.ScaleType = Enum.ScaleType.Stretch
-
-
-    local followAsset = LoadBackgroundAsset(
-        "https://i.ibb.co/0ybrnxbc/1795767300499.png",
-        "LZN_floating_button_follow.png"
-    )
-    if followAsset then
-        FloatingFollowImage.Image = followAsset
-    else
-        warn("[LZN] A imagem acima do botão flutuante não pôde ser carregada.")
-    end
 
     -- Shader original do arquivo Shaders by LZN (Lezin), embutido para funcionar como toggle.
     local LZN_SHADER_SOURCE = [=[local Lighting = game:GetService("Lighting")
