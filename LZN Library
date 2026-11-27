@@ -393,17 +393,17 @@ function LZNLib:CreateWindow(options)
 
     local function PlaySFX(sfxObj, pitchOverride)
         if not sfxEnabled or not sfxObj then return end
-        for _, sound in ipairs(SoundService:GetChildren()) do
-            if sound:IsA("Sound") and string.find(sound.Name, hubName .. "_SFX_", 1, true) and sound ~= sfxObj then
-                pcall(function() sound:Stop() end)
-            end
-        end
+
+        -- Não interrompe os outros efeitos: dropdowns e seleções podem tocar
+        -- em sequência sem que um som corte o outro.
         pcall(function()
             if pitchOverride then
                 sfxObj.PlaybackSpeed = pitchOverride
             end
+
+            -- Stop reinicia o som. Evitamos alterar TimePosition antes do
+            -- carregamento, pois isso pode gerar erro e impedir o :Play().
             sfxObj:Stop()
-            sfxObj.TimePosition = 0
             sfxObj:Play()
         end)
     end
