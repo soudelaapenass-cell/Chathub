@@ -391,20 +391,37 @@ function LZNLib:CreateWindow(options)
     Window.NotificationSFX = {SFX.NotifySuccess, SFX.NotifyError, SFX.NotifyFail, SFX.NotifyWarning}
     Window.NotificationSoundIndex = 0
 
+    -- Cada evento recebe sua própria instância de reprodução.
+    -- Assim, um clique não interrompe outro efeito que acabou de começar.
     local function PlaySFX(sfxObj, pitchOverride)
-        if not sfxEnabled or not sfxObj then return end
+        if not sfxEnabled or not sfxObj or not sfxObj:IsA("Sound") then return end
 
-        -- Não interrompe os outros efeitos: dropdowns e seleções podem tocar
-        -- em sequência sem que um som corte o outro.
-        pcall(function()
+        local playback
+        local ok = pcall(function()
+            playback = sfxObj:Clone()
+            playback.Name = hubName .. "_SFX_Playback"
+            playback.Looped = false
             if pitchOverride then
-                sfxObj.PlaybackSpeed = pitchOverride
+                playback.PlaybackSpeed = pitchOverride
             end
+            playback.TimePosition = 0
+            playback.Parent = SoundService
+            playback:Play()
+        end)
 
-            -- Stop reinicia o som. Evitamos alterar TimePosition antes do
-            -- carregamento, pois isso pode gerar erro e impedir o :Play().
-            sfxObj:Stop()
-            sfxObj:Play()
+        if not ok then
+            if playback then pcall(function() playback:Destroy() end) end
+            return
+        end
+
+        -- Limpeza automática mesmo se o áudio não disparar Ended.
+        task.delay(10, function()
+            if playback and playback.Parent then
+                pcall(function()
+                    playback:Stop()
+                    playback:Destroy()
+                end)
+            end
         end)
     end
 
