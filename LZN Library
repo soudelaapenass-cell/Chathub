@@ -5151,43 +5151,86 @@ function LZNLib:CreateWindow(options)
 
 
     local function LoadBackgroundAsset(url, fileName)
-        if type(getcustomasset) ~= "function" and type(getsynasset) ~= "function" then
-            return url
+        local assetGetter = nil
+        if type(getcustomasset) == "function" then
+            assetGetter = getcustomasset
+        elseif type(getsynasset) == "function" then
+            assetGetter = getsynasset
+        end
+        if not assetGetter then
+            warn("[LZN Library] getcustomasset/getsynasset não disponível; não é possível carregar imagens externas.")
+            return nil
         end
         if type(writefile) ~= "function" then
-            return url
+            warn("[LZN Library] writefile não disponível; não é possível salvar as imagens da intro.")
+            return nil
         end
-        local assetGetter = type(getcustomasset) == "function" and getcustomasset or getsynasset
+
         local cached = false
         if type(isfile) == "function" then
-            pcall(function() cached = isfile(fileName) end)
+            local ok, result = pcall(isfile, fileName)
+            cached = ok and result == true
         end
+
+        local function validImage(data)
+            if type(data) ~= "string" or #data < 128 then return false end
+            local png = data:sub(1, 8) == string.char(137) .. "PNG\r\n\26\n"
+            local jpg = data:sub(1, 3) == string.char(255, 216, 255)
+            return png or jpg
+        end
+
+        -- Se existir cache corrompido/incompleto, baixa novamente em vez de tentar exibi-lo.
+        if cached and type(readfile) == "function" then
+            local ok, cachedData = pcall(readfile, fileName)
+            if not ok or not validImage(cachedData) then cached = false end
+        end
+
         if not cached then
-            local requestFunction = nil
-            if type(request) == "function" then
-                requestFunction = request
-            elseif type(http_request) == "function" then
-                requestFunction = http_request
-            elseif type(syn) == "table" and type(syn.request) == "function" then
-                requestFunction = syn.request
+            local body = nil
+            local requestFunctions = {}
+            if type(request) == "function" then table.insert(requestFunctions, request) end
+            if type(http_request) == "function" then table.insert(requestFunctions, http_request) end
+            if type(syn) == "table" and type(syn.request) == "function" then table.insert(requestFunctions, syn.request) end
+            if type(http) == "table" and type(http.request) == "function" then table.insert(requestFunctions, http.request) end
+
+            for _, requestFunction in ipairs(requestFunctions) do
+                local ok, response = pcall(requestFunction, {
+                    Url = url,
+                    Method = "GET",
+                    Headers = { ["User-Agent"] = "Mozilla/5.0", ["Accept"] = "image/avif,image/webp,image/apng,image/*,*/*;q=0.8" },
+                    FollowRedirects = true
+                })
+                if ok and type(response) == "table" then
+                    local responseBody = response.Body or response.body
+                    local status = tonumber(response.StatusCode or response.Status or response.status_code)
+                    if validImage(responseBody) and (not status or (status >= 200 and status < 300)) then
+                        body = responseBody
+                        break
+                    end
+                end
             end
-            local body
-            if requestFunction then
-                local ok, response = pcall(requestFunction, {Url = url, Method = "GET"})
-                if ok and type(response) == "table" and response.Success ~= false then body = response.Body end
+
+            if not body and type(game.HttpGet) == "function" then
+                local ok, responseBody = pcall(function() return game:HttpGet(url) end)
+                if ok and validImage(responseBody) then body = responseBody end
             end
-            if type(body) ~= "string" or #body < 100 then
-                local ok, result = pcall(function() return game:HttpGet(url) end)
-                if ok and type(result) == "string" and #result > 100 then body = result end
+
+            if body then
+                local ok, err = pcall(writefile, fileName, body)
+                if not ok then warn("[LZN Library] Falha ao salvar " .. fileName .. ": " .. tostring(err)) end
+            else
+                warn("[LZN Library] Não foi possível baixar uma imagem válida: " .. tostring(url))
+                return nil
             end
-            if type(body) == "string" and #body > 100 then pcall(writefile, fileName, body) end
         end
+
         local ok, asset = pcall(assetGetter, fileName)
-        if ok and type(asset) == "string" then return asset end
-        return url
+        if ok and type(asset) == "string" and asset ~= "" then return asset end
+        warn("[LZN Library] getcustomasset falhou para " .. tostring(fileName) .. ": " .. tostring(asset))
+        return nil
     end
 
-    HubBackground.Image = LoadBackgroundAsset(bgImage, "LZN_hub_background.jpg")
+    HubBackground.Image = LoadBackgroundAsset(bgImage, "LZN_hub_background.jpg") or bgImage
     HubBackground.ScaleType = Enum.ScaleType.Stretch
     FloatingButtonImage.Image = floatImage
     FloatingButtonImage.ScaleType = Enum.ScaleType.Stretch
@@ -5686,15 +5729,34 @@ end
                 image.Size = size
                 image.Position = position
                 image.BackgroundTransparency = 1
-                -- Baixa a imagem para arquivo local e carrega pelo asset customizado do executor.
-                local assetName = "LZN_Intro_" .. name .. ".img"
-                image.Image = LoadBackgroundAsset(url, assetName)
-                image.ScaleType = Enum.ScaleType.Fit
                 image.BorderSizePixel = 0
+                image.ScaleType = Enum.ScaleType.Fit
                 image.ImageTransparency = 1
                 image.ZIndex = 302
                 image.Parent = panel
+
+                -- Extensão real do arquivo: PNG/JPG. ImageLabel não aceita URL HTTP direta.
+                local lowerUrl = tostring(url):lower()
+                local extension = (lowerUrl:find("%.jpg") or lowerUrl:find("%.jpeg")) and ".jpg" or ".png"
+                local assetName = "LZN_Intro_" .. name .. extension
+                local asset = LoadBackgroundAsset(url, assetName)
+                if asset then
+                    image.Image = asset
+                else
+                    warn("[LZN Library] Imagem não carregada: " .. name .. ". Verifique o console do executor.")
+                end
                 return image
+            end
+            local function preloadIntroImages(images)
+                local contentProvider = game:GetService("ContentProvider")
+                local ok, err = pcall(function()
+                    contentProvider:PreloadAsync(images, function(assetId, status)
+                        if status ~= Enum.AssetFetchStatus.Success then
+                            warn("[LZN Library] Falha ao carregar asset " .. tostring(assetId) .. ": " .. tostring(status))
+                        end
+                    end)
+                end)
+                if not ok then warn("[LZN Library] PreloadAsync: " .. tostring(err)) end
             end
             local function fadeIn(objects)
                 for _, object in ipairs(objects) do
@@ -5719,6 +5781,7 @@ end
             local thanksPT = makeText("ThanksPortuguese", "PT-BR 🇧🇷\nobrigado(a) por usar minha library, vida🤭 quero dizer, anjo😅❤️", UDim2.new(0, 16, 0, 50), UDim2.new(1, -32, 0, 76), nil, 13)
             local thanksEN = makeText("ThanksEnglish", "EN 🇺🇸\nThank(s) you for using my library, life🤭 I mean, angel😅❤️", UDim2.new(0, 16, 0, 132), UDim2.new(1, -32, 0, 76), nil, 13)
             local thanksImage = makeImage("ThanksImage", options.IntroImage3 or "https://i.ibb.co/8nsVqWrh/1795746809383.jpg", UDim2.new(0.5, -82, 0, 220), UDim2.new(0, 164, 0, 140))
+            preloadIntroImages({thanksImage})
             fadeIn({thanksPT, thanksEN, thanksImage})
             task.wait(4)
             if not overlay.Parent then return end
@@ -5730,6 +5793,7 @@ end
             local creditEN = makeText("CreditEnglish", "EN 🇺🇸\nlibrary by LZN (Lezin)♥️", UDim2.new(0, 16, 0, 132), UDim2.new(1, -32, 0, 58), Color3.fromRGB(255, 205, 90), 14)
             local creditImage1 = makeImage("CreditImageLZN", options.IntroImage2 or "https://i.ibb.co/60rmXBNK/IMG-20261116-185612.png", UDim2.new(0, 26, 0, 220), UDim2.new(0, 132, 0, 132))
             local creditImage2 = makeImage("CreditImageManhattan", options.IntroImage4 or "https://i.ibb.co/gLZkkcZR/manhattan.png", UDim2.new(1, -158, 0, 220), UDim2.new(0, 132, 0, 132))
+            preloadIntroImages({creditImage1, creditImage2})
             fadeIn({creditPT, creditEN, creditImage1, creditImage2})
             task.wait(4)
             if not overlay.Parent then return end
